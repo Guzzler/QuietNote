@@ -1,4 +1,4 @@
-import { Loader2, Send, MessageSquare } from "lucide-react";
+import { Loader2, Send, MessageSquare, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PromptSelector from "./PromptSelector";
@@ -14,6 +14,7 @@ export default function ChatPanel({
   newSession,
   replyInThread,
   activeThread,
+  contextTrimmed,
 }: any) {
   const [animated, setAnimated] = useState("");
 
@@ -79,6 +80,12 @@ export default function ChatPanel({
           ) : (
             <>
               <div className="flex-1 overflow-auto space-y-3 pb-2">
+                {contextTrimmed && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mx-1">
+                    <Info className="h-3 w-3 flex-shrink-0" />
+                    <span>Earlier messages are no longer in context. The model may not recall the start of this conversation.</span>
+                  </div>
+                )}
                 <AnimatePresence>
                   {activeThread.messages
                     .filter((m: any) => m.role !== "system")

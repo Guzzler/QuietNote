@@ -9,6 +9,7 @@ import PrivacyDashboard from "./components/PrivacyDashboard";
 import { useMLCEngine } from "./hooks/useMLCEngine";
 import { putSession, listSessions, getSession, putMood } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
+import { buildManagedMessages } from "./utils/tokenEstimator";
 import type { Session, ChatMessage, ModelRef, MoodEntry } from "./types";
 
 // System instruction for the model
@@ -25,23 +26,20 @@ Example:
 User: "I had a stressful day at work"
 Assistant: "It sounds like work took a lot out of you today. What moment felt the most overwhelming? Is there anything that helped you get through it?"`;
 
-// Build messages array for the chat API
-function buildMessages(entry: string, conversationHistory?: { role: string; content: string }[]): { role: string; content: string }[] {
-  const messages: { role: string; content: string }[] = [
-    { role: "user", content: SYSTEM_INSTRUCTION }
-  ];
-
-  // Add conversation history if present
-  if (conversationHistory && conversationHistory.length > 0) {
-    for (const msg of conversationHistory) {
-      messages.push({ role: msg.role, content: msg.content });
-    }
-  }
-
-  // Add the current entry
-  messages.push({ role: "user", content: entry });
-
-  return messages;
+// Build messages array for the chat API with context window management.
+// Uses token estimation to trim older messages when the conversation
+// exceeds the model's context limit. Returns both messages and whether
+// trimming occurred (for UI indicator).
+function buildMessages(
+  entry: string,
+  conversationHistory?: { role: string; content: string }[]
+): { messages: { role: string; content: string }[]; trimmed: boolean } {
+  const { messages, trimResult } = buildManagedMessages(
+    SYSTEM_INSTRUCTION,
+    entry,
+    conversationHistory ?? []
+  );
+  return { messages, trimmed: trimResult.trimmed };
 }
 
 function uid() {
@@ -104,6 +102,7 @@ export default function App() {
   // Modal states
   const [showMoodTracker, setShowMoodTracker] = useState(false);
   const [showPrivacyDashboard, setShowPrivacyDashboard] = useState(false);
+  const [contextTrimmed, setContextTrimmed] = useState(false);
 
   // Handle saving mood
   const handleSaveMood = async (mood: MoodEntry) => {
@@ -185,7 +184,8 @@ export default function App() {
 
     try {
       // Build messages for the chat API
-      const messages = buildMessages(firstMessage);
+      const { messages, trimmed } = buildMessages(firstMessage);
+      setContextTrimmed(trimmed);
 
       const stream = await e.chat.completions.create({
         messages,
@@ -318,8 +318,9 @@ export default function App() {
     });
 
     try {
-      // Build messages with conversation history
-      const messages = buildMessages(text, conversationHistory);
+      // Build messages with conversation history (context-managed)
+      const { messages, trimmed } = buildMessages(text, conversationHistory);
+      setContextTrimmed(trimmed);
 
       const stream = await e.chat.completions.create({
         messages,
@@ -493,6 +494,7 @@ export default function App() {
             newSession={newSession}
             replyInThread={replyInThread}
             activeThread={activeThread}
+            contextTrimmed={contextTrimmed}
           />
         }
         right={
