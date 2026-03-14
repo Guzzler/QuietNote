@@ -495,6 +495,10 @@ export default function App() {
             replyInThread={replyInThread}
             activeThread={activeThread}
             contextTrimmed={contextTrimmed}
+            showCrisisResources={showCrisisResources}
+            onSaveMood={handleSaveMood}
+            onOpenMoodTracker={() => setShowMoodTracker(true)}
+            sessionId={currentId ?? undefined}
           />
         }
         right={

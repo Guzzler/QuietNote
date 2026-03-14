@@ -1,11 +1,26 @@
 import { Loader2, Send, MessageSquare, Info } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PromptSelector from "./PromptSelector";
+import MoodSuggestionCard from "./MoodSuggestionCard";
+import { getTopEmotion } from "../utils/emotionExtractor";
+import type { MoodEmotion, MoodEntry } from "../types";
+
+// Guardrail constants
+const MIN_MESSAGE_LENGTH = 20;
+const SUGGESTION_COOLDOWN = 3; // Show at most 1 suggestion per N assistant messages
+const MAX_DISMISSALS_PER_SESSION = 3;
+const EMOTION_CONFIDENCE_THRESHOLD = 0.4;
+
+interface MoodSuggestion {
+  emotion: MoodEmotion;
+  intensity: number;
+  afterMessageId: string; // The assistant message ID this suggestion follows
+}
 
 export default function ChatPanel({
-  topic,              // unused (kept for prop compatibility)
-  setTopic,           // unused
+  topic: _topic,      // unused (kept for prop compatibility)
+  setTopic: _setTopic, // unused
   busy,
   loading,
   current,
@@ -15,8 +30,26 @@ export default function ChatPanel({
   replyInThread,
   activeThread,
   contextTrimmed,
+  showCrisisResources,
+  onSaveMood,
+  onOpenMoodTracker,
+  sessionId,
 }: any) {
   const [animated, setAnimated] = useState("");
+
+  // Mood suggestion state (session-scoped)
+  const [activeSuggestion, setActiveSuggestion] = useState<MoodSuggestion | null>(null);
+  const [dismissCount, setDismissCount] = useState(0);
+  const [messagesSinceSuggestion, setMessagesSinceSuggestion] = useState(0);
+  const [acceptedMessageIds, setAcceptedMessageIds] = useState<Set<string>>(new Set());
+
+  // Reset suggestion state when session changes
+  useEffect(() => {
+    setActiveSuggestion(null);
+    setDismissCount(0);
+    setMessagesSinceSuggestion(0);
+    setAcceptedMessageIds(new Set());
+  }, [current?.id]);
 
   // Typing animation for the latest assistant message
   useEffect(() => {
@@ -36,6 +69,76 @@ export default function ChatPanel({
       setAnimated("");
     }
   }, [activeThread]);
+
+  // Check for emotions after assistant messages are finalized
+  useEffect(() => {
+    if (!activeThread || busy) return;
+
+    const msgs = activeThread.messages;
+    if (msgs.length < 2) return;
+
+    const lastMsg = msgs[msgs.length - 1];
+
+    // Only trigger after a finalized assistant message (no temp flag)
+    if (lastMsg.role !== "assistant" || lastMsg.temp) return;
+
+    // Don't suggest if already accepted/dismissed for this message
+    if (acceptedMessageIds.has(lastMsg.id)) return;
+
+    // Guardrail: hit dismiss limit for this session
+    if (dismissCount >= MAX_DISMISSALS_PER_SESSION) return;
+
+    // Guardrail: cooldown — haven't had enough messages since last suggestion
+    setMessagesSinceSuggestion((prev) => prev + 1);
+    if (messagesSinceSuggestion < SUGGESTION_COOLDOWN && activeSuggestion !== null) return;
+
+    // Guardrail: crisis suppression — never show during crisis
+    if (showCrisisResources) return;
+
+    // Find the preceding user message
+    const userMsg = [...msgs].reverse().find(
+      (m: any) => m.role === "user" && m.ts <= lastMsg.ts
+    );
+    if (!userMsg) return;
+
+    // Guardrail: minimum message length
+    if (userMsg.content.length < MIN_MESSAGE_LENGTH) return;
+
+    // Run emotion extraction on the user message
+    const topEmotion = getTopEmotion(userMsg.content, EMOTION_CONFIDENCE_THRESHOLD);
+    if (!topEmotion) return;
+
+    setActiveSuggestion({
+      emotion: topEmotion.emotion,
+      intensity: topEmotion.intensity,
+      afterMessageId: lastMsg.id,
+    });
+    setMessagesSinceSuggestion(0);
+  }, [activeThread?.messages?.length, busy]);
+
+  const handleSuggestionAccept = useCallback((mood: MoodEntry) => {
+    if (activeSuggestion) {
+      setAcceptedMessageIds((prev) => new Set(prev).add(activeSuggestion.afterMessageId));
+    }
+    setActiveSuggestion(null);
+    onSaveMood?.(mood);
+  }, [activeSuggestion, onSaveMood]);
+
+  const handleSuggestionEdit = useCallback((_emotion: MoodEmotion, _intensity: number) => {
+    if (activeSuggestion) {
+      setAcceptedMessageIds((prev) => new Set(prev).add(activeSuggestion.afterMessageId));
+    }
+    setActiveSuggestion(null);
+    onOpenMoodTracker?.();
+  }, [activeSuggestion, onOpenMoodTracker]);
+
+  const handleSuggestionDismiss = useCallback(() => {
+    if (activeSuggestion) {
+      setAcceptedMessageIds((prev) => new Set(prev).add(activeSuggestion.afterMessageId));
+    }
+    setActiveSuggestion(null);
+    setDismissCount((prev) => prev + 1);
+  }, [activeSuggestion]);
 
   const handleSend = () => {
     const text = (userInput || "").trim();
@@ -89,26 +192,46 @@ export default function ChatPanel({
                 <AnimatePresence>
                   {activeThread.messages
                     .filter((m: any) => m.role !== "system")
-                    .map((m: any, idx: number) => (
-                      <motion.div
-                        key={m.id}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className={`max-w-[85%] rounded-2xl px-3 py-2 border text-sm shadow-sm hover:shadow-md transition-all ${
-                          m.role === "user"
-                            ? "ml-auto bg-indigo-600 text-white border-indigo-600"
-                            : "mr-auto bg-indigo-50 border-indigo-100 text-slate-800"
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap leading-relaxed">
-                          {m.role === "assistant" &&
-                          idx === activeThread.messages.length - 1
-                            ? animated
-                            : m.content}
+                    .map((m: any, idx: number) => {
+                      const isLastAssistant =
+                        m.role === "assistant" &&
+                        idx === activeThread.messages.filter((msg: any) => msg.role !== "system").length - 1;
+
+                      return (
+                        <div key={m.id}>
+                          <motion.div
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25 }}
+                            className={`max-w-[85%] rounded-2xl px-3 py-2 border text-sm shadow-sm hover:shadow-md transition-all ${
+                              m.role === "user"
+                                ? "ml-auto bg-indigo-600 text-white border-indigo-600"
+                                : "mr-auto bg-indigo-50 border-indigo-100 text-slate-800"
+                            }`}
+                          >
+                            <div className="whitespace-pre-wrap leading-relaxed">
+                              {isLastAssistant ? animated : m.content}
+                            </div>
+                          </motion.div>
+
+                          {/* Mood suggestion card — appears after the relevant assistant message */}
+                          {activeSuggestion &&
+                            activeSuggestion.afterMessageId === m.id &&
+                            m.role === "assistant" && (
+                              <div className="mt-2">
+                                <MoodSuggestionCard
+                                  emotion={activeSuggestion.emotion}
+                                  intensity={activeSuggestion.intensity}
+                                  sessionId={sessionId}
+                                  onAccept={handleSuggestionAccept}
+                                  onEdit={handleSuggestionEdit}
+                                  onDismiss={handleSuggestionDismiss}
+                                />
+                              </div>
+                            )}
                         </div>
-                      </motion.div>
-                    ))}
+                      );
+                    })}
                 </AnimatePresence>
 
                 {busy && (
