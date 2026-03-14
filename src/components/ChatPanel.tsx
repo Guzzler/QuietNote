@@ -1,21 +1,45 @@
-import { Loader2, Send, MessageSquare, Info } from "lucide-react";
+import { Loader2, Send, MessageSquare, Info, AlertCircle } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PromptSelector from "./PromptSelector";
 import MoodSuggestionCard from "./MoodSuggestionCard";
+import PromptSuggestionCard from "./PromptSuggestionCard";
 import { getTopEmotion } from "../utils/emotionExtractor";
-import type { MoodEmotion, MoodEntry } from "../types";
+import { getTopTheme } from "../utils/themeExtractor";
+import { getPromptByCategory } from "../data/journalPrompts";
+import type { MoodEmotion, MoodEntry, PromptCategory } from "../types";
 
-// Guardrail constants
+// Guardrail constants for mood suggestions
 const MIN_MESSAGE_LENGTH = 20;
-const SUGGESTION_COOLDOWN = 3; // Show at most 1 suggestion per N assistant messages
+const SUGGESTION_COOLDOWN = 3; // Show at most 1 mood suggestion per N assistant messages
 const MAX_DISMISSALS_PER_SESSION = 3;
 const EMOTION_CONFIDENCE_THRESHOLD = 0.4;
+
+// Guardrail constants for prompt suggestions
+const PROMPT_MIN_MESSAGE_LENGTH = 30; // Themes need more context than emotions
+const PROMPT_SUGGESTION_COOLDOWN = 5; // Less frequent than mood suggestions
+const MAX_PROMPT_DISMISSALS_PER_SESSION = 2;
+const THEME_CONFIDENCE_THRESHOLD = 0.4;
+
+// Emotions that indicate the user is in distress — suppress gratitude prompts
+const NEGATIVE_EMOTIONS: MoodEmotion[] = [
+  "sad",
+  "anxious",
+  "angry",
+  "frustrated",
+  "lonely",
+];
 
 interface MoodSuggestion {
   emotion: MoodEmotion;
   intensity: number;
   afterMessageId: string; // The assistant message ID this suggestion follows
+}
+
+interface PromptSuggestion {
+  prompt: string;
+  category: PromptCategory;
+  afterMessageId: string;
 }
 
 export default function ChatPanel({
@@ -43,12 +67,24 @@ export default function ChatPanel({
   const [messagesSinceSuggestion, setMessagesSinceSuggestion] = useState(0);
   const [acceptedMessageIds, setAcceptedMessageIds] = useState<Set<string>>(new Set());
 
-  // Reset suggestion state when session changes
+  // Prompt suggestion state (session-scoped)
+  const [activePromptSuggestion, setActivePromptSuggestion] = useState<PromptSuggestion | null>(null);
+  const [promptDismissCount, setPromptDismissCount] = useState(0);
+  const [messagesSincePromptSuggestion, setMessagesSincePromptSuggestion] = useState(0);
+  const [suggestedCategories, setSuggestedCategories] = useState<Set<PromptCategory>>(new Set());
+  const [promptAcceptedMessageIds, setPromptAcceptedMessageIds] = useState<Set<string>>(new Set());
+
+  // Reset all suggestion state when session changes
   useEffect(() => {
     setActiveSuggestion(null);
     setDismissCount(0);
     setMessagesSinceSuggestion(0);
     setAcceptedMessageIds(new Set());
+    setActivePromptSuggestion(null);
+    setPromptDismissCount(0);
+    setMessagesSincePromptSuggestion(0);
+    setSuggestedCategories(new Set());
+    setPromptAcceptedMessageIds(new Set());
   }, [current?.id]);
 
   // Typing animation for the latest assistant message
@@ -70,7 +106,7 @@ export default function ChatPanel({
     }
   }, [activeThread]);
 
-  // Check for emotions after assistant messages are finalized
+  // Check for emotions and themes after assistant messages are finalized
   useEffect(() => {
     if (!activeThread || busy) return;
 
@@ -82,16 +118,6 @@ export default function ChatPanel({
     // Only trigger after a finalized assistant message (no temp flag)
     if (lastMsg.role !== "assistant" || lastMsg.temp) return;
 
-    // Don't suggest if already accepted/dismissed for this message
-    if (acceptedMessageIds.has(lastMsg.id)) return;
-
-    // Guardrail: hit dismiss limit for this session
-    if (dismissCount >= MAX_DISMISSALS_PER_SESSION) return;
-
-    // Guardrail: cooldown — haven't had enough messages since last suggestion
-    setMessagesSinceSuggestion((prev) => prev + 1);
-    if (messagesSinceSuggestion < SUGGESTION_COOLDOWN && activeSuggestion !== null) return;
-
     // Guardrail: crisis suppression — never show during crisis
     if (showCrisisResources) return;
 
@@ -101,19 +127,62 @@ export default function ChatPanel({
     );
     if (!userMsg) return;
 
-    // Guardrail: minimum message length
-    if (userMsg.content.length < MIN_MESSAGE_LENGTH) return;
+    // --- Mood suggestion check ---
+    if (
+      !acceptedMessageIds.has(lastMsg.id) &&
+      dismissCount < MAX_DISMISSALS_PER_SESSION &&
+      messagesSinceSuggestion >= SUGGESTION_COOLDOWN &&
+      userMsg.content.length >= MIN_MESSAGE_LENGTH
+    ) {
+      const topEmotion = getTopEmotion(userMsg.content, EMOTION_CONFIDENCE_THRESHOLD);
+      if (topEmotion) {
+        setActiveSuggestion({
+          emotion: topEmotion.emotion,
+          intensity: topEmotion.intensity,
+          afterMessageId: lastMsg.id,
+        });
+        setMessagesSinceSuggestion(0);
+        // Mood suggestion takes priority — skip prompt suggestion
+        setMessagesSincePromptSuggestion((prev) => prev + 1);
+        return;
+      }
+    }
+    setMessagesSinceSuggestion((prev) => prev + 1);
 
-    // Run emotion extraction on the user message
-    const topEmotion = getTopEmotion(userMsg.content, EMOTION_CONFIDENCE_THRESHOLD);
-    if (!topEmotion) return;
+    // --- Prompt suggestion check (only if no mood suggestion is active) ---
+    if (
+      !activeSuggestion &&
+      !promptAcceptedMessageIds.has(lastMsg.id) &&
+      promptDismissCount < MAX_PROMPT_DISMISSALS_PER_SESSION &&
+      messagesSincePromptSuggestion >= PROMPT_SUGGESTION_COOLDOWN &&
+      userMsg.content.length >= PROMPT_MIN_MESSAGE_LENGTH
+    ) {
+      const topTheme = getTopTheme(userMsg.content, THEME_CONFIDENCE_THRESHOLD);
+      if (topTheme && !suggestedCategories.has(topTheme.theme)) {
+        // Don't suggest gratitude prompts when negative emotions are detected
+        const topEmotion = getTopEmotion(userMsg.content, 0.3);
+        if (
+          topTheme.theme === "gratitude" &&
+          topEmotion &&
+          NEGATIVE_EMOTIONS.includes(topEmotion.emotion)
+        ) {
+          setMessagesSincePromptSuggestion((prev) => prev + 1);
+          return;
+        }
 
-    setActiveSuggestion({
-      emotion: topEmotion.emotion,
-      intensity: topEmotion.intensity,
-      afterMessageId: lastMsg.id,
-    });
-    setMessagesSinceSuggestion(0);
+        const promptData = getPromptByCategory(topTheme.theme);
+        if (promptData) {
+          setActivePromptSuggestion({
+            prompt: promptData.text,
+            category: topTheme.theme,
+            afterMessageId: lastMsg.id,
+          });
+          setMessagesSincePromptSuggestion(0);
+          return;
+        }
+      }
+    }
+    setMessagesSincePromptSuggestion((prev) => prev + 1);
   }, [activeThread?.messages?.length, busy]);
 
   const handleSuggestionAccept = useCallback((mood: MoodEntry) => {
@@ -124,12 +193,12 @@ export default function ChatPanel({
     onSaveMood?.(mood);
   }, [activeSuggestion, onSaveMood]);
 
-  const handleSuggestionEdit = useCallback((_emotion: MoodEmotion, _intensity: number) => {
+  const handleSuggestionEdit = useCallback((emotion: MoodEmotion, intensity: number) => {
     if (activeSuggestion) {
       setAcceptedMessageIds((prev) => new Set(prev).add(activeSuggestion.afterMessageId));
     }
     setActiveSuggestion(null);
-    onOpenMoodTracker?.();
+    onOpenMoodTracker?.(emotion, intensity);
   }, [activeSuggestion, onOpenMoodTracker]);
 
   const handleSuggestionDismiss = useCallback(() => {
@@ -139,6 +208,24 @@ export default function ChatPanel({
     setActiveSuggestion(null);
     setDismissCount((prev) => prev + 1);
   }, [activeSuggestion]);
+
+  const handlePromptUse = useCallback((prompt: string) => {
+    if (activePromptSuggestion) {
+      setPromptAcceptedMessageIds((prev) => new Set(prev).add(activePromptSuggestion.afterMessageId));
+      setSuggestedCategories((prev) => new Set(prev).add(activePromptSuggestion.category));
+    }
+    setActivePromptSuggestion(null);
+    setUserInput(prompt);
+  }, [activePromptSuggestion, setUserInput]);
+
+  const handlePromptDismiss = useCallback(() => {
+    if (activePromptSuggestion) {
+      setPromptAcceptedMessageIds((prev) => new Set(prev).add(activePromptSuggestion.afterMessageId));
+      setSuggestedCategories((prev) => new Set(prev).add(activePromptSuggestion.category));
+    }
+    setActivePromptSuggestion(null);
+    setPromptDismissCount((prev) => prev + 1);
+  }, [activePromptSuggestion]);
 
   const handleSend = () => {
     const text = (userInput || "").trim();
@@ -183,6 +270,25 @@ export default function ChatPanel({
           ) : (
             <>
               <div className="flex-1 overflow-auto space-y-3 pb-2">
+                {/* AI Limitations Disclaimer — always shown at top of conversation */}
+                <div className="flex items-start gap-2 text-xs text-stone-400 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 mx-1">
+                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    Quietnote is an AI journaling companion, not a therapist or mental health professional.
+                    Your conversations stay on this device.{" "}
+                    <button
+                      onClick={() => {
+                        // Trigger showing crisis resources for informational access
+                        const event = new CustomEvent("open-crisis-resources");
+                        window.dispatchEvent(event);
+                      }}
+                      className="underline text-stone-500 hover:text-stone-700 transition-colors"
+                    >
+                      Crisis resources
+                    </button>
+                  </p>
+                </div>
+
                 {contextTrimmed && (
                   <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mx-1">
                     <Info className="h-3 w-3 flex-shrink-0" />
@@ -226,6 +332,21 @@ export default function ChatPanel({
                                   onAccept={handleSuggestionAccept}
                                   onEdit={handleSuggestionEdit}
                                   onDismiss={handleSuggestionDismiss}
+                                />
+                              </div>
+                            )}
+
+                          {/* Prompt suggestion card — appears after the relevant assistant message */}
+                          {activePromptSuggestion &&
+                            activePromptSuggestion.afterMessageId === m.id &&
+                            m.role === "assistant" &&
+                            !activeSuggestion && (
+                              <div className="mt-2">
+                                <PromptSuggestionCard
+                                  prompt={activePromptSuggestion.prompt}
+                                  category={activePromptSuggestion.category}
+                                  onUsePrompt={handlePromptUse}
+                                  onDismiss={handlePromptDismiss}
                                 />
                               </div>
                             )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Smile,
@@ -20,6 +20,8 @@ interface MoodTrackerProps {
   onClose: () => void;
   onSaveMood: (mood: MoodEntry) => void;
   sessionId?: string;
+  initialEmotion?: MoodEmotion;
+  initialIntensity?: number;
 }
 
 const EMOTIONS: { value: MoodEmotion; label: string; icon: React.ReactNode; color: string }[] = [
@@ -46,12 +48,20 @@ const CONTEXTS: { value: MoodContext; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId }: MoodTrackerProps) {
+export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, initialEmotion, initialIntensity }: MoodTrackerProps) {
   const [selectedEmotion, setSelectedEmotion] = useState<MoodEmotion | null>(null);
   const [intensity, setIntensity] = useState(5);
   const [selectedContexts, setSelectedContexts] = useState<MoodContext[]>([]);
   const [note, setNote] = useState("");
   const [showContexts, setShowContexts] = useState(false);
+
+  // Apply pre-fill values when modal opens with initial values
+  useEffect(() => {
+    if (isOpen && initialEmotion) {
+      setSelectedEmotion(initialEmotion);
+      setIntensity(initialIntensity ?? 5);
+    }
+  }, [isOpen, initialEmotion, initialIntensity]);
 
   const handleSave = () => {
     if (!selectedEmotion) return;
