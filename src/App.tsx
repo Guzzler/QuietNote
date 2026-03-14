@@ -10,7 +10,7 @@ import { useMLCEngine } from "./hooks/useMLCEngine";
 import { putSession, listSessions, getSession, putMood } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
-import type { Session, ChatMessage, ModelRef, MoodEntry } from "./types";
+import type { Session, ChatMessage, ModelRef, MoodEntry, MoodEmotion } from "./types";
 
 // System instruction for the model
 const SYSTEM_INSTRUCTION = `You are Quietnote, a thoughtful journaling companion. Your role is to help users explore their thoughts and feelings through gentle reflection.
@@ -103,6 +103,16 @@ export default function App() {
   const [showMoodTracker, setShowMoodTracker] = useState(false);
   const [showPrivacyDashboard, setShowPrivacyDashboard] = useState(false);
   const [contextTrimmed, setContextTrimmed] = useState(false);
+
+  // MoodTracker pre-fill state (for opening from suggestion card "Edit" button)
+  const [moodPreFill, setMoodPreFill] = useState<{ emotion: MoodEmotion; intensity: number } | null>(null);
+
+  // Listen for crisis resources open event from ChatPanel disclaimer link
+  useEffect(() => {
+    const handleOpenCrisis = () => setShowCrisisResources(true);
+    window.addEventListener("open-crisis-resources", handleOpenCrisis);
+    return () => window.removeEventListener("open-crisis-resources", handleOpenCrisis);
+  }, []);
 
   // Handle saving mood
   const handleSaveMood = async (mood: MoodEntry) => {
@@ -437,9 +447,14 @@ export default function App() {
       />
       <MoodTracker
         isOpen={showMoodTracker}
-        onClose={() => setShowMoodTracker(false)}
+        onClose={() => {
+          setShowMoodTracker(false);
+          setMoodPreFill(null);
+        }}
         onSaveMood={handleSaveMood}
         sessionId={currentId ?? undefined}
+        initialEmotion={moodPreFill?.emotion}
+        initialIntensity={moodPreFill?.intensity}
       />
       <PrivacyDashboard
         isOpen={showPrivacyDashboard}
@@ -497,7 +512,12 @@ export default function App() {
             contextTrimmed={contextTrimmed}
             showCrisisResources={showCrisisResources}
             onSaveMood={handleSaveMood}
-            onOpenMoodTracker={() => setShowMoodTracker(true)}
+            onOpenMoodTracker={(emotion?: MoodEmotion, intensity?: number) => {
+              if (emotion) {
+                setMoodPreFill({ emotion, intensity: intensity ?? 5 });
+              }
+              setShowMoodTracker(true);
+            }}
             sessionId={currentId ?? undefined}
           />
         }
