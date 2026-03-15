@@ -3,10 +3,13 @@
  * Detects crisis-related keywords in user messages and provides appropriate resources
  */
 
+export type CrisisMatchType = "keyword" | "indirect" | "contextual";
+
 export interface CrisisDetectionResult {
   isCrisis: boolean;
   severity: "none" | "low" | "medium" | "high" | "critical";
   detectedKeywords: string[];
+  matchType: CrisisMatchType;
   recommendedAction: "continue" | "show_resources" | "immediate_help";
 }
 
@@ -58,14 +61,90 @@ const LOW_SEVERITY_KEYWORDS = [
   "breaking point",
 ];
 
+// Indirect expression categories — phrase-level matching for expressions
+// that don't use explicit crisis keywords but indicate serious distress.
+// These are well-documented in clinical suicide risk assessment literature.
+
+const INDIRECT_HIGH_PHRASES = [
+  "don't want to be here anymore",
+  "can't do this anymore",
+  "there's no way out",
+  "trapped with no escape",
+  "everyone would be better off without me",
+  "i'm a burden",
+  "i am a burden",
+  "what's the point of going on",
+  "whats the point of going on",
+  "i won't be around much longer",
+  "i wont be around much longer",
+  "no point in living",
+  "can't keep going",
+  "don't want to exist",
+];
+
+const PASSIVE_DEATH_WISH_PHRASES = [
+  "wish i could disappear",
+  "wish i didn't exist",
+  "wish i didnt exist",
+  "wish i could just sleep forever",
+  "wouldn't mind if i didn't wake up",
+  "wouldnt mind if i didnt wake up",
+  "don't care if i live or die",
+  "dont care if i live or die",
+  "wish i was never born",
+  "rather not be alive",
+];
+
+const FAREWELL_PHRASES = [
+  "saying goodbye to everyone",
+  "want you to know i love you",
+  "giving away my stuff",
+  "giving away my things",
+  "writing letters to everyone",
+  "putting my affairs in order",
+  "this is my last",
+  "won't see me again",
+  "wont see me again",
+];
+
+const ESCALATING_HOPELESSNESS_PHRASES = [
+  "nothing ever gets better",
+  "i'll never be happy",
+  "ill never be happy",
+  "there's no point",
+  "theres no point",
+  "why bother trying",
+  "it's never going to change",
+  "its never going to change",
+  "i'm done fighting",
+  "im done fighting",
+  "nothing will ever change",
+  "no reason to keep trying",
+  "given up on everything",
+];
+
 /**
  * Analyze text for crisis-related content
  */
+/**
+ * Severity priority for comparison
+ */
+const SEVERITY_RANK: Record<CrisisDetectionResult["severity"], number> = {
+  none: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+  critical: 4,
+};
+
 export function detectCrisis(text: string): CrisisDetectionResult {
   const lowerText = text.toLowerCase();
   const detectedKeywords: string[] = [];
   let highestSeverity: CrisisDetectionResult["severity"] = "none";
   let recommendedAction: CrisisDetectionResult["recommendedAction"] = "continue";
+  let matchType: CrisisMatchType = "keyword";
+
+  // --- Explicit keyword checks (original behavior) ---
 
   // Check critical keywords
   for (const keyword of CRITICAL_KEYWORDS) {
@@ -90,7 +169,7 @@ export function detectCrisis(text: string): CrisisDetectionResult {
   }
 
   // Check medium severity keywords
-  if (highestSeverity === "none") {
+  if (SEVERITY_RANK[highestSeverity] < SEVERITY_RANK["medium"]) {
     for (const keyword of MEDIUM_SEVERITY_KEYWORDS) {
       if (lowerText.includes(keyword.toLowerCase())) {
         detectedKeywords.push(keyword);
@@ -111,10 +190,71 @@ export function detectCrisis(text: string): CrisisDetectionResult {
     }
   }
 
+  // --- Indirect expression checks ---
+  // Indirect expressions trigger show_resources (not immediate_help) on their own.
+  // If combined with explicit keywords that already set immediate_help, that takes precedence.
+
+  const hadExplicitMatch = detectedKeywords.length > 0;
+
+  // Indirect high phrases → severity "high", but only show_resources (not immediate_help)
+  for (const phrase of INDIRECT_HIGH_PHRASES) {
+    if (lowerText.includes(phrase)) {
+      detectedKeywords.push(phrase);
+      if (SEVERITY_RANK[highestSeverity] < SEVERITY_RANK["high"]) {
+        highestSeverity = "high";
+        recommendedAction = "show_resources";
+      }
+      if (!hadExplicitMatch) matchType = "indirect";
+    }
+  }
+
+  // Passive death wishes → severity "high", show_resources
+  for (const phrase of PASSIVE_DEATH_WISH_PHRASES) {
+    if (lowerText.includes(phrase)) {
+      detectedKeywords.push(phrase);
+      if (SEVERITY_RANK[highestSeverity] < SEVERITY_RANK["high"]) {
+        highestSeverity = "high";
+        recommendedAction = "show_resources";
+      }
+      if (!hadExplicitMatch) matchType = "indirect";
+    }
+  }
+
+  // Farewell language → severity "medium", show_resources
+  for (const phrase of FAREWELL_PHRASES) {
+    if (lowerText.includes(phrase)) {
+      detectedKeywords.push(phrase);
+      if (SEVERITY_RANK[highestSeverity] < SEVERITY_RANK["medium"]) {
+        highestSeverity = "medium";
+        recommendedAction = "show_resources";
+      }
+      if (!hadExplicitMatch) matchType = "indirect";
+    }
+  }
+
+  // Escalating hopelessness → severity "medium", show_resources
+  for (const phrase of ESCALATING_HOPELESSNESS_PHRASES) {
+    if (lowerText.includes(phrase)) {
+      detectedKeywords.push(phrase);
+      if (SEVERITY_RANK[highestSeverity] < SEVERITY_RANK["medium"]) {
+        highestSeverity = "medium";
+        recommendedAction = "show_resources";
+      }
+      if (!hadExplicitMatch) matchType = "indirect";
+    }
+  }
+
+  // If we only had indirect matches but also have explicit keywords,
+  // the matchType stays "keyword" (explicit takes precedence)
+  if (!hadExplicitMatch && detectedKeywords.length === 0) {
+    matchType = "keyword"; // default, no matches
+  }
+
   return {
     isCrisis: highestSeverity !== "none",
     severity: highestSeverity,
     detectedKeywords,
+    matchType,
     recommendedAction,
   };
 }
