@@ -23,7 +23,19 @@
       "Bash(for f in 01_Prompt_Engineering_Mastery.ipynb 02_Customer_Discovery_Framework.ipynb 03_Scenario_Playbook.ipynb 04_Live_Demo_Toolkit.ipynb 05_Mock_Interview_Scenarios.ipynb)",
       "Bash(do sed -i 's/claude-sonnet-4-20250514/claude-haiku-4-5-20251001/g' \"$f\")",
       "Bash(done)",
-      "mcp__scheduled-tasks__list_scheduled_tasks"
+      "mcp__scheduled-tasks__list_scheduled_tasks",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_click",
+      "mcp__Claude_Preview__preview_stop",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_network",
+      "mcp__Claude_Preview__preview_logs",
+      "mcp__Claude_Preview__preview_eval",
+      "mcp__Claude_Preview__preview_fill",
+      "mcp__Claude_Preview__preview_inspect",
+      "mcp__Claude_Preview__preview_resize"
     ]
   }
 }
