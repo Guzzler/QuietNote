@@ -6,7 +6,7 @@ import SessionsPanel from "./components/SessionsPanel";
 import CrisisResources from "./components/CrisisResources";
 import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
-import { useMLCEngine } from "./hooks/useMLCEngine";
+import { useMLCEngine, MODEL_REF } from "./hooks/useMLCEngine";
 import { putSession, listSessions, getSession, putMood } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
@@ -81,12 +81,7 @@ export default function App() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [current, setCurrent] = useState<Session | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
-  const [model] = useState<ModelRef>({
-    modelUrl:
-      "https://huggingface.co/Sharangp/quietnote-tinyllama-1.1b-q4f16_1-MLC-test",
-    modelId: "Sharangp/quietnote-tinyllama-1.1b-q4f16_1-MLC-test",
-    localId: "quietnote-default-test",
-  });
+  const [model] = useState<ModelRef>(MODEL_REF);
 
   const [temperature] = useState(0.5); // a bit crisper for instruction following
   const [maxTokens] = useState(512);

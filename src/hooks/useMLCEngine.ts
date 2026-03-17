@@ -3,9 +3,16 @@ import { CreateMLCEngine, type InitProgressReport } from "@mlc-ai/web-llm";
 
 import type { ModelRef } from "../types";
 
-// Fine-tuned Quietnote Gemma 2B model
+// Fine-tuned Quietnote Gemma 2B model — single source of truth for model identity
 const CUSTOM_MODEL_ID = "quietnote-gemma-2b-q4f32_1-MLC";
 const CUSTOM_MODEL_URL = "https://huggingface.co/Sharangp/quietnote-gemma-2b-q4f32_1-MLC/resolve/main/";
+
+/** Model reference for session metadata — use this instead of hardcoding */
+export const MODEL_REF: ModelRef = {
+  modelId: CUSTOM_MODEL_ID,
+  modelUrl: "https://huggingface.co/Sharangp/quietnote-gemma-2b-q4f32_1-MLC",
+  localId: CUSTOM_MODEL_ID,
+};
 
 export function useMLCEngine() {
   const [engine, setEngine] = useState<any | null>(null);

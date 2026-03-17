@@ -14,6 +14,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 import type { MoodEmotion, MoodContext, MoodEntry } from "../types";
+import { listMoods } from "../storage";
+import MoodInsightsCard from "./MoodInsightsCard";
 
 interface MoodTrackerProps {
   isOpen: boolean;
@@ -54,6 +56,14 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
   const [selectedContexts, setSelectedContexts] = useState<MoodContext[]>([]);
   const [note, setNote] = useState("");
   const [showContexts, setShowContexts] = useState(false);
+  const [allMoods, setAllMoods] = useState<MoodEntry[]>([]);
+
+  // Load moods for insights when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      listMoods().then(setAllMoods);
+    }
+  }, [isOpen]);
 
   // Apply pre-fill values when modal opens with initial values
   useEffect(() => {
@@ -275,6 +285,9 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                     />
                   </motion.div>
                 )}
+
+                {/* Mood Insights */}
+                <MoodInsightsCard moods={allMoods} />
               </div>
 
               {/* Footer */}
