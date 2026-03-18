@@ -6,10 +6,12 @@ import SessionsPanel from "./components/SessionsPanel";
 import CrisisResources from "./components/CrisisResources";
 import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
+import WebGPUFallback from "./components/WebGPUFallback";
 import { useMLCEngine, MODEL_REF } from "./hooks/useMLCEngine";
 import { putSession, listSessions, getSession, putMood } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
+import { sanitizeResponse } from "./utils/responseGuardrails";
 import type { Session, ChatMessage, ModelRef, MoodEntry, MoodEmotion } from "./types";
 
 // System instruction for the model
@@ -76,7 +78,7 @@ function truncateToLastSentence(text: string): string {
 }
 
 export default function App() {
-  const { loadModel, loading, logs, progress } = useMLCEngine();
+  const { loadModel, loading, logs, progress, webgpuUnsupported } = useMLCEngine();
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [current, setCurrent] = useState<Session | null>(null);
@@ -228,6 +230,13 @@ export default function App() {
 
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamp
       const finalContent = truncateToLastSentence(acc);
+
+      // Run response guardrails (monitoring only — logs warnings, does not block)
+      const guardrailResult = sanitizeResponse(finalContent);
+      if (guardrailResult.warnings.length > 0) {
+        console.warn("[Guardrails]", guardrailResult.warnings);
+      }
+
       setCurrent((prev) => {
         if (!prev) return prev;
         return {
@@ -363,6 +372,13 @@ export default function App() {
 
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamps
       const finalContent = truncateToLastSentence(acc);
+
+      // Run response guardrails (monitoring only — logs warnings, does not block)
+      const guardrailResult = sanitizeResponse(finalContent);
+      if (guardrailResult.warnings.length > 0) {
+        console.warn("[Guardrails]", guardrailResult.warnings);
+      }
+
       setCurrent((prev) => {
         if (!prev) return prev;
         const updated = {
@@ -404,6 +420,11 @@ export default function App() {
     () => current?.threads.find((t) => t.id === selectedThread),
     [current, selectedThread]
   );
+
+  // Show fallback when WebGPU is not available
+  if (webgpuUnsupported) {
+    return <WebGPUFallback reason={webgpuUnsupported} />;
+  }
 
   if (loading) {
     return (

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CreateMLCEngine, type InitProgressReport } from "@mlc-ai/web-llm";
 
 import type { ModelRef } from "../types";
+import { checkWebGPUSupport } from "../utils/webgpuCheck";
 
 // Fine-tuned Quietnote Gemma 2B model — single source of truth for model identity
 const CUSTOM_MODEL_ID = "quietnote-gemma-2b-q4f32_1-MLC";
@@ -19,10 +20,18 @@ export function useMLCEngine() {
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
+  const [webgpuUnsupported, setWebgpuUnsupported] = useState<string | null>(null);
 
   const loadModel = async (_customModel?: ModelRef) => {
     // If we already created the engine once, we skip (you could add a forceReload flag if needed)
     if (engine) return engine;
+
+    // Check WebGPU support before attempting model load
+    const gpuStatus = await checkWebGPUSupport();
+    if (!gpuStatus.supported) {
+      setWebgpuUnsupported(gpuStatus.reason ?? "WebGPU is not supported in this browser.");
+      return null;
+    }
 
     setLoading(true);
     setLogs([]);
@@ -53,5 +62,5 @@ export function useMLCEngine() {
     }
   };
 
-  return { engine, loadModel, loading, logs, progress };
+  return { engine, loadModel, loading, logs, progress, webgpuUnsupported };
 }
