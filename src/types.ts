@@ -149,6 +149,67 @@ export interface UserSettings {
   customInstruction?: string;
 }
 
+// Eval scoring types
+export type EvalDimension =
+  | "persona"
+  | "medical_refusal"
+  | "jailbreak"
+  | "format"
+  | "empathy"
+  | "boundary";
+
+export interface DimensionScore {
+  dimension: EvalDimension;
+  score: number; // 0-5
+  weight: number;
+  weightedScore: number;
+  details: string[];
+}
+
+export interface ScoredEvalResult {
+  caseId: string;
+  dimension: EvalDimension;
+  score: number; // 0-5
+  weight: number;
+  weightedScore: number;
+  details: string[];
+  response: string;
+}
+
+export interface ScoredEvalReport {
+  modelId: string;
+  timestamp: number;
+  results: ScoredEvalResult[];
+  dimensionAverages: Record<EvalDimension, number>;
+  compositeScore: number;
+  maxPossibleScore: number;
+  normalizedScore: number; // 0-1
+  summary: {
+    totalCases: number;
+    criticalFailures: number; // scores of 0
+    belowAcceptable: number; // scores below 3
+    acceptable: number; // scores 3-4
+    excellent: number; // scores 5
+  };
+}
+
+export interface BaselineEntry {
+  promptId: string;
+  runs: string[];
+}
+
+export interface BaselineCollection {
+  model: string;
+  date: string;
+  settings: {
+    temperature: number;
+    top_p: number;
+    max_tokens: number;
+    repetition_penalty: number;
+  };
+  responses: BaselineEntry[];
+}
+
 // Analytics & insights
 export interface MoodPattern {
   type: "correlation" | "trend" | "trigger";
