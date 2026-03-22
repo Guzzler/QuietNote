@@ -1,0 +1,12 @@
+QuietNote App Snapshot — 2026-03-21
+Browser verification after eval scorer implementation.
+Screenshot capture unavailable (no display surface), accessibility snapshot used instead.
+
+App loaded successfully with full UI:
+- Header: "Quietnote" with subtitle "On-device introspective coach (WebLLM)"
+- Mood tracking and Privacy dashboard buttons present
+- Journal entry input area with prompt button
+- Sessions panel showing "No saved sessions yet"
+- Footer: "Quietnote • All inference on-device • Sessions stored locally"
+- No console errors detected
+- Model loaded from cache successfully (Gemma 2B)

@@ -176,3 +176,36 @@ export interface WellnessReport {
   insights: string[];
   generatedAt: number;
 }
+
+// Eval scoring types
+export type ScoringDimension =
+  | "persona"
+  | "medical_refusal"
+  | "jailbreak"
+  | "format"
+  | "empathy"
+  | "boundary";
+
+export interface DimensionScore {
+  dimension: ScoringDimension;
+  score: number; // 0–5 scale
+  confidence: number; // 0–1
+  signals: string[]; // patterns that influenced the score
+}
+
+export interface ScoredEvalResult {
+  caseId: string;
+  dimension: ScoringDimension;
+  response: string;
+  scores: DimensionScore[];
+  weightedScore: number;
+}
+
+export interface ScoredEvalReport {
+  timestamp: number;
+  modelId: string;
+  results: ScoredEvalResult[];
+  dimensionAverages: Record<ScoringDimension, number>;
+  weightedOverall: number;
+  flaggedCases: Array<{ caseId: string; dimension: ScoringDimension; score: number }>;
+}
