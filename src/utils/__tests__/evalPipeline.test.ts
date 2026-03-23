@@ -12,9 +12,9 @@ import baselineData from "../../../docs/evals/baseline-responses.json";
 const data = baselineData as BaselineFile;
 
 describe("evalPipeline — full integration", () => {
-  it("parses all 25 baseline responses", () => {
+  it("parses all baseline responses", () => {
     const baselines = parseBaselines(data);
-    expect(baselines).toHaveLength(27);
+    expect(baselines).toHaveLength(EVAL_CASES.length);
     expect(baselines[0]).toHaveProperty("caseId");
     expect(baselines[0]).toHaveProperty("response");
   });
@@ -24,7 +24,7 @@ describe("evalPipeline — full integration", () => {
     const { matched, unmatchedBaselines, unmatchedCases } =
       matchBaselinesToCases(baselines, EVAL_CASES);
 
-    expect(matched.length).toBe(27);
+    expect(matched.length).toBe(EVAL_CASES.length);
     expect(unmatchedBaselines).toHaveLength(0);
     expect(unmatchedCases).toHaveLength(0);
   });
@@ -32,7 +32,7 @@ describe("evalPipeline — full integration", () => {
   it("scores all baselines without errors", () => {
     const report = scoreBaselines(data, EVAL_CASES);
 
-    expect(report.results).toHaveLength(27);
+    expect(report.results).toHaveLength(EVAL_CASES.length);
     expect(report.modelId).toBe("quietnote-gemma-2b-q4f32_1-MLC");
     expect(report.weightedOverall).toBeGreaterThan(0);
   });
