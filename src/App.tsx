@@ -21,12 +21,17 @@ Guidelines:
 - Acknowledge what the user shared with empathy (1 sentence)
 - Ask 1-2 open-ended questions to help them reflect deeper
 - Never give advice, diagnose, or make assumptions about their situation
+- NEVER recommend medications, supplements, dosages, or treatments — including natural ones like melatonin or herbal remedies
+- If asked about ANY health condition, treatment, or diagnosis, redirect to journaling about how it makes them feel and suggest consulting a healthcare professional
 - Keep responses concise (3-4 sentences total)
 - Use a warm, calm tone
 
 Example:
 User: "I had a stressful day at work"
-Assistant: "It sounds like work took a lot out of you today. What moment felt the most overwhelming? Is there anything that helped you get through it?"`;
+Assistant: "It sounds like work took a lot out of you today. What moment felt the most overwhelming? Is there anything that helped you get through it?"
+
+User: "Should I try melatonin for my insomnia?"
+Assistant: "Sleep difficulties can be really draining. What's been on your mind when you're lying awake? If sleep is an ongoing struggle, a doctor could help explore what's going on."`;
 
 // Build messages array for the chat API with context window management.
 // Uses token estimation to trim older messages when the conversation
@@ -231,11 +236,15 @@ export default function App() {
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamp
       const finalContent = truncateToLastSentence(acc);
 
-      // Run response guardrails (monitoring only — logs warnings, does not block)
+      // Run response guardrails — blocks medical/diagnostic responses with safe fallback
       const guardrailResult = sanitizeResponse(finalContent);
       if (guardrailResult.warnings.length > 0) {
         console.warn("[Guardrails]", guardrailResult.warnings);
       }
+      if (guardrailResult.isBlocked) {
+        console.warn("[Guardrails] Response BLOCKED — replaced with safe fallback");
+      }
+      const safeContent = guardrailResult.text;
 
       setCurrent((prev) => {
         if (!prev) return prev;
@@ -248,7 +257,7 @@ export default function App() {
                   ...t,
                   updatedAt: Date.now(),
                   messages: t.messages.map((m) =>
-                    m.id === assistantMsgId ? { ...m, content: finalContent, temp: undefined } : m
+                    m.id === assistantMsgId ? { ...m, content: safeContent, temp: undefined } : m
                   ),
                 }
               : t
@@ -373,11 +382,15 @@ export default function App() {
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamps
       const finalContent = truncateToLastSentence(acc);
 
-      // Run response guardrails (monitoring only — logs warnings, does not block)
+      // Run response guardrails — blocks medical/diagnostic responses with safe fallback
       const guardrailResult = sanitizeResponse(finalContent);
       if (guardrailResult.warnings.length > 0) {
         console.warn("[Guardrails]", guardrailResult.warnings);
       }
+      if (guardrailResult.isBlocked) {
+        console.warn("[Guardrails] Response BLOCKED — replaced with safe fallback");
+      }
+      const safeContent = guardrailResult.text;
 
       setCurrent((prev) => {
         if (!prev) return prev;
@@ -390,7 +403,7 @@ export default function App() {
                   ...t,
                   updatedAt: Date.now(),
                   messages: t.messages.map((m) =>
-                    m.id === assistantMsgId ? { ...m, content: finalContent, temp: undefined } : m
+                    m.id === assistantMsgId ? { ...m, content: safeContent, temp: undefined } : m
                   ),
                 }
               : t

@@ -1,9 +1,20 @@
 /**
  * Response guardrails for model output safety.
  *
- * Detects medical advice patterns, diagnostic language, and response length
- * violations. V1 is monitoring-only — logs warnings without blocking responses.
+ * Detects medical advice patterns, diagnostic language, dismissive language,
+ * and response length violations. V2 adds blocking mode — responses matching
+ * BLOCK-severity patterns are replaced with a safe fallback before reaching
+ * the user.
  */
+
+export type GuardrailSeverity = "block" | "warn" | "monitor";
+
+/**
+ * Safe fallback response used when a BLOCK-severity pattern is matched.
+ * Empathetic, redirects to professional help, and invites continued journaling.
+ */
+export const BLOCKED_RESPONSE_FALLBACK =
+  "I appreciate you sharing that with me. That sounds like something worth exploring with a healthcare professional who can give you personalized guidance. In the meantime, how are you feeling about it?";
 
 /** Patterns that indicate the model is giving medical/medication advice */
 const MEDICAL_ADVICE_PATTERNS = [
@@ -28,6 +39,14 @@ const MEDICAL_ADVICE_PATTERNS = [
   /\bativan\b/i,
   /\bssri\b/i,
   /\bbenzodiazepine\b/i,
+  /\bmelatonin\b/i,
+  /\bst\.?\s*john'?s?\s*wort\b/i,
+  /\bcbd\s*oil\b/i,
+  /\bvalerian\b/i,
+  /\b5-?htp\b/i,
+  /\bsupplement(?:s)?\s+(?:for|that|which|to|like|such)\b/i,
+  /\bherbal remed(?:y|ies)\b/i,
+  /\bnatural remed(?:y|ies)\b/i,
 ];
 
 /** Patterns that indicate the model is diagnosing a condition */
@@ -67,6 +86,8 @@ export interface GuardrailResult {
   text: string;
   warnings: GuardrailWarning[];
   hasCriticalWarning: boolean;
+  /** True when a BLOCK-severity pattern matched and the response was replaced */
+  isBlocked: boolean;
 }
 
 function findPatternMatches(
@@ -115,10 +136,19 @@ export function isResponseTooLong(
   return wordCount > maxWords;
 }
 
+/** Severity assignment per warning type */
+const SEVERITY_MAP: Record<GuardrailWarning["type"], GuardrailSeverity> = {
+  medical_advice: "block",
+  diagnostic_language: "block",
+  dismissive: "warn",
+  too_long: "monitor",
+};
+
 /**
  * Run all guardrails on a response.
- * Returns the original text with any warnings.
- * V1: monitoring only — does not modify or block the response.
+ * V2: BLOCK-severity matches replace the response text with a safe fallback.
+ * WARN-severity matches are flagged but the original text is preserved.
+ * MONITOR-severity matches are logged only.
  */
 export function sanitizeResponse(
   response: string,
@@ -169,9 +199,15 @@ export function sanitizeResponse(
     (w) => w.type === "medical_advice" || w.type === "diagnostic_language"
   );
 
+  // Determine if any warning triggers blocking
+  const isBlocked = warnings.some(
+    (w) => SEVERITY_MAP[w.type] === "block"
+  );
+
   return {
-    text: response,
+    text: isBlocked ? BLOCKED_RESPONSE_FALLBACK : response,
     warnings,
     hasCriticalWarning,
+    isBlocked,
   };
 }
