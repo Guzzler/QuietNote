@@ -90,8 +90,8 @@ export default function App() {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [model] = useState<ModelRef>(MODEL_REF);
 
-  const [temperature] = useState(0.5); // a bit crisper for instruction following
-  const [maxTokens] = useState(512);
+  const [temperature] = useState(0.4); // tight for instruction following
+  const [maxTokens] = useState(150); // ~112 words ≈ 4-5 sentences; hard-caps generation length
   const [busy, setBusy] = useState(false);
   const [topic, setTopic] = useState(""); // used only for first message if you want
   const [userInput, setUserInput] = useState("");
@@ -199,10 +199,16 @@ export default function App() {
       const { messages, trimmed } = buildMessages(firstMessage);
       setContextTrimmed(trimmed);
 
+      // Reset WebLLM's internal KV cache to prevent stale state accumulation.
+      // We provide the full conversation in the messages array, so the engine
+      // must process it from scratch each turn to avoid repetition/corruption.
+      await e.resetChat();
+
       const stream = await e.chat.completions.create({
         messages,
         temperature,
         max_tokens: maxTokens,
+        repetition_penalty: 1.3,
         stream: true,
       });
 
@@ -239,7 +245,7 @@ export default function App() {
       // Run response guardrails — blocks medical/diagnostic responses with safe fallback
       const guardrailResult = sanitizeResponse(finalContent);
       if (guardrailResult.warnings.length > 0) {
-        console.warn("[Guardrails]", guardrailResult.warnings);
+        console.warn("[Guardrails] Warnings:", guardrailResult.warnings.map(w => typeof w === 'object' ? JSON.stringify(w) : w).join(', '));
       }
       if (guardrailResult.isBlocked) {
         console.warn("[Guardrails] Response BLOCKED — replaced with safe fallback");
@@ -345,10 +351,15 @@ export default function App() {
       const { messages, trimmed } = buildMessages(text, conversationHistory);
       setContextTrimmed(trimmed);
 
+      // Reset WebLLM's internal KV cache before each turn to prevent
+      // stale state causing repetition or degeneration.
+      await e.resetChat();
+
       const stream = await e.chat.completions.create({
         messages,
         temperature,
         max_tokens: maxTokens,
+        repetition_penalty: 1.3,
         stream: true,
       });
 
@@ -385,7 +396,7 @@ export default function App() {
       // Run response guardrails — blocks medical/diagnostic responses with safe fallback
       const guardrailResult = sanitizeResponse(finalContent);
       if (guardrailResult.warnings.length > 0) {
-        console.warn("[Guardrails]", guardrailResult.warnings);
+        console.warn("[Guardrails] Warnings:", guardrailResult.warnings.map(w => typeof w === 'object' ? JSON.stringify(w) : w).join(', '));
       }
       if (guardrailResult.isBlocked) {
         console.warn("[Guardrails] Response BLOCKED — replaced with safe fallback");
