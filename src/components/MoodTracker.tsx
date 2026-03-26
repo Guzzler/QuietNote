@@ -20,7 +20,7 @@ import MoodInsightsCard from "./MoodInsightsCard";
 interface MoodTrackerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveMood: (mood: MoodEntry) => void;
+  onSaveMood: (mood: MoodEntry) => void | Promise<void>;
   sessionId?: string;
   initialEmotion?: MoodEmotion;
   initialIntensity?: number;
@@ -73,7 +73,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
     }
   }, [isOpen, initialEmotion, initialIntensity]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedEmotion) return;
 
     const moodEntry: MoodEntry = {
@@ -86,7 +86,10 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
       ts: Date.now(),
     };
 
-    onSaveMood(moodEntry);
+    await onSaveMood(moodEntry);
+    // Refresh mood list so count updates immediately
+    const updated = await listMoods();
+    setAllMoods(updated);
     handleReset();
     onClose();
   };
@@ -123,27 +126,22 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
     return "bg-red-500";
   };
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
-          />
+  if (!isOpen) return null;
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          >
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[90vh] overflow-hidden">
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+      />
+
+      {/* Modal wrapper — click outside the white box to close */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[90vh] overflow-hidden">
               {/* Header */}
               <div className="p-5 border-b border-slate-200 flex items-center justify-between">
                 <div>
@@ -308,9 +306,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                 </button>
               </div>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
+          </div>
+      </>
+    );
 }

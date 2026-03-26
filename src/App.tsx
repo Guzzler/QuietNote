@@ -90,8 +90,8 @@ export default function App() {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [model] = useState<ModelRef>(MODEL_REF);
 
-  const [temperature] = useState(0.4); // tight for instruction following
-  const [maxTokens] = useState(150); // ~112 words ≈ 4-5 sentences; hard-caps generation length
+  const [temperature] = useState(0.6); // slightly higher for natural-sounding responses from stock model
+  const [maxTokens] = useState(200); // ~150 words ≈ 4-6 sentences; allows room for reflective questions
   const [busy, setBusy] = useState(false);
   const [topic, setTopic] = useState(""); // used only for first message if you want
   const [userInput, setUserInput] = useState("");
