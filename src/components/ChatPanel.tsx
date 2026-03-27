@@ -1,4 +1,4 @@
-import { Loader2, Send, MessageSquare, Info, AlertCircle } from "lucide-react";
+import { Loader2, Send, MessageSquare, Info, AlertCircle, RefreshCw } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PromptSelector from "./PromptSelector";
@@ -58,6 +58,9 @@ export default function ChatPanel({
   onSaveMood,
   onOpenMoodTracker,
   sessionId,
+  modelError,
+  clearModelError,
+  onRetryLoad,
 }: any) {
   const [animated, setAnimated] = useState("");
 
@@ -227,7 +230,8 @@ export default function ChatPanel({
     setPromptDismissCount((prev) => prev + 1);
   }, [activePromptSuggestion]);
 
-  const handleSend = () => {
+  const handleSend = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const text = (userInput || "").trim();
     if (!text) return;
     if (!current || !activeThread) {
@@ -365,6 +369,26 @@ export default function ChatPanel({
             </>
           )}
         </motion.div>
+      )}
+
+      {/* Model Error Banner */}
+      {modelError && (
+        <div className="mx-1 mb-2 flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p>{modelError}</p>
+          </div>
+          <button
+            onClick={() => {
+              clearModelError?.();
+              onRetryLoad?.();
+            }}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-red-100 hover:bg-red-200 rounded transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Retry
+          </button>
+        </div>
       )}
 
       {/* Input Row */}
