@@ -83,7 +83,7 @@ function truncateToLastSentence(text: string): string {
 }
 
 export default function App() {
-  const { loadModel, loading, logs, progress, webgpuUnsupported } = useMLCEngine();
+  const { loadModel, loading, logs, progress, webgpuUnsupported, error: modelError, clearError: clearModelError } = useMLCEngine();
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [current, setCurrent] = useState<Session | null>(null);
@@ -145,7 +145,6 @@ export default function App() {
 
   // Start a new session with the first user entry
   const newSession = async (firstMessage: string) => {
-    const e = await loadModel();
     if (!firstMessage.trim()) return;
 
     // Check for crisis content - only show resources for critical/high severity
@@ -153,6 +152,12 @@ export default function App() {
     if (crisisResult.severity === "critical" || crisisResult.severity === "high") {
       setCrisisSeverity(crisisResult.severity);
       setShowCrisisResources(true);
+    }
+
+    const e = await loadModel();
+    if (!e) {
+      // Model failed to load — input is preserved in ChatPanel (not cleared until success)
+      return;
     }
 
     setBusy(true);
@@ -272,6 +277,15 @@ export default function App() {
       });
 
       setSessions(await listSessions());
+    } catch (err) {
+      console.error("[newSession] Inference failed:", err);
+      // Remove the empty assistant placeholder and the session so the user can retry
+      setCurrent(null);
+      setCurrentId(null);
+      setSelectedThread(null);
+      setSessions((prev) => prev.filter((s) => s.id !== sess.id));
+      // Restore the user's input so it's not lost
+      setUserInput(firstMessage);
     } finally {
       setBusy(false);
     }
@@ -307,6 +321,10 @@ export default function App() {
     }
 
     const e = await loadModel();
+    if (!e) {
+      // Model failed to load — input is preserved in ChatPanel
+      return;
+    }
     setBusy(true);
 
     const thread = current.threads.find((t) => t.id === threadId)!;
@@ -426,6 +444,21 @@ export default function App() {
       });
 
       setSessions(await listSessions());
+    } catch (err) {
+      console.error("[replyInThread] Inference failed:", err);
+      // Remove the failed user+assistant messages and restore input
+      setCurrent((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          threads: prev.threads.map((t) =>
+            t.id === threadId
+              ? { ...t, messages: t.messages.filter((m) => m.id !== userMsgId && m.id !== assistantMsgId) }
+              : t
+          ),
+        };
+      });
+      setUserInput(text);
     } finally {
       setBusy(false);
     }
@@ -559,6 +592,9 @@ export default function App() {
               setShowMoodTracker(true);
             }}
             sessionId={currentId ?? undefined}
+            modelError={modelError}
+            clearModelError={clearModelError}
+            onRetryLoad={loadModel}
           />
         }
         right={

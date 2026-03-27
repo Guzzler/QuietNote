@@ -22,6 +22,9 @@ export function useMLCEngine() {
   const [logs, setLogs] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [webgpuUnsupported, setWebgpuUnsupported] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const clearError = () => setError(null);
 
   const loadModel = async (_customModel?: ModelRef) => {
     // If we already created the engine once, we skip (you could add a forceReload flag if needed)
@@ -36,6 +39,7 @@ export function useMLCEngine() {
 
     setLoading(true);
     setLogs([]);
+    setError(null);
 
     try {
       // Use the built-in WebLLM model — no custom appConfig needed
@@ -47,10 +51,24 @@ export function useMLCEngine() {
       });
       setEngine(e);
       return e;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      // Map technical errors to user-friendly messages
+      if (message.includes("memory") || message.includes("OOM")) {
+        setError("Not enough memory to load the model. Try closing other tabs and retrying.");
+      } else if (message.includes("network") || message.includes("fetch") || message.includes("Failed to fetch")) {
+        setError("Could not download the model. Check your internet connection and try again.");
+      } else if (message.includes("WASM") || message.includes("wasm") || message.includes("compile")) {
+        setError("Your browser couldn't compile the model. Try updating your browser or using Chrome.");
+      } else {
+        setError("Something went wrong loading the model. Please try again.");
+      }
+      console.error("[useMLCEngine] Model load failed:", err);
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-  return { engine, loadModel, loading, logs, progress, webgpuUnsupported };
+  return { engine, loadModel, loading, logs, progress, webgpuUnsupported, error, clearError };
 }

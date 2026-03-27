@@ -66,11 +66,11 @@ export default function PromptSelector({ onSelectPrompt }: PromptSelectorProps) 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full mt-2 right-0 w-96 bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50"
+            className="absolute bottom-full mb-2 right-0 w-96 bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50"
           >
             {/* Category Selector */}
             <div className="mb-4">
