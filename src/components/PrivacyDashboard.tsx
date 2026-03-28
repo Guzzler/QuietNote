@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+// NOTE: Outer AnimatePresence removed (Framer Motion v12 exit bug).
+// Inner AnimatePresence for delete confirmation toggle is kept (keyed children work correctly).
 import {
   Shield,
   X,
@@ -140,26 +142,22 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
     },
   ];
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
-          />
+  if (!isOpen) return null;
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          >
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+      />
+
+      {/* Modal */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <div onClick={(e) => e.stopPropagation()}>
             <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-hidden">
               {/* Header */}
               <div className="p-5 border-b border-slate-200 bg-gradient-to-r from-green-50 to-emerald-50">
@@ -328,9 +326,8 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
                 </button>
               </div>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
+    </>
   );
 }
