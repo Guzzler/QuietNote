@@ -35,7 +35,13 @@
       "mcp__Claude_Preview__preview_eval",
       "mcp__Claude_Preview__preview_fill",
       "mcp__Claude_Preview__preview_inspect",
-      "mcp__Claude_Preview__preview_resize"
+      "mcp__Claude_Preview__preview_resize",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "WebSearch",
+      "WebFetch(domain:qwenlm.github.io)",
+      "WebFetch(domain:arxiv.org)",
+      "Skill(commit-commands:commit-push-pr)",
+      "Skill(commit-commands:commit-push-pr:*)"
     ]
   }
 }
