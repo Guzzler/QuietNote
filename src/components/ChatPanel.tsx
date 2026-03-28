@@ -234,13 +234,14 @@ export default function ChatPanel({
     e?.stopPropagation();
     const text = (userInput || "").trim();
     if (!text) return;
+    // Clear input optimistically — App.tsx restores it if model fails to load
+    setUserInput("");
     if (!current || !activeThread) {
       // first turn → start a new session
       newSession(text);
     } else {
       replyInThread(activeThread.id, text);
     }
-    setUserInput("");
   };
 
   return (

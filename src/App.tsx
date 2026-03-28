@@ -156,7 +156,8 @@ export default function App() {
 
     const e = await loadModel();
     if (!e) {
-      // Model failed to load — input is preserved in ChatPanel (not cleared until success)
+      // Model failed to load — restore the user's input so it's not lost
+      setUserInput(firstMessage);
       return;
     }
 
@@ -322,7 +323,8 @@ export default function App() {
 
     const e = await loadModel();
     if (!e) {
-      // Model failed to load — input is preserved in ChatPanel
+      // Model failed to load — restore the user's input so it's not lost
+      setUserInput(text);
       return;
     }
     setBusy(true);
