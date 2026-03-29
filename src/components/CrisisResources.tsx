@@ -31,7 +31,7 @@ export default function CrisisResources({ isOpen, onClose, severity }: CrisisRes
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 animate-modal-backdrop"
       />
 
       {/* Modal */}
@@ -41,7 +41,7 @@ export default function CrisisResources({ isOpen, onClose, severity }: CrisisRes
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-hidden"
+          className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-hidden animate-modal-content"
         >
           {/* Header */}
           <div className={`p-6 border-b ${severityColors[severity]}`}>

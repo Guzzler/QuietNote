@@ -69,3 +69,43 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Modal enter animations */
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-content-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modal-backdrop-in 0.2s ease-out both;
+}
+
+.animate-modal-content {
+  animation: modal-content-in 0.2s ease-out both;
+}
+
+.animate-dropdown {
+  animation: dropdown-in 0.15s ease-out both;
+}

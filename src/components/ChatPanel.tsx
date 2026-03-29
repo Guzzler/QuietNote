@@ -1,4 +1,4 @@
-import { Loader2, Send, MessageSquare, Info, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, Send, MessageSquare, Info, AlertCircle, RefreshCw, Lock, Sparkles, Heart } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PromptSelector from "./PromptSelector";
@@ -248,15 +248,35 @@ export default function ChatPanel({
     <main className="rounded-2xl border border-slate-200 bg-white/80 p-4 flex flex-col h-full min-h-[75vh] shadow-sm backdrop-blur-sm transition-all duration-300">
       {/* Chat Area */}
       {!current ? (
-        <div className="flex-1 grid place-items-center text-slate-500">
+        <div className="flex-1 grid place-items-center text-slate-600">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-            className="text-center"
+            transition={{ duration: 0.4 }}
+            className="text-center max-w-sm px-4"
           >
-            <MessageSquare className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-            <p>Write your journal entry to start.</p>
+            <div className="mx-auto mb-4 w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center">
+              <MessageSquare className="h-6 w-6 text-indigo-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-slate-800 mb-1">Welcome to Quietnote</h2>
+            <p className="text-sm text-slate-500 mb-5">A private space to reflect on your thoughts and feelings.</p>
+
+            <div className="text-left space-y-3 mb-5">
+              <div className="flex items-start gap-2.5">
+                <Lock className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-slate-600">Everything stays on your device — nothing is sent to any server</p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Sparkles className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-slate-600">Try a journal prompt to get started, or just start typing</p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Heart className="h-4 w-4 text-pink-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-slate-600">Track your mood over time to discover patterns</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400">Your thoughts are safe here.</p>
           </motion.div>
         </div>
       ) : (
