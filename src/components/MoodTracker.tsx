@@ -133,7 +133,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 animate-modal-backdrop"
       />
 
       {/* Modal wrapper — click outside the white box to close */}
@@ -141,7 +141,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
         onClick={onClose}
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
-        <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[90vh] overflow-hidden">
+        <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[90vh] overflow-hidden animate-modal-content">
               {/* Header */}
               <div className="p-5 border-b border-slate-200 flex items-center justify-between">
                 <div>

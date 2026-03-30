@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Brain, Shield, Loader2, Heart } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Brain, Shield, Loader2, Heart, Lock, Sparkles } from "lucide-react";
 import Layout from "./components/Layout";
 import ChatPanel from "./components/ChatPanel";
 import SessionsPanel from "./components/SessionsPanel";
@@ -82,8 +82,19 @@ function truncateToLastSentence(text: string): string {
   return text;
 }
 
+function getLoadingMessage(progress: number): string {
+  const pct = Math.floor(progress * 100);
+  if (pct <= 2) return "Preparing your private journaling space\u2026";
+  if (pct <= 15) return "Downloading your personal AI (this only happens once)\u2026";
+  if (pct <= 50) return "Setting up on-device intelligence\u2026";
+  if (pct <= 80) return "Almost ready\u2026";
+  return "Finishing up\u2026";
+}
+
 export default function App() {
   const { loadModel, loading, logs, progress, webgpuUnsupported, error: modelError, clearError: clearModelError } = useMLCEngine();
+  const hasSeenLoading = useRef(false);
+  if (loading) hasSeenLoading.current = true;
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [current, setCurrent] = useState<Session | null>(null);
@@ -486,26 +497,40 @@ export default function App() {
   }
 
   if (loading) {
+    const pct = Math.floor(progress * 100);
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-indigo-50 to-slate-50 text-slate-700 z-50">
-        <div className="p-4 rounded-2xl bg-white/80 shadow border border-slate-200 w-[320px] text-center">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
-            <h2 className="font-semibold">Loading Quietnote model…</h2>
+        <div className="p-6 rounded-2xl bg-white/80 shadow border border-slate-200 w-[360px] text-center">
+          {/* App identity */}
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <div className="p-1.5 rounded-xl bg-indigo-100">
+              <Brain className="h-5 w-5 text-indigo-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-slate-800">Quietnote</h2>
           </div>
-          <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+          <p className="text-xs text-slate-400 mb-5">Your private journaling companion</p>
+
+          {/* Progress bar */}
+          <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden mb-3">
             <div
-              className="h-full bg-indigo-500 transition-all duration-300"
-              style={{ width: `${Math.floor(progress * 100)}%` }}
+              className="h-full bg-indigo-500 transition-all duration-500 ease-out"
+              style={{ width: `${pct}%` }}
             />
           </div>
-          <div className="text-[11px] text-slate-500 mt-2">
-            {Math.floor(progress * 100)}% initialized
+
+          {/* Friendly status message */}
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
+            <p className="text-sm text-slate-600 font-medium">
+              {getLoadingMessage(progress)}
+            </p>
           </div>
-          <div className="text-[10px] text-slate-400 mt-2 max-h-[100px] overflow-auto">
-            {logs.slice(-4).map((l, i) => (
-              <div key={i}>{l}</div>
-            ))}
+          <p className="text-xs text-slate-400">{pct}%</p>
+
+          {/* First-time note */}
+          <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+            <Lock className="h-3 w-3" />
+            <span>First time takes a few minutes. After that, it loads instantly.</span>
           </div>
         </div>
       </div>

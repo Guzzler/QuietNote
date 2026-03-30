@@ -149,7 +149,7 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 animate-modal-backdrop"
       />
 
       {/* Modal */}
@@ -158,7 +158,7 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
         onClick={onClose}
       >
         <div onClick={(e) => e.stopPropagation()}>
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-hidden animate-modal-content">
               {/* Header */}
               <div className="p-5 border-b border-slate-200 bg-gradient-to-r from-green-50 to-emerald-50">
                 <div className="flex items-start justify-between">
