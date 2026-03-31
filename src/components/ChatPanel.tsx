@@ -77,6 +77,9 @@ export default function ChatPanel({
   const [suggestedCategories, setSuggestedCategories] = useState<Set<PromptCategory>>(new Set());
   const [promptAcceptedMessageIds, setPromptAcceptedMessageIds] = useState<Set<string>>(new Set());
 
+  // External trigger for PromptSelector (from welcome card link)
+  const [promptSelectorOpen, setPromptSelectorOpen] = useState(false);
+
   // Reset all suggestion state when session changes
   useEffect(() => {
     setActiveSuggestion(null);
@@ -268,7 +271,7 @@ export default function ChatPanel({
               </div>
               <div className="flex items-start gap-2.5">
                 <Sparkles className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-slate-600">Try a journal prompt to get started, or just start typing</p>
+                <p className="text-sm text-slate-600">Try a <button onClick={() => setPromptSelectorOpen(true)} className="inline text-indigo-600 underline hover:text-indigo-700 transition-colors">journal prompt</button> to get started, or just start typing</p>
               </div>
               <div className="flex items-start gap-2.5">
                 <Heart className="h-4 w-4 text-pink-500 mt-0.5 flex-shrink-0" />
@@ -416,7 +419,7 @@ export default function ChatPanel({
       <div className="border-t border-slate-200 mt-2 pt-2">
         {/* Prompt Selector */}
         <div className="mb-2 flex justify-end">
-          <PromptSelector onSelectPrompt={(prompt) => setUserInput(prompt)} />
+          <PromptSelector onSelectPrompt={(prompt) => setUserInput(prompt)} externalOpen={promptSelectorOpen} onExternalOpenHandled={() => setPromptSelectorOpen(false)} />
         </div>
 
         <div className="flex gap-2 items-end">

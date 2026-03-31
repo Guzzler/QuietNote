@@ -570,7 +570,7 @@ export default function App() {
           <div>
             <h1 className="text-xl font-semibold">Quietnote</h1>
             <p className="text-xs text-slate-500">
-              On-device introspective coach (WebLLM)
+              Private journaling companion
             </p>
           </div>
           <div className="ml-auto flex items-center gap-4">
@@ -625,11 +625,13 @@ export default function App() {
           />
         }
         right={
-          <SessionsPanel
-            sessions={sessions}
-            currentId={currentId}
-            loadExisting={loadExisting}
-          />
+          <div className={sessions.length === 0 ? "hidden lg:block" : ""}>
+            <SessionsPanel
+              sessions={sessions}
+              currentId={currentId}
+              loadExisting={loadExisting}
+            />
+          </div>
         }
       />
 

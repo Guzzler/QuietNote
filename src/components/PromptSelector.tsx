@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, RefreshCw, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 // NOTE: Outer AnimatePresence removed (Framer Motion v12 exit bug).
@@ -13,9 +13,11 @@ import type { PromptCategory } from "../types";
 
 interface PromptSelectorProps {
   onSelectPrompt: (prompt: string) => void;
+  externalOpen?: boolean;
+  onExternalOpenHandled?: () => void;
 }
 
-export default function PromptSelector({ onSelectPrompt }: PromptSelectorProps) {
+export default function PromptSelector({ onSelectPrompt, externalOpen, onExternalOpenHandled }: PromptSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState<PromptData | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<PromptCategory | "all">("all");
@@ -40,6 +42,17 @@ export default function PromptSelector({ onSelectPrompt }: PromptSelectorProps) 
         : getPromptByCategory(selectedCategory);
     setCurrentPrompt(prompt);
   };
+
+  useEffect(() => {
+    if (externalOpen) {
+      setIsOpen(true);
+      if (!currentPrompt) {
+        const prompt = selectedCategory === "all" ? getRandomPrompt() : getPromptByCategory(selectedCategory);
+        setCurrentPrompt(prompt);
+      }
+      onExternalOpenHandled?.();
+    }
+  }, [externalOpen]);
 
   const usePrompt = () => {
     if (currentPrompt) {
