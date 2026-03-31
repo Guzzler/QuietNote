@@ -636,7 +636,7 @@ export default function App() {
       />
 
       <footer className="text-center text-[11px] text-slate-500 py-4">
-        Quietnote • All inference on-device • Sessions stored locally
+        Quietnote • Your data never leaves this device
       </footer>
     </div>
   );

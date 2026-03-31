@@ -432,7 +432,7 @@ export default function ChatPanel({
                 handleSend();
               }
             }}
-            placeholder="Write your journal entry…"
+            placeholder="What's on your mind?"
             className="flex-1 min-h-[52px] max-h-36 resize-none rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all bg-white/80"
           />
           <button
