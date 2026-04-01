@@ -315,18 +315,24 @@ export default function App() {
 
       // For critical situations, inject crisis resources into AI response
       if (crisisResult.recommendedAction === "immediate_help") {
-        const thread = current.threads.find((t) => t.id === threadId)!;
-        thread.messages.push(
-          { id: uid(), role: "user", content: text, ts: Date.now() },
-          {
-            id: uid(),
-            role: "assistant",
-            content: getCrisisResponseMessage(crisisResult.severity),
-            ts: Date.now()
-          }
-        );
-        setCurrent({ ...current });
-        await putSession(current);
+        const userMsg: ChatMessage = { id: uid(), role: "user", content: text, ts: Date.now() };
+        const crisisMsg: ChatMessage = {
+          id: uid(),
+          role: "assistant",
+          content: getCrisisResponseMessage(crisisResult.severity),
+          ts: Date.now(),
+        };
+        const updated: Session = {
+          ...current,
+          updatedAt: Date.now(),
+          threads: current.threads.map((t) =>
+            t.id === threadId
+              ? { ...t, updatedAt: Date.now(), messages: [...t.messages, userMsg, crisisMsg] }
+              : t
+          ),
+        };
+        setCurrent(updated);
+        await putSession(updated);
         setSessions(await listSessions());
         return;
       }
