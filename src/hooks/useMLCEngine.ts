@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { CreateMLCEngine, type InitProgressReport } from "@mlc-ai/web-llm";
 
 import type { ModelRef } from "../types";
@@ -23,12 +23,15 @@ export function useMLCEngine() {
   const [progress, setProgress] = useState(0);
   const [webgpuUnsupported, setWebgpuUnsupported] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const loadingRef = useRef(false);
+  const engineRef = useRef<any | null>(null);
 
   const clearError = () => setError(null);
 
   const loadModel = async (_customModel?: ModelRef) => {
-    // If we already created the engine once, we skip (you could add a forceReload flag if needed)
-    if (engine) return engine;
+    // Guard against concurrent loads using a ref (not state) to avoid stale closures
+    if (engineRef.current) return engineRef.current;
+    if (loadingRef.current) return null;
 
     // Check WebGPU support before attempting model load
     const gpuStatus = await checkWebGPUSupport();
@@ -37,6 +40,7 @@ export function useMLCEngine() {
       return null;
     }
 
+    loadingRef.current = true;
     setLoading(true);
     setLogs([]);
     setError(null);
@@ -49,6 +53,7 @@ export function useMLCEngine() {
           if (s.progress !== undefined) setProgress(s.progress);
         },
       });
+      engineRef.current = e;
       setEngine(e);
       return e;
     } catch (err) {
@@ -66,6 +71,7 @@ export function useMLCEngine() {
       console.error("[useMLCEngine] Model load failed:", err);
       return null;
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   };

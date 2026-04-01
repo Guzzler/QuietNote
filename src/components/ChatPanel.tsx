@@ -93,12 +93,13 @@ export default function ChatPanel({
     setPromptAcceptedMessageIds(new Set());
   }, [current?.id]);
 
-  // Typing animation for the latest assistant message
+  // Typing animation for the latest assistant message — only after finalization
   useEffect(() => {
     if (!activeThread) return;
     const msgs = activeThread.messages;
     const last = msgs[msgs.length - 1];
-    if (last?.role === "assistant") {
+    // Only animate once the message is finalized (not during streaming)
+    if (last?.role === "assistant" && !last.temp) {
       let i = 0;
       const text = last.content || "";
       const interval = setInterval(() => {
@@ -110,7 +111,7 @@ export default function ChatPanel({
     } else {
       setAnimated("");
     }
-  }, [activeThread]);
+  }, [activeThread?.messages?.length, activeThread?.messages?.[activeThread?.messages?.length - 1]?.temp]);
 
   // Check for emotions and themes after assistant messages are finalized
   useEffect(() => {
@@ -344,7 +345,7 @@ export default function ChatPanel({
                             }`}
                           >
                             <div className="whitespace-pre-wrap leading-relaxed">
-                              {isLastAssistant ? animated : m.content}
+                              {isLastAssistant ? (m.temp ? m.content : animated) : m.content}
                             </div>
                           </motion.div>
 
