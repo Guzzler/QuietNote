@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 // NOTE: Outer AnimatePresence removed (Framer Motion v12 exit bug).
 // Inner AnimatePresence for delete confirmation toggle is kept (keyed children work correctly).
@@ -16,6 +16,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { getStorageStats, clearAllData, listSessions, listMoods } from "../storage";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface PrivacyDashboardProps {
   isOpen: boolean;
@@ -24,6 +25,8 @@ interface PrivacyDashboardProps {
 }
 
 export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: PrivacyDashboardProps) {
+  const titleId = useId();
+  const focusTrapRef = useFocusTrap(isOpen);
   const [stats, setStats] = useState<{ sessions: number; moods: number; totalBytes: number } | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -35,6 +38,16 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
       loadStats();
     }
   }, [isOpen]);
+
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -157,8 +170,14 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
         onClick={onClose}
       >
-        <div onClick={(e) => e.stopPropagation()}>
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-hidden animate-modal-content">
+        <div
+          ref={focusTrapRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-hidden animate-modal-content"
+        >
               {/* Header */}
               <div className="p-5 border-b border-slate-200 bg-gradient-to-r from-green-50 to-emerald-50">
                 <div className="flex items-start justify-between">
@@ -167,7 +186,7 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
                       <Shield className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-slate-800">Privacy Dashboard</h2>
+                      <h2 id={titleId} className="text-xl font-semibold text-slate-800">Privacy Dashboard</h2>
                       <p className="text-sm text-slate-600 mt-0.5">
                         Your data stays on your device. Always.
                       </p>
@@ -175,7 +194,8 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
                   </div>
                   <button
                     onClick={onClose}
-                    className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+                    aria-label="Close privacy dashboard"
+                    className="p-2 hover:bg-white/50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
                     <X className="h-5 w-5 text-slate-500" />
                   </button>
@@ -325,7 +345,6 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
                   Close
                 </button>
               </div>
-            </div>
         </div>
       </div>
     </>

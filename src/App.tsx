@@ -583,7 +583,7 @@ export default function App() {
             {/* Mood Tracker Button */}
             <button
               onClick={() => setShowMoodTracker(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-pink-50 text-pink-700 border border-pink-200 rounded-lg hover:bg-pink-100 transition-colors"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm bg-pink-50 text-pink-700 border border-pink-200 rounded-lg hover:bg-pink-100 transition-colors min-h-[44px]"
               title="Track your mood"
             >
               <Heart className="h-4 w-4" />
@@ -592,7 +592,7 @@ export default function App() {
             {/* Privacy Dashboard Button */}
             <button
               onClick={() => setShowPrivacyDashboard(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors min-h-[44px]"
               title="Privacy dashboard"
             >
               <Shield className="h-4 w-4" />

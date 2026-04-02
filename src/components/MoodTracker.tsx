@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Smile,
@@ -16,6 +16,7 @@ import {
 import type { MoodEmotion, MoodContext, MoodEntry } from "../types";
 import { listMoods } from "../storage";
 import MoodInsightsCard from "./MoodInsightsCard";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface MoodTrackerProps {
   isOpen: boolean;
@@ -51,6 +52,8 @@ const CONTEXTS: { value: MoodContext; label: string }[] = [
 ];
 
 export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, initialEmotion, initialIntensity }: MoodTrackerProps) {
+  const titleId = useId();
+  const focusTrapRef = useFocusTrap(isOpen);
   const [selectedEmotion, setSelectedEmotion] = useState<MoodEmotion | null>(null);
   const [intensity, setIntensity] = useState(5);
   const [selectedContexts, setSelectedContexts] = useState<MoodContext[]>([]);
@@ -72,6 +75,23 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
       setIntensity(initialIntensity ?? 5);
     }
   }, [isOpen, initialEmotion, initialIntensity]);
+
+  // Reset state when closed without saving
+  useEffect(() => {
+    if (!isOpen) {
+      handleReset();
+    }
+  }, [isOpen]);
+
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleSave = async () => {
     if (!selectedEmotion) return;
@@ -141,16 +161,24 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
         onClick={onClose}
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
-        <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[90vh] overflow-hidden animate-modal-content">
+        <div
+          ref={focusTrapRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[90vh] overflow-hidden animate-modal-content"
+        >
               {/* Header */}
               <div className="p-5 border-b border-slate-200 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-800">How are you feeling?</h2>
+                  <h2 id={titleId} className="text-xl font-semibold text-slate-800">How are you feeling?</h2>
                   <p className="text-sm text-slate-500 mt-1">Track your mood to discover patterns</p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  aria-label="Close mood tracker"
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <X className="h-5 w-5 text-slate-500" />
                 </button>
