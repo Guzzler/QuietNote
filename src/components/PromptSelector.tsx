@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sparkles, RefreshCw, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 // NOTE: Outer AnimatePresence removed (Framer Motion v12 exit bug).
@@ -21,8 +21,31 @@ export default function PromptSelector({ onSelectPrompt, externalOpen, onExterna
   const [isOpen, setIsOpen] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState<PromptData | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<PromptCategory | "all">("all");
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const categories = getAllCategories();
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
 
   const categoryLabels: Record<PromptCategory | "all", string> = {
     all: "All Categories",
@@ -63,7 +86,7 @@ export default function PromptSelector({ onSelectPrompt, externalOpen, onExterna
   };
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       {/* Trigger Button */}
       <button
         onClick={() => {
@@ -80,7 +103,7 @@ export default function PromptSelector({ onSelectPrompt, externalOpen, onExterna
       {/* Dropdown Panel */}
       {isOpen && (
           <div
-            className="absolute bottom-full mb-2 right-0 w-96 bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50 animate-dropdown"
+            className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-96 bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50 animate-dropdown"
           >
             {/* Category Selector */}
             <div className="mb-4">

@@ -1,5 +1,7 @@
+import { useEffect, useId } from "react";
 import { X, Phone, MessageSquare, Globe, Heart } from "lucide-react";
 import { getCrisisResources, type CrisisResource } from "../utils/crisisDetection";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface CrisisResourcesProps {
   isOpen: boolean;
@@ -8,6 +10,19 @@ interface CrisisResourcesProps {
 }
 
 export default function CrisisResources({ isOpen, onClose, severity }: CrisisResourcesProps) {
+  const titleId = useId();
+  const focusTrapRef = useFocusTrap(isOpen);
+
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const resources = getCrisisResources("US");
@@ -40,6 +55,10 @@ export default function CrisisResources({ isOpen, onClose, severity }: CrisisRes
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
         <div
+          ref={focusTrapRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
           onClick={(e) => e.stopPropagation()}
           className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] overflow-hidden animate-modal-content"
         >
@@ -51,7 +70,7 @@ export default function CrisisResources({ isOpen, onClose, severity }: CrisisRes
                   <Heart className={`h-6 w-6 ${severityTextColors[severity]}`} />
                 </div>
                 <div>
-                  <h2 className={`text-xl font-semibold ${severityTextColors[severity]}`}>
+                  <h2 id={titleId} className={`text-xl font-semibold ${severityTextColors[severity]}`}>
                     {severity === "critical" || severity === "high"
                       ? "Immediate Support Available"
                       : "Crisis Support Resources"}
@@ -63,7 +82,8 @@ export default function CrisisResources({ isOpen, onClose, severity }: CrisisRes
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+                aria-label="Close crisis resources"
+                className="p-2 hover:bg-white/50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <X className="h-5 w-5 text-slate-500" />
               </button>
