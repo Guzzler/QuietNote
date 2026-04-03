@@ -245,7 +245,7 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
                 {/* Storage Stats */}
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-slate-700 mb-3">Your Data</h3>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
                       <p className="text-2xl font-bold text-slate-800">{stats?.sessions ?? "..."}</p>
                       <p className="text-sm text-slate-500">Journal Sessions</p>
@@ -254,12 +254,12 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
                       <p className="text-2xl font-bold text-slate-800">{stats?.moods ?? "..."}</p>
                       <p className="text-sm text-slate-500">Mood Entries</p>
                     </div>
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
-                      <p className="text-2xl font-bold text-slate-800">
-                        {stats ? formatBytes(stats.totalBytes) : "..."}
-                      </p>
-                      <p className="text-sm text-slate-500">Storage Used</p>
-                    </div>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                    <p className="text-lg font-bold text-slate-800">
+                      {stats ? formatBytes(stats.totalBytes) : "..."}
+                    </p>
+                    <p className="text-xs text-slate-500">Total Browser Storage (includes AI model cache)</p>
                   </div>
                 </div>
 

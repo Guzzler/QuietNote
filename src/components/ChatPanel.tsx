@@ -439,6 +439,7 @@ export default function ChatPanel({
           <button
             onClick={handleSend}
             disabled={busy || loading}
+            aria-label="Send message"
             className="h-[52px] aspect-square inline-flex items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 shadow-sm transition-all"
           >
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
