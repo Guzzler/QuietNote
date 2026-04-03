@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Brain, Shield, Loader2, Heart, Lock, Sparkles } from "lucide-react";
+import { Brain, Shield, Loader2, Heart, Lock, Sparkles, Plus } from "lucide-react";
 import Layout from "./components/Layout";
 import ChatPanel from "./components/ChatPanel";
 import SessionsPanel from "./components/SessionsPanel";
@@ -580,11 +580,30 @@ export default function App() {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-4">
+            {/* New Session Button — only visible when in a conversation */}
+            {current && (
+              <button
+                onClick={() => {
+                  setCurrent(null);
+                  setCurrentId(null);
+                  setSelectedThread(null);
+                  setUserInput("");
+                  setContextTrimmed(false);
+                }}
+                className="flex items-center gap-2 px-3 py-2.5 text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors min-h-[44px]"
+                title="New session"
+                aria-label="Start new session"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">New</span>
+              </button>
+            )}
             {/* Mood Tracker Button */}
             <button
               onClick={() => setShowMoodTracker(true)}
               className="flex items-center gap-2 px-3 py-2.5 text-sm bg-pink-50 text-pink-700 border border-pink-200 rounded-lg hover:bg-pink-100 transition-colors min-h-[44px]"
               title="Track your mood"
+              aria-label="Track your mood"
             >
               <Heart className="h-4 w-4" />
               <span className="hidden sm:inline">Mood</span>
@@ -594,6 +613,7 @@ export default function App() {
               onClick={() => setShowPrivacyDashboard(true)}
               className="flex items-center gap-2 px-3 py-2.5 text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors min-h-[44px]"
               title="Privacy dashboard"
+              aria-label="Privacy dashboard"
             >
               <Shield className="h-4 w-4" />
               <span className="hidden sm:inline">Privacy</span>
