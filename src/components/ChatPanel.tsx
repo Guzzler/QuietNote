@@ -1,5 +1,5 @@
 import { Loader2, Send, MessageSquare, Info, AlertCircle, RefreshCw, Lock, Sparkles, Heart } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PromptSelector from "./PromptSelector";
 import MoodSuggestionCard from "./MoodSuggestionCard";
@@ -63,6 +63,7 @@ export default function ChatPanel({
   onRetryLoad,
 }: any) {
   const [animated, setAnimated] = useState("");
+  const animatedMessageIds = useRef<Set<string>>(new Set());
 
   // Mood suggestion state (session-scoped)
   const [activeSuggestion, setActiveSuggestion] = useState<MoodSuggestion | null>(null);
@@ -91,21 +92,30 @@ export default function ChatPanel({
     setMessagesSincePromptSuggestion(0);
     setSuggestedCategories(new Set());
     setPromptAcceptedMessageIds(new Set());
+    animatedMessageIds.current = new Set();
   }, [current?.id]);
 
-  // Typing animation for the latest assistant message — only after finalization
+  // Typing animation for the latest assistant message — only after finalization, only once per message
   useEffect(() => {
     if (!activeThread) return;
     const msgs = activeThread.messages;
     const last = msgs[msgs.length - 1];
     // Only animate once the message is finalized (not during streaming)
     if (last?.role === "assistant" && !last.temp) {
+      // Skip animation if this message was already animated
+      if (animatedMessageIds.current.has(last.id)) {
+        setAnimated(last.content || "");
+        return;
+      }
       let i = 0;
       const text = last.content || "";
       const interval = setInterval(() => {
         setAnimated(text.slice(0, i));
         i++;
-        if (i > text.length) clearInterval(interval);
+        if (i > text.length) {
+          clearInterval(interval);
+          animatedMessageIds.current.add(last.id);
+        }
       }, 18);
       return () => clearInterval(interval);
     } else {

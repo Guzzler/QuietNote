@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Brain, Shield, Loader2, Heart, Lock, Sparkles, Plus } from "lucide-react";
+import { Brain, Shield, Loader2, Heart, Lock, Plus, BookOpen } from "lucide-react";
 import Layout from "./components/Layout";
 import ChatPanel from "./components/ChatPanel";
 import SessionsPanel from "./components/SessionsPanel";
@@ -92,7 +92,7 @@ function getLoadingMessage(progress: number): string {
 }
 
 export default function App() {
-  const { loadModel, loading, logs, progress, webgpuUnsupported, error: modelError, clearError: clearModelError } = useMLCEngine();
+  const { loadModel, loading, progress, webgpuUnsupported, error: modelError, clearError: clearModelError } = useMLCEngine();
   const hasSeenLoading = useRef(false);
   if (loading) hasSeenLoading.current = true;
 
@@ -119,6 +119,9 @@ export default function App() {
 
   // MoodTracker pre-fill state (for opening from suggestion card "Edit" button)
   const [moodPreFill, setMoodPreFill] = useState<{ emotion: MoodEmotion; intensity: number } | null>(null);
+
+  // Mobile sessions panel toggle
+  const [showMobileSessions, setShowMobileSessions] = useState(false);
 
   // Listen for crisis resources open event from ChatPanel disclaimer link
   useEffect(() => {
@@ -598,6 +601,16 @@ export default function App() {
                 <span className="hidden sm:inline">New</span>
               </button>
             )}
+            {/* Sessions Button — mobile only */}
+            <button
+              onClick={() => setShowMobileSessions((v) => !v)}
+              className="flex lg:hidden items-center gap-2 px-3 py-2.5 text-sm bg-slate-50 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors min-h-[44px]"
+              title="Sessions"
+              aria-label="Toggle sessions panel"
+            >
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Sessions</span>
+            </button>
             {/* Mood Tracker Button */}
             <button
               onClick={() => setShowMoodTracker(true)}
@@ -651,11 +664,14 @@ export default function App() {
           />
         }
         right={
-          <div className={sessions.length === 0 ? "hidden lg:block" : ""}>
+          <div className={`${showMobileSessions ? "" : "hidden"} lg:block`}>
             <SessionsPanel
               sessions={sessions}
               currentId={currentId}
-              loadExisting={loadExisting}
+              loadExisting={(id) => {
+                loadExisting(id);
+                setShowMobileSessions(false);
+              }}
             />
           </div>
         }

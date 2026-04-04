@@ -191,7 +191,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                   <label className="text-sm font-medium text-slate-700 mb-3 block">
                     Select your emotion
                   </label>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {EMOTIONS.map((emotion) => (
                       <motion.button
                         key={emotion.value}
