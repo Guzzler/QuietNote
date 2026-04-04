@@ -32,6 +32,7 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -105,6 +106,8 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 3000);
     } catch (err) {
       console.error("Export failed:", err);
     } finally {
@@ -285,6 +288,21 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
                       <span className="font-medium">Erase All Data</span>
                     </button>
                   </div>
+
+                  {/* Export success message */}
+                  <AnimatePresence>
+                    {exportSuccess && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2"
+                      >
+                        <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                        <span>Data exported successfully — check your downloads folder.</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Delete Confirmation */}
