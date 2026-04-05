@@ -64,6 +64,8 @@ export default function ChatPanel({
 }: any) {
   const [animated, setAnimated] = useState("");
   const animatedMessageIds = useRef<Set<string>>(new Set());
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Mood suggestion state (session-scoped)
   const [activeSuggestion, setActiveSuggestion] = useState<MoodSuggestion | null>(null);
@@ -80,6 +82,11 @@ export default function ChatPanel({
 
   // External trigger for PromptSelector (from welcome card link)
   const [promptSelectorOpen, setPromptSelectorOpen] = useState(false);
+
+  // Auto-scroll to bottom when messages change or typing animation updates
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeThread?.messages?.length, animated, busy]);
 
   // Reset all suggestion state when session changes
   useEffect(() => {
@@ -244,6 +251,24 @@ export default function ChatPanel({
     setPromptDismissCount((prev) => prev + 1);
   }, [activePromptSuggestion]);
 
+  // Auto-resize textarea based on content
+  const autoResizeTextarea = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  // Reset textarea height when input is cleared (e.g. after send)
+  useEffect(() => {
+    if (!userInput) {
+      const el = textareaRef.current;
+      if (el) el.style.height = "auto";
+    } else {
+      autoResizeTextarea();
+    }
+  }, [userInput, autoResizeTextarea]);
+
   const handleSend = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     const text = (userInput || "").trim();
@@ -400,6 +425,7 @@ export default function ChatPanel({
                     <span>Quietnote is thinking…</span>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </>
           )}
@@ -435,8 +461,12 @@ export default function ChatPanel({
 
         <div className="flex gap-2 items-end">
           <textarea
+            ref={textareaRef}
             value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
+            onChange={(e) => {
+              setUserInput(e.target.value);
+              autoResizeTextarea();
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
