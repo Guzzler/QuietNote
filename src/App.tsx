@@ -8,7 +8,7 @@ import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
 import WebGPUFallback from "./components/WebGPUFallback";
 import { useMLCEngine, MODEL_REF } from "./hooks/useMLCEngine";
-import { putSession, listSessions, getSession, putMood } from "./storage";
+import { putSession, listSessions, getSession, putMood, deleteSession } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
@@ -141,6 +141,20 @@ export default function App() {
     setCurrent(null);
     setCurrentId(null);
     setSelectedThread(null);
+  };
+
+  // Handle individual session deletion
+  const handleDeleteSession = async (id: string) => {
+    await deleteSession(id);
+    // If deleting the active session, go back to welcome screen
+    if (currentId === id) {
+      setCurrent(null);
+      setCurrentId(null);
+      setSelectedThread(null);
+      setUserInput("");
+      setContextTrimmed(false);
+    }
+    setSessions(await listSessions());
   };
 
   useEffect(() => {
@@ -672,6 +686,7 @@ export default function App() {
                 loadExisting(id);
                 setShowMobileSessions(false);
               }}
+              onDeleteSession={handleDeleteSession}
             />
           </div>
         }
