@@ -16,7 +16,7 @@ export interface WebGPUStatus {
  */
 export async function checkWebGPUSupport(): Promise<WebGPUStatus> {
   // Check if the WebGPU API exists
-  if (!navigator.gpu) {
+  if (!(navigator as any).gpu) {
     return {
       supported: false,
       reason: "Your browser does not support the WebGPU API.",
@@ -24,7 +24,7 @@ export async function checkWebGPUSupport(): Promise<WebGPUStatus> {
   }
 
   try {
-    const adapter = await navigator.gpu.requestAdapter();
+    const adapter = await (navigator as any).gpu.requestAdapter();
     if (!adapter) {
       return {
         supported: false,

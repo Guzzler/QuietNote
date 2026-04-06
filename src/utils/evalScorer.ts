@@ -259,10 +259,6 @@ export function scoreResponse(
 
   const scores = allDimensions.map((dim) => scoreDimension(response, dim));
 
-  // Calculate weighted score (emphasis on the case's primary dimension)
-  const primaryScore = scores.find((s) => s.dimension === evalCase.dimension);
-  const primaryWeight = DIMENSION_WEIGHTS[evalCase.dimension];
-
   // Weighted average across all dimensions
   let totalWeight = 0;
   let weightedSum = 0;
