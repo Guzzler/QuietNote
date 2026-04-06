@@ -327,6 +327,16 @@ export const JOURNAL_PROMPTS: PromptData[] = [
 ];
 
 /**
+ * Structured 3-step gratitude journaling sequence.
+ * Used by the guided gratitude mode to walk users through a reflection.
+ */
+export const GRATITUDE_SEQUENCE = [
+  { step: 1, prompt: "What are you grateful for today?" },
+  { step: 2, prompt: "Why does this matter to you?" },
+  { step: 3, prompt: "How did it make you feel?" },
+] as const;
+
+/**
  * Get a random prompt from a specific category
  */
 export function getPromptByCategory(category: PromptCategory): PromptData | null {

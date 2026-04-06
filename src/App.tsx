@@ -7,14 +7,15 @@ import CrisisResources from "./components/CrisisResources";
 import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
 import WebGPUFallback from "./components/WebGPUFallback";
-import { useMLCEngine, MODEL_REF } from "./hooks/useMLCEngine";
+import { useInferenceEngine, MODEL_REF } from "./hooks/useInferenceEngine";
 import { putSession, listSessions, getSession, putMood, deleteSession } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
+import type { JournalingMode } from "./components/JournalingModeSelector";
 import type { Session, ChatMessage, ModelRef, MoodEntry, MoodEmotion } from "./types";
 
-// System instruction for the model
+// System instruction for the model — free-write mode
 const SYSTEM_INSTRUCTION = `You are Quietnote, a thoughtful journaling companion. Your role is to help users explore their thoughts and feelings through gentle reflection.
 
 Guidelines:
@@ -33,16 +34,28 @@ Assistant: "It sounds like work took a lot out of you today. What moment felt th
 User: "Should I try melatonin for my insomnia?"
 Assistant: "Sleep difficulties can be really draining. What's been on your mind when you're lying awake? If sleep is an ongoing struggle, a doctor could help explore what's going on."`;
 
+// System instruction for gratitude journaling mode
+const GRATITUDE_SYSTEM_INSTRUCTION = `You are Quietnote in Gratitude Journaling mode. Guide the user through a 3-step gratitude reflection:
+1. What they're grateful for
+2. Why it matters to them
+3. How it makes them feel
+
+After each response, gently acknowledge what they shared and move to the next step.
+Keep responses warm and brief (2-3 sentences). Do not give advice.
+NEVER recommend medications, supplements, dosages, or treatments.`;
+
+function getSystemInstruction(mode: JournalingMode): string {
+  return mode === "gratitude" ? GRATITUDE_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
+}
+
 // Build messages array for the chat API with context window management.
-// Uses token estimation to trim older messages when the conversation
-// exceeds the model's context limit. Returns both messages and whether
-// trimming occurred (for UI indicator).
 function buildMessages(
   entry: string,
+  systemInstruction: string,
   conversationHistory?: { role: string; content: string }[]
 ): { messages: { role: string; content: string }[]; trimmed: boolean } {
   const { messages, trimResult } = buildManagedMessages(
-    SYSTEM_INSTRUCTION,
+    systemInstruction,
     entry,
     conversationHistory ?? []
   );
@@ -92,7 +105,7 @@ function getLoadingMessage(progress: number): string {
 }
 
 export default function App() {
-  const { loadModel, loading, progress, webgpuUnsupported, error: modelError, clearError: clearModelError } = useMLCEngine();
+  const { loadModel, loading, progress, webgpuUnsupported, error: modelError, clearError: clearModelError } = useInferenceEngine();
   const hasSeenLoading = useRef(false);
   if (loading) hasSeenLoading.current = true;
 
@@ -107,6 +120,10 @@ export default function App() {
   const [topic, setTopic] = useState(""); // used only for first message if you want
   const [userInput, setUserInput] = useState("");
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
+
+  // Journaling mode state
+  const [journalingMode, setJournalingMode] = useState<JournalingMode>("freewrite");
+  const [gratitudeStep, setGratitudeStep] = useState(1); // 1-based step counter
 
   // Crisis detection state
   const [showCrisisResources, setShowCrisisResources] = useState(false);
@@ -171,9 +188,15 @@ export default function App() {
     })();
   }, []);
 
+  // Reset gratitude step when session changes
+  useEffect(() => {
+    setGratitudeStep(1);
+  }, [currentId]);
+
   // Start a new session with the first user entry
   const newSession = async (firstMessage: string) => {
     if (!firstMessage.trim()) return;
+    if (journalingMode === "gratitude") setGratitudeStep((s) => s + 1);
 
     // Check for crisis content - only show resources for critical/high severity
     const crisisResult = detectCrisis(firstMessage);
@@ -230,28 +253,11 @@ export default function App() {
 
     try {
       // Build messages for the chat API
-      const { messages, trimmed } = buildMessages(firstMessage);
+      const { messages, trimmed } = buildMessages(firstMessage, getSystemInstruction(journalingMode));
       setContextTrimmed(trimmed);
 
-      // Reset WebLLM's internal KV cache to prevent stale state accumulation.
-      // We provide the full conversation in the messages array, so the engine
-      // must process it from scratch each turn to avoid repetition/corruption.
-      await e.resetChat();
-
-      const stream = await e.chat.completions.create({
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        repetition_penalty: 1.3,
-        stream: true,
-      });
-
       let acc = "";
-      for await (const c of stream) {
-        const delta =
-          c?.choices?.[0]?.delta?.content ??
-          (c as any)?.output_text ??
-          "";
+      for await (const delta of e.generate(messages, { temperature, maxTokens, repetitionPenalty: 1.3 })) {
         acc += delta;
 
         // Update the assistant message content immutably
@@ -323,6 +329,7 @@ export default function App() {
   // Follow-ups: now includes full conversation history so AI remembers context
   const replyInThread = async (threadId: string, text: string) => {
     if (!current) return;
+    if (journalingMode === "gratitude") setGratitudeStep((s) => s + 1);
 
     // Check for crisis content - only show resources for critical/high severity
     const crisisResult = detectCrisis(text);
@@ -402,27 +409,11 @@ export default function App() {
 
     try {
       // Build messages with conversation history (context-managed)
-      const { messages, trimmed } = buildMessages(text, conversationHistory);
+      const { messages, trimmed } = buildMessages(text, getSystemInstruction(journalingMode), conversationHistory);
       setContextTrimmed(trimmed);
 
-      // Reset WebLLM's internal KV cache before each turn to prevent
-      // stale state causing repetition or degeneration.
-      await e.resetChat();
-
-      const stream = await e.chat.completions.create({
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        repetition_penalty: 1.3,
-        stream: true,
-      });
-
       let acc = "";
-      for await (const c of stream) {
-        const delta =
-          c?.choices?.[0]?.delta?.content ??
-          (c as any)?.output_text ??
-          "";
+      for await (const delta of e.generate(messages, { temperature, maxTokens, repetitionPenalty: 1.3 })) {
         acc += delta;
 
         // Update assistant message content immutably
@@ -675,6 +666,12 @@ export default function App() {
             modelError={modelError}
             clearModelError={clearModelError}
             onRetryLoad={loadModel}
+            journalingMode={journalingMode}
+            onJournalingModeChange={(mode: JournalingMode) => {
+              setJournalingMode(mode);
+              setGratitudeStep(1);
+            }}
+            gratitudeStep={gratitudeStep}
           />
         }
         right={
