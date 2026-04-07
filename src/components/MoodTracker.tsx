@@ -138,14 +138,6 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
     return "Very strong";
   };
 
-  const getIntensityColor = (value: number) => {
-    if (value <= 2) return "bg-green-500";
-    if (value <= 4) return "bg-lime-500";
-    if (value <= 6) return "bg-yellow-500";
-    if (value <= 8) return "bg-orange-500";
-    return "bg-red-500";
-  };
-
   if (!isOpen) return null;
 
   return (

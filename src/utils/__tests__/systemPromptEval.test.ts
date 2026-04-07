@@ -4,7 +4,6 @@ import {
   runEvalSuite,
   EVAL_CASES,
   type EvalCase,
-  type EvalResult,
 } from "../evalRunner";
 import baselineData from "../../../docs/evals/baseline-responses.json";
 

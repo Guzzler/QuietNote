@@ -160,10 +160,8 @@ export function detectCrisis(text: string): CrisisDetectionResult {
     for (const keyword of HIGH_SEVERITY_KEYWORDS) {
       if (lowerText.includes(keyword.toLowerCase())) {
         detectedKeywords.push(keyword);
-        if (highestSeverity !== "critical") {
-          highestSeverity = "high";
-          recommendedAction = "immediate_help";
-        }
+        highestSeverity = "high";
+        recommendedAction = "immediate_help";
       }
     }
   }

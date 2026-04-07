@@ -4,7 +4,6 @@ import {
   findTopEmotions,
   findTopContexts,
   detectCorrelations,
-  detectDayOfWeekPatterns,
   generateWeeklyReport,
   MIN_ENTRIES_FOR_PATTERNS,
   MIN_COOCCURRENCES,
