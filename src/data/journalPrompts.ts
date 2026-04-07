@@ -337,6 +337,26 @@ export const GRATITUDE_SEQUENCE = [
 ] as const;
 
 /**
+ * Structured 3-step morning check-in sequence.
+ * Used by the guided check-in mode for morning reflections.
+ */
+export const MORNING_CHECKIN_SEQUENCE = [
+  { step: 1, prompt: "How are you feeling this morning?" },
+  { step: 2, prompt: "What would you like to focus on today?" },
+  { step: 3, prompt: "Is there anything weighing on your mind?" },
+] as const;
+
+/**
+ * Structured 3-step evening check-in sequence.
+ * Used by the guided check-in mode for evening reflections.
+ */
+export const EVENING_CHECKIN_SEQUENCE = [
+  { step: 1, prompt: "How was your day?" },
+  { step: 2, prompt: "What went well today?" },
+  { step: 3, prompt: "What would you do differently?" },
+] as const;
+
+/**
  * Get a random prompt from a specific category
  */
 export function getPromptByCategory(category: PromptCategory): PromptData | null {

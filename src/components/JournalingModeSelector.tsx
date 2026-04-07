@@ -1,21 +1,29 @@
-import { PenLine, Heart } from "lucide-react";
+import { PenLine, Heart, Sun, Moon } from "lucide-react";
 
-export type JournalingMode = "freewrite" | "gratitude";
+export type JournalingMode = "freewrite" | "gratitude" | "checkin";
 
 interface Props {
   mode: JournalingMode;
   onChange: (mode: JournalingMode) => void;
 }
 
-const MODES: { id: JournalingMode; label: string; icon: typeof PenLine }[] = [
+function getCheckinIcon() {
+  const hour = new Date().getHours();
+  return hour >= 5 && hour < 12 ? Sun : Moon;
+}
+
+const STATIC_MODES: { id: JournalingMode; label: string; icon: typeof PenLine }[] = [
   { id: "freewrite", label: "Free Write", icon: PenLine },
   { id: "gratitude", label: "Gratitude", icon: Heart },
 ];
 
 export default function JournalingModeSelector({ mode, onChange }: Props) {
+  const CheckinIcon = getCheckinIcon();
+  const modes = [...STATIC_MODES, { id: "checkin" as JournalingMode, label: "Check-in", icon: CheckinIcon }];
+
   return (
     <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 gap-0.5" role="radiogroup" aria-label="Journaling mode">
-      {MODES.map(({ id, label, icon: Icon }) => (
+      {modes.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           role="radio"

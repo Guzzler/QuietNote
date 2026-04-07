@@ -7,19 +7,21 @@
 
 import type { InferenceEngine, RuntimeId } from "./types";
 import { WebLLMEngine } from "./webllm-engine";
+import { TransformersJSEngine } from "./transformersjs-engine";
 
 export function createEngine(runtime: RuntimeId = "webllm"): InferenceEngine {
   switch (runtime) {
     case "webllm":
       return new WebLLMEngine();
+    case "transformersjs":
+      return new TransformersJSEngine();
     case "mediapipe":
       throw new Error("MediaPipe backend is not yet implemented.");
-    case "transformersjs":
-      throw new Error("Transformers.js backend is not yet implemented.");
     default:
       throw new Error(`Unknown runtime: ${runtime}`);
   }
 }
 
 export { WEBLLM_MODEL_REF } from "./webllm-engine";
+export { TRANSFORMERSJS_MODEL_REF } from "./transformersjs-engine";
 export type { InferenceEngine, EngineStatus, GenerateOptions, LoadProgress, RuntimeId } from "./types";
