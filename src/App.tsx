@@ -7,13 +7,13 @@ import CrisisResources from "./components/CrisisResources";
 import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
 import WebGPUFallback from "./components/WebGPUFallback";
-import { useInferenceEngine, MODEL_REF } from "./hooks/useInferenceEngine";
+import { useInferenceEngine } from "./hooks/useInferenceEngine";
 import { putSession, listSessions, getSession, putMood, deleteSession } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
 import type { JournalingMode } from "./components/JournalingModeSelector";
-import type { Session, ChatMessage, ModelRef, MoodEntry, MoodEmotion } from "./types";
+import type { Session, ChatMessage, MoodEntry, MoodEmotion } from "./types";
 
 // System instruction for the model — free-write mode
 const SYSTEM_INSTRUCTION = `You are Quietnote, a thoughtful journaling companion. Your role is to help users explore their thoughts and feelings through gentle reflection.
@@ -44,8 +44,34 @@ After each response, gently acknowledge what they shared and move to the next st
 Keep responses warm and brief (2-3 sentences). Do not give advice.
 NEVER recommend medications, supplements, dosages, or treatments.`;
 
+// System instructions for check-in journaling mode
+const CHECKIN_MORNING_INSTRUCTION = `You are Quietnote in Morning Check-in mode. Guide the user through a 3-step morning reflection:
+1. How they're feeling this morning
+2. What they want to focus on today
+3. Any worries or concerns on their mind
+
+After each response, gently acknowledge what they shared and encourage intention-setting.
+Be warm, brief (2-3 sentences), and supportive. Help them start their day mindfully.
+NEVER give advice, diagnose, or recommend medications, supplements, dosages, or treatments.`;
+
+const CHECKIN_EVENING_INSTRUCTION = `You are Quietnote in Evening Check-in mode. Guide the user through a 3-step evening reflection:
+1. How their day was overall
+2. What went well today
+3. What they would do differently
+
+After each response, gently acknowledge what they shared and encourage self-compassion.
+Be warm, brief (2-3 sentences), and reflective. Help them close their day with peace.
+NEVER give advice, diagnose, or recommend medications, supplements, dosages, or treatments.`;
+
+function isMorning(): boolean {
+  const hour = new Date().getHours();
+  return hour >= 5 && hour < 12;
+}
+
 function getSystemInstruction(mode: JournalingMode): string {
-  return mode === "gratitude" ? GRATITUDE_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
+  if (mode === "gratitude") return GRATITUDE_SYSTEM_INSTRUCTION;
+  if (mode === "checkin") return isMorning() ? CHECKIN_MORNING_INSTRUCTION : CHECKIN_EVENING_INSTRUCTION;
+  return SYSTEM_INSTRUCTION;
 }
 
 // Build messages array for the chat API with context window management.
@@ -105,14 +131,14 @@ function getLoadingMessage(progress: number): string {
 }
 
 export default function App() {
-  const { loadModel, loading, progress, webgpuUnsupported, error: modelError, clearError: clearModelError } = useInferenceEngine();
+  const { loadModel, loading, progress, webgpuUnsupported, error: modelError, clearError: clearModelError, runtimeId, switchRuntime, modelRef } = useInferenceEngine();
   const hasSeenLoading = useRef(false);
   if (loading) hasSeenLoading.current = true;
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [current, setCurrent] = useState<Session | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
-  const [model] = useState<ModelRef>(MODEL_REF);
+  const model = modelRef;
 
   const [temperature] = useState(0.6); // slightly higher for natural-sounding responses from stock model
   const [maxTokens] = useState(200); // ~150 words ≈ 4-6 sentences; allows room for reflective questions
@@ -124,6 +150,7 @@ export default function App() {
   // Journaling mode state
   const [journalingMode, setJournalingMode] = useState<JournalingMode>("freewrite");
   const [gratitudeStep, setGratitudeStep] = useState(1); // 1-based step counter
+  const [checkinStep, setCheckinStep] = useState(1); // 1-based step counter
 
   // Crisis detection state
   const [showCrisisResources, setShowCrisisResources] = useState(false);
@@ -188,15 +215,17 @@ export default function App() {
     })();
   }, []);
 
-  // Reset gratitude step when session changes
+  // Reset guided mode steps when session changes
   useEffect(() => {
     setGratitudeStep(1);
+    setCheckinStep(1);
   }, [currentId]);
 
   // Start a new session with the first user entry
   const newSession = async (firstMessage: string) => {
     if (!firstMessage.trim()) return;
     if (journalingMode === "gratitude") setGratitudeStep((s) => s + 1);
+    if (journalingMode === "checkin") setCheckinStep((s) => s + 1);
 
     // Check for crisis content - only show resources for critical/high severity
     const crisisResult = detectCrisis(firstMessage);
@@ -330,6 +359,7 @@ export default function App() {
   const replyInThread = async (threadId: string, text: string) => {
     if (!current) return;
     if (journalingMode === "gratitude") setGratitudeStep((s) => s + 1);
+    if (journalingMode === "checkin") setCheckinStep((s) => s + 1);
 
     // Check for crisis content - only show resources for critical/high severity
     const crisisResult = detectCrisis(text);
@@ -574,6 +604,9 @@ export default function App() {
         isOpen={showPrivacyDashboard}
         onClose={() => setShowPrivacyDashboard(false)}
         onDataCleared={handleDataCleared}
+        runtimeId={runtimeId}
+        onRuntimeChange={switchRuntime}
+        engineLoading={loading}
       />
 
       <header className="sticky top-0 z-10 backdrop-blur bg-white/60 border-b border-slate-200 shadow-sm">
@@ -670,8 +703,10 @@ export default function App() {
             onJournalingModeChange={(mode: JournalingMode) => {
               setJournalingMode(mode);
               setGratitudeStep(1);
+              setCheckinStep(1);
             }}
             gratitudeStep={gratitudeStep}
+            checkinStep={checkinStep}
           />
         }
         right={

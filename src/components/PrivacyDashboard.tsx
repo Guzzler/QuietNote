@@ -14,17 +14,27 @@ import {
   Wifi,
   WifiOff,
   AlertTriangle,
+  Cpu,
 } from "lucide-react";
 import { getStorageStats, clearAllData, listSessions, listMoods } from "../storage";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import type { RuntimeId } from "../inference/types";
+
+const RUNTIME_OPTIONS: { id: RuntimeId; label: string; model: string; description: string }[] = [
+  { id: "webllm", label: "WebLLM", model: "Gemma 2 2B", description: "Original backend via MLC WebGPU" },
+  { id: "transformersjs", label: "Transformers.js", model: "Gemma 3 1B", description: "Hugging Face ONNX via WebGPU/WASM" },
+];
 
 interface PrivacyDashboardProps {
   isOpen: boolean;
   onClose: () => void;
   onDataCleared?: () => void;
+  runtimeId?: RuntimeId;
+  onRuntimeChange?: (runtime: RuntimeId) => void;
+  engineLoading?: boolean;
 }
 
-export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: PrivacyDashboardProps) {
+export default function PrivacyDashboard({ isOpen, onClose, onDataCleared, runtimeId = "webllm", onRuntimeChange, engineLoading }: PrivacyDashboardProps) {
   const titleId = useId();
   const focusTrapRef = useFocusTrap(isOpen);
   const [stats, setStats] = useState<{ sessions: number; moods: number; totalBytes: number } | null>(null);
@@ -264,6 +274,45 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared }: Pri
                     </p>
                     <p className="text-xs text-slate-500">Total Browser Storage (includes AI model cache)</p>
                   </div>
+                </div>
+
+                {/* Inference Engine Selection */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                    <Cpu className="h-4 w-4" />
+                    Inference Engine
+                  </h3>
+                  <div className="space-y-2">
+                    {RUNTIME_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => onRuntimeChange?.(option.id)}
+                        disabled={engineLoading}
+                        className={`w-full flex items-start gap-3 p-3 rounded-xl border transition-all text-left ${
+                          runtimeId === option.id
+                            ? "bg-indigo-50 border-indigo-200"
+                            : "bg-slate-50 border-slate-100 hover:border-slate-200"
+                        } ${engineLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                      >
+                        <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                          runtimeId === option.id ? "border-indigo-500" : "border-slate-300"
+                        }`}>
+                          {runtimeId === option.id && (
+                            <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-800 text-sm">
+                            {option.label} <span className="text-slate-400 font-normal">({option.model})</span>
+                          </p>
+                          <p className="text-xs text-slate-500">{option.description}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Switching engines requires downloading a new model. All processing remains on-device.
+                  </p>
                 </div>
 
                 {/* Data Control Actions */}
