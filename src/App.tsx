@@ -63,6 +63,19 @@ After each response, gently acknowledge what they shared and encourage self-comp
 Be warm, brief (2-3 sentences), and reflective. Help them close their day with peace.
 NEVER give advice, diagnose, or recommend medications, supplements, dosages, or treatments.`;
 
+// System instruction for CBT thought record mode
+const THOUGHT_RECORD_INSTRUCTION = `You are Quietnote in Thought Record mode. Guide the user through a 5-step cognitive behavioral thought record:
+1. Identify the situation
+2. Notice automatic thoughts
+3. Name emotions and intensity
+4. Examine evidence for and against the thought
+5. Develop a more balanced perspective
+
+After each response, gently acknowledge what they shared and guide them to the next step.
+Be warm, brief (2-3 sentences), and supportive. You are a journaling facilitator, not a therapist.
+Help the user notice thought patterns without diagnosing or labeling.
+NEVER give advice, diagnose, or recommend medications, supplements, dosages, or treatments.`;
+
 function isMorning(): boolean {
   const hour = new Date().getHours();
   return hour >= 5 && hour < 12;
@@ -71,6 +84,7 @@ function isMorning(): boolean {
 function getSystemInstruction(mode: JournalingMode): string {
   if (mode === "gratitude") return GRATITUDE_SYSTEM_INSTRUCTION;
   if (mode === "checkin") return isMorning() ? CHECKIN_MORNING_INSTRUCTION : CHECKIN_EVENING_INSTRUCTION;
+  if (mode === "thoughtrecord") return THOUGHT_RECORD_INSTRUCTION;
   return SYSTEM_INSTRUCTION;
 }
 
@@ -151,6 +165,7 @@ export default function App() {
   const [journalingMode, setJournalingMode] = useState<JournalingMode>("freewrite");
   const [gratitudeStep, setGratitudeStep] = useState(1); // 1-based step counter
   const [checkinStep, setCheckinStep] = useState(1); // 1-based step counter
+  const [thoughtRecordStep, setThoughtRecordStep] = useState(1); // 1-based step counter
 
   // Crisis detection state
   const [showCrisisResources, setShowCrisisResources] = useState(false);
@@ -219,6 +234,7 @@ export default function App() {
   useEffect(() => {
     setGratitudeStep(1);
     setCheckinStep(1);
+    setThoughtRecordStep(1);
   }, [currentId]);
 
   // Start a new session with the first user entry
@@ -226,6 +242,7 @@ export default function App() {
     if (!firstMessage.trim()) return;
     if (journalingMode === "gratitude") setGratitudeStep((s) => s + 1);
     if (journalingMode === "checkin") setCheckinStep((s) => s + 1);
+    if (journalingMode === "thoughtrecord") setThoughtRecordStep((s) => s + 1);
 
     // Check for crisis content - only show resources for critical/high severity
     const crisisResult = detectCrisis(firstMessage);
@@ -360,6 +377,7 @@ export default function App() {
     if (!current) return;
     if (journalingMode === "gratitude") setGratitudeStep((s) => s + 1);
     if (journalingMode === "checkin") setCheckinStep((s) => s + 1);
+    if (journalingMode === "thoughtrecord") setThoughtRecordStep((s) => s + 1);
 
     // Check for crisis content - only show resources for critical/high severity
     const crisisResult = detectCrisis(text);
@@ -704,9 +722,11 @@ export default function App() {
               setJournalingMode(mode);
               setGratitudeStep(1);
               setCheckinStep(1);
+              setThoughtRecordStep(1);
             }}
             gratitudeStep={gratitudeStep}
             checkinStep={checkinStep}
+            thoughtRecordStep={thoughtRecordStep}
           />
         }
         right={

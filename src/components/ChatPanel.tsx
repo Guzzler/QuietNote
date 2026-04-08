@@ -7,6 +7,7 @@ import PromptSuggestionCard from "./PromptSuggestionCard";
 import JournalingModeSelector from "./JournalingModeSelector";
 import GratitudeGuide from "./GratitudeGuide";
 import CheckInGuide from "./CheckInGuide";
+import ThoughtRecordGuide from "./ThoughtRecordGuide";
 import type { JournalingMode } from "./JournalingModeSelector";
 import { getTopEmotion } from "../utils/emotionExtractor";
 import { getTopTheme } from "../utils/themeExtractor";
@@ -69,6 +70,7 @@ export default function ChatPanel({
   onJournalingModeChange,
   gratitudeStep = 1,
   checkinStep = 1,
+  thoughtRecordStep = 1,
 }: any) {
   const [animated, setAnimated] = useState("");
   const animatedMessageIds = useRef<Set<string>>(new Set());
@@ -300,6 +302,8 @@ export default function ChatPanel({
             <GratitudeGuide currentStep={gratitudeStep} />
           ) : journalingMode === "checkin" ? (
             <CheckInGuide currentStep={checkinStep} />
+          ) : journalingMode === "thoughtrecord" ? (
+            <ThoughtRecordGuide currentStep={thoughtRecordStep} />
           ) : (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}

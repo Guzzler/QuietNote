@@ -13,7 +13,7 @@ import type {
   GenerateOptions,
 } from "./types";
 
-const MODEL_ID = "onnx-community/gemma-3-1b-it-ONNX";
+const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX";
 
 export class TransformersJSEngine implements InferenceEngine, EngineCapability {
   readonly name = "Transformers.js";
@@ -174,5 +174,5 @@ export class TransformersJSEngine implements InferenceEngine, EngineCapability {
 export const TRANSFORMERSJS_MODEL_REF = {
   modelId: MODEL_ID,
   modelUrl: `https://huggingface.co/${MODEL_ID}`,
-  localId: "transformersjs-gemma-3-1b",
+  localId: "transformersjs-gemma-4-e2b",
 } as const;
