@@ -1,6 +1,6 @@
-import { PenLine, Heart, Sun, Moon } from "lucide-react";
+import { PenLine, Heart, Sun, Moon, Brain } from "lucide-react";
 
-export type JournalingMode = "freewrite" | "gratitude" | "checkin";
+export type JournalingMode = "freewrite" | "gratitude" | "checkin" | "thoughtrecord";
 
 interface Props {
   mode: JournalingMode;
@@ -19,7 +19,11 @@ const STATIC_MODES: { id: JournalingMode; label: string; icon: typeof PenLine }[
 
 export default function JournalingModeSelector({ mode, onChange }: Props) {
   const CheckinIcon = getCheckinIcon();
-  const modes = [...STATIC_MODES, { id: "checkin" as JournalingMode, label: "Check-in", icon: CheckinIcon }];
+  const modes = [
+    ...STATIC_MODES,
+    { id: "checkin" as JournalingMode, label: "Check-in", icon: CheckinIcon },
+    { id: "thoughtrecord" as JournalingMode, label: "Thought Record", icon: Brain },
+  ];
 
   return (
     <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 gap-0.5" role="radiogroup" aria-label="Journaling mode">

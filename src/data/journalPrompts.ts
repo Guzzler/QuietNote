@@ -357,6 +357,18 @@ export const EVENING_CHECKIN_SEQUENCE = [
 ] as const;
 
 /**
+ * Structured 5-step CBT thought record sequence.
+ * Used by the guided thought record mode for cognitive restructuring.
+ */
+export const THOUGHT_RECORD_SEQUENCE = [
+  { step: 1, prompt: "What happened? Describe the situation briefly." },
+  { step: 2, prompt: "What went through your mind? What were you thinking?" },
+  { step: 3, prompt: "What emotions did you feel? How intense were they (1-10)?" },
+  { step: 4, prompt: "What evidence supports or contradicts this thought?" },
+  { step: 5, prompt: "What's a more balanced way to think about this?" },
+] as const;
+
+/**
  * Get a random prompt from a specific category
  */
 export function getPromptByCategory(category: PromptCategory): PromptData | null {
