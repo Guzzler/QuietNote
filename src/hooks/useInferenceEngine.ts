@@ -50,7 +50,7 @@ export function useInferenceEngine() {
 
     // Create engine if we don't have one yet
     if (!engineRef.current) {
-      engineRef.current = createEngine(runtimeId);
+      engineRef.current = await createEngine(runtimeId);
       currentRuntimeRef.current = runtimeId;
     }
 
