@@ -12,7 +12,7 @@ import type { JournalingMode } from "./JournalingModeSelector";
 import { getTopEmotion } from "../utils/emotionExtractor";
 import { getTopTheme } from "../utils/themeExtractor";
 import { getPromptByCategory } from "../data/journalPrompts";
-import type { MoodEmotion, MoodEntry, PromptCategory } from "../types";
+import type { ChatMessage, MoodEmotion, MoodEntry, PromptCategory, Session, Thread } from "../types";
 
 // Guardrail constants for mood suggestions
 const MIN_MESSAGE_LENGTH = 20;
@@ -47,9 +47,35 @@ interface PromptSuggestion {
   afterMessageId: string;
 }
 
+interface ChatPanelProps {
+  topic: string;
+  setTopic: (topic: string) => void;
+  busy: boolean;
+  loading: boolean;
+  current: Session | null;
+  userInput: string;
+  setUserInput: (input: string) => void;
+  newSession: (text: string) => void;
+  replyInThread: (threadId: string, text: string) => void;
+  activeThread: Thread | null | undefined;
+  contextTrimmed: boolean;
+  showCrisisResources: boolean;
+  onSaveMood?: (mood: MoodEntry) => void;
+  onOpenMoodTracker?: (emotion?: MoodEmotion, intensity?: number) => void;
+  sessionId?: string;
+  modelError: string | null;
+  clearModelError?: () => void;
+  onRetryLoad?: () => void;
+  journalingMode?: JournalingMode;
+  onJournalingModeChange: (mode: JournalingMode) => void;
+  gratitudeStep?: number;
+  checkinStep?: number;
+  thoughtRecordStep?: number;
+}
+
 export default function ChatPanel({
-  topic: _topic,      // unused (kept for prop compatibility)
-  setTopic: _setTopic, // unused
+  topic: _topic,
+  setTopic: _setTopic,
   busy,
   loading,
   current,
@@ -66,12 +92,12 @@ export default function ChatPanel({
   modelError,
   clearModelError,
   onRetryLoad,
-  journalingMode = "freewrite" as JournalingMode,
+  journalingMode = "freewrite",
   onJournalingModeChange,
   gratitudeStep = 1,
   checkinStep = 1,
   thoughtRecordStep = 1,
-}: any) {
+}: ChatPanelProps) {
   const [animated, setAnimated] = useState("");
   const animatedMessageIds = useRef<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -157,7 +183,7 @@ export default function ChatPanel({
 
     // Find the preceding user message
     const userMsg = [...msgs].reverse().find(
-      (m: any) => m.role === "user" && m.ts <= lastMsg.ts
+      (m: ChatMessage) => m.role === "user" && m.ts <= lastMsg.ts
     );
     if (!userMsg) return;
 
@@ -379,11 +405,11 @@ export default function ChatPanel({
                 )}
                 <AnimatePresence>
                   {activeThread.messages
-                    .filter((m: any) => m.role !== "system")
-                    .map((m: any, idx: number) => {
+                    .filter((m: ChatMessage) => m.role !== "system")
+                    .map((m: ChatMessage, idx: number) => {
                       const isLastAssistant =
                         m.role === "assistant" &&
-                        idx === activeThread.messages.filter((msg: any) => msg.role !== "system").length - 1;
+                        idx === activeThread.messages.filter((msg: ChatMessage) => msg.role !== "system").length - 1;
 
                       return (
                         <div key={m.id}>
