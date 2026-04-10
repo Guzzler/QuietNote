@@ -19,8 +19,10 @@ export async function createEngine(runtime: RuntimeId = "webllm"): Promise<Infer
       const { TransformersJSEngine } = await import("./transformersjs-engine");
       return new TransformersJSEngine();
     }
-    case "mediapipe":
-      throw new Error("MediaPipe backend is not yet implemented.");
+    case "mediapipe": {
+      const { MediaPipeEngine } = await import("./mediapipe-engine");
+      return new MediaPipeEngine();
+    }
     default:
       throw new Error(`Unknown runtime: ${runtime}`);
   }
@@ -37,6 +39,12 @@ export const TRANSFORMERSJS_MODEL_REF: ModelRef = {
   modelId: "onnx-community/gemma-4-E2B-it-ONNX",
   modelUrl: "https://huggingface.co/onnx-community/gemma-4-E2B-it-ONNX",
   localId: "transformersjs-gemma-4-e2b",
+};
+
+export const MEDIAPIPE_MODEL_REF: ModelRef = {
+  modelId: "gemma-3-1b-mediapipe",
+  modelUrl: "https://storage.googleapis.com/mediapipe-models/llm_inference/gemma3_1b_gpu/float16/1/gemma3_1b_gpu.bin",
+  localId: "mediapipe-gemma-3-1b",
 };
 
 export type { InferenceEngine, EngineStatus, GenerateOptions, LoadProgress, RuntimeId } from "./types";

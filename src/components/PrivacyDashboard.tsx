@@ -23,6 +23,7 @@ import type { RuntimeId } from "../inference/types";
 const RUNTIME_OPTIONS: { id: RuntimeId; label: string; model: string; description: string }[] = [
   { id: "webllm", label: "WebLLM", model: "Gemma 2 2B", description: "Original backend via MLC WebGPU" },
   { id: "transformersjs", label: "Transformers.js", model: "Gemma 4 E2B", description: "Hugging Face ONNX via WebGPU/WASM" },
+  { id: "mediapipe", label: "MediaPipe", model: "Gemma 3 1B", description: "Google AI Edge via WebGPU" },
 ];
 
 interface PrivacyDashboardProps {
@@ -143,7 +144,7 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared, runti
     {
       icon: <Server className="h-5 w-5" />,
       title: "Zero Server Communication",
-      description: "Your journal entries never leave your device. No API calls, no cloud sync.",
+      description: "Your journal entries never leave your device. The AI model is downloaded once on first use, then all processing stays local.",
       status: "active",
     },
     {
@@ -155,7 +156,7 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared, runti
     {
       icon: <Lock className="h-5 w-5" />,
       title: "On-Device AI",
-      description: "The AI model runs entirely in your browser using WebLLM technology.",
+      description: "The AI model runs entirely in your browser. Model files are downloaded once, then everything runs locally.",
       status: "active",
     },
     {
@@ -223,7 +224,7 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared, runti
                   <div>
                     <p className="font-medium text-green-800">Your privacy is protected</p>
                     <p className="text-sm text-green-700">
-                      0 bytes sent to external servers. All processing happens locally.
+                      After setup, all processing happens locally on your device.
                     </p>
                   </div>
                 </div>
