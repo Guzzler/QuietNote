@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { createEngine, WEBLLM_MODEL_REF, TRANSFORMERSJS_MODEL_REF } from "../inference";
+import { createEngine, WEBLLM_MODEL_REF, TRANSFORMERSJS_MODEL_REF, MEDIAPIPE_MODEL_REF } from "../inference";
 import type { InferenceEngine, LoadProgress, RuntimeId } from "../inference";
 import type { EngineCapability } from "../inference/types";
 import type { ModelRef } from "../types";
@@ -7,7 +7,7 @@ import type { ModelRef } from "../types";
 const MODEL_REFS: Record<RuntimeId, ModelRef> = {
   webllm: WEBLLM_MODEL_REF,
   transformersjs: TRANSFORMERSJS_MODEL_REF,
-  mediapipe: { modelId: "mediapipe", modelUrl: "", localId: "mediapipe" },
+  mediapipe: MEDIAPIPE_MODEL_REF,
 };
 
 function getStoredRuntime(): RuntimeId {
