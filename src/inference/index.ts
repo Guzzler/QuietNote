@@ -42,9 +42,9 @@ export const TRANSFORMERSJS_MODEL_REF: ModelRef = {
 };
 
 export const MEDIAPIPE_MODEL_REF: ModelRef = {
-  modelId: "gemma-3-1b-mediapipe",
-  modelUrl: "https://storage.googleapis.com/mediapipe-models/llm_inference/gemma3_1b_gpu/float16/1/gemma3_1b_gpu.bin",
-  localId: "mediapipe-gemma-3-1b",
+  modelId: "gemma-4-e2b-mediapipe",
+  modelUrl: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.task",
+  localId: "mediapipe-gemma-4-e2b",
 };
 
 export type { InferenceEngine, EngineStatus, GenerateOptions, LoadProgress, RuntimeId } from "./types";

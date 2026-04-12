@@ -346,7 +346,7 @@ export default function ChatPanel({
               <div className="text-left space-y-3 mb-5">
                 <div className="flex items-start gap-2.5">
                   <Lock className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-slate-600">Everything stays on your device — nothing is sent to any server</p>
+                  <p className="text-sm text-slate-600">After setup, everything stays on your device — your journal entries are never sent anywhere</p>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <Sparkles className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />

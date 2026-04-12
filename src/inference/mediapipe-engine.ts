@@ -3,6 +3,9 @@
  *
  * Uses @mediapipe/tasks-genai to run Gemma 4 E2B locally via WebGPU.
  * Google AI Edge's official on-device LLM path for web browsers.
+ *
+ * Note: Gemma 4 E2B has a known issue (mediapipe#6270) — memory access out of
+ * bounds on some Chrome/GPU combos. The existing error-recovery UI handles this.
  */
 
 import type {
@@ -14,7 +17,7 @@ import type {
 } from "./types";
 
 const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/llm_inference/gemma3_1b_gpu/float16/1/gemma3_1b_gpu.bin";
+  "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.task";
 
 export class MediaPipeEngine implements InferenceEngine, EngineCapability {
   readonly name = "MediaPipe";
@@ -163,7 +166,7 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
 
 /** Model reference metadata */
 export const MEDIAPIPE_MODEL_REF = {
-  modelId: "gemma-3-1b-mediapipe",
+  modelId: "gemma-4-e2b-mediapipe",
   modelUrl: MODEL_URL,
-  localId: "mediapipe-gemma-3-1b",
+  localId: "mediapipe-gemma-4-e2b",
 } as const;

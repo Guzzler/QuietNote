@@ -23,7 +23,7 @@ import type { RuntimeId } from "../inference/types";
 const RUNTIME_OPTIONS: { id: RuntimeId; label: string; model: string; description: string }[] = [
   { id: "webllm", label: "WebLLM", model: "Gemma 2 2B", description: "Original backend via MLC WebGPU" },
   { id: "transformersjs", label: "Transformers.js", model: "Gemma 4 E2B", description: "Hugging Face ONNX via WebGPU/WASM" },
-  { id: "mediapipe", label: "MediaPipe", model: "Gemma 3 1B", description: "Google AI Edge via WebGPU" },
+  { id: "mediapipe", label: "MediaPipe", model: "Gemma 4 E2B", description: "Google AI Edge via WebGPU" },
 ];
 
 interface PrivacyDashboardProps {

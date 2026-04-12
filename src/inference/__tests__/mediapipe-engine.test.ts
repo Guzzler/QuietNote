@@ -75,9 +75,9 @@ describe("MediaPipeEngine", () => {
       expect(typeof MEDIAPIPE_MODEL_REF.modelId).toBe("string");
     });
 
-    it("has a valid modelUrl pointing to Google storage", () => {
+    it("has a valid modelUrl pointing to HuggingFace", () => {
       expect(MEDIAPIPE_MODEL_REF.modelUrl).toContain(
-        "storage.googleapis.com",
+        "huggingface.co",
       );
     });
 
