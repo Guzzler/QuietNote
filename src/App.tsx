@@ -745,7 +745,7 @@ export default function App() {
       />
 
       <footer className="text-center text-[11px] text-slate-500 py-4">
-        Quietnote • Your data never leaves this device
+        Quietnote • Your journal entries stay on this device
       </footer>
     </div>
   );
