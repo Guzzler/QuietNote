@@ -167,13 +167,16 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                   <h2 id={titleId} className="text-xl font-semibold text-slate-800">How are you feeling?</h2>
                   <p className="text-sm text-slate-500 mt-1">Track your mood to discover patterns</p>
                 </div>
-                <button
-                  onClick={onClose}
-                  aria-label="Close mood tracker"
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-                >
-                  <X className="h-5 w-5 text-slate-500" />
-                </button>
+                <div className="flex flex-col items-center gap-0.5">
+                  <button
+                    onClick={onClose}
+                    aria-label="Close mood tracker"
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  >
+                    <X className="h-5 w-5 text-slate-500" />
+                  </button>
+                  <span className="text-[10px] text-slate-400 hidden sm:block">Esc</span>
+                </div>
               </div>
 
               {/* Content */}

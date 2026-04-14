@@ -15,7 +15,9 @@ import {
   WifiOff,
   AlertTriangle,
   Cpu,
+  Activity,
 } from "lucide-react";
+import { NetworkAudit, type NetworkRequest } from "../utils/networkAudit";
 import { getStorageStats, clearAllData, listSessions, listMoods } from "../storage";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import type { RuntimeId } from "../inference/types";
@@ -44,6 +46,11 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared, runti
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
+
+  // Network audit (dev mode only)
+  const [audit] = useState(() => import.meta.env.DEV ? new NetworkAudit() : null);
+  const [auditRunning, setAuditRunning] = useState(false);
+  const [auditLog, setAuditLog] = useState<NetworkRequest[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -126,6 +133,36 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared, runti
     }
   };
 
+  const handleAuditToggle = () => {
+    if (!audit) return;
+    if (auditRunning) {
+      const log = audit.stop();
+      setAuditLog(log);
+      setAuditRunning(false);
+    } else {
+      audit.start();
+      setAuditRunning(true);
+      setAuditLog([]);
+    }
+  };
+
+  // Refresh audit log while running
+  useEffect(() => {
+    if (!auditRunning || !audit) return;
+    const interval = setInterval(() => {
+      setAuditLog(audit.getLog());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [auditRunning, audit]);
+
+  // Stop audit when dashboard closes
+  useEffect(() => {
+    if (!isOpen && audit && auditRunning) {
+      audit.stop();
+      setAuditRunning(false);
+    }
+  }, [isOpen, audit, auditRunning]);
+
   const handleClearData = async () => {
     setIsDeleting(true);
     try {
@@ -206,13 +243,16 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared, runti
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={onClose}
-                    aria-label="Close privacy dashboard"
-                    className="p-2 hover:bg-white/50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-                  >
-                    <X className="h-5 w-5 text-slate-500" />
-                  </button>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      onClick={onClose}
+                      aria-label="Close privacy dashboard"
+                      className="p-2 hover:bg-white/50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    >
+                      <X className="h-5 w-5 text-slate-500" />
+                    </button>
+                    <span className="text-[10px] text-slate-400 hidden sm:block">Esc</span>
+                  </div>
                 </div>
               </div>
 
@@ -392,6 +432,74 @@ export default function PrivacyDashboard({ isOpen, onClose, onDataCleared, runti
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* Network Audit (dev mode only) */}
+                {import.meta.env.DEV && audit && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      Network Audit
+                      <span className="text-xs font-normal text-slate-400">(dev only)</span>
+                    </h3>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs text-slate-500">
+                          {auditRunning
+                            ? `Monitoring — ${auditLog.length} request${auditLog.length !== 1 ? "s" : ""} captured`
+                            : auditLog.length > 0
+                              ? `Stopped — ${auditLog.length} request${auditLog.length !== 1 ? "s" : ""} captured`
+                              : "Verify no network requests occur during journaling"}
+                        </p>
+                        <button
+                          onClick={handleAuditToggle}
+                          className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                            auditRunning
+                              ? "bg-red-100 text-red-700 hover:bg-red-200"
+                              : "bg-green-100 text-green-700 hover:bg-green-200"
+                          }`}
+                        >
+                          {auditRunning ? "Stop Audit" : "Start Audit"}
+                        </button>
+                      </div>
+                      {auditLog.length > 0 && (
+                        <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
+                          {auditLog.map((req, idx) => {
+                            const isModelDownload = req.url.includes("huggingface.co") ||
+                              req.url.includes("storage.googleapis.com") ||
+                              req.url.includes("cdn.jsdelivr.net") ||
+                              req.url.includes("mlc-ai");
+                            return (
+                              <div
+                                key={idx}
+                                className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${
+                                  isModelDownload
+                                    ? "bg-green-50 text-green-700"
+                                    : "bg-red-50 text-red-700"
+                                }`}
+                              >
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                  isModelDownload ? "bg-green-400" : "bg-red-400"
+                                }`} />
+                                <span className="font-mono truncate flex-1">{req.url}</span>
+                                <span className="text-[10px] opacity-60">{req.type}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {auditLog.length === 0 && !auditRunning && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          Start the audit, then use the app. All outbound requests will be logged here.
+                        </p>
+                      )}
+                      {auditRunning && auditLog.length === 0 && (
+                        <p className="text-xs text-green-600 mt-1">
+                          No outbound requests detected. Your data is staying local.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Open Source Note */}
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">

@@ -119,6 +119,9 @@ export default function ChatPanel({
   // External trigger for PromptSelector (from welcome card link)
   const [promptSelectorOpen, setPromptSelectorOpen] = useState(false);
 
+  // Keyboard shortcut hints visibility
+  const [inputFocused, setInputFocused] = useState(false);
+
   // Auto-scroll to bottom when messages change or typing animation updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -518,6 +521,8 @@ export default function ChatPanel({
                 handleSend();
               }
             }}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             placeholder="What's on your mind?"
             className="flex-1 min-h-[52px] max-h-36 resize-none rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all bg-white/80"
           />
@@ -530,6 +535,11 @@ export default function ChatPanel({
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </button>
         </div>
+        {inputFocused && (
+          <p className="hidden sm:block text-[10px] text-slate-400 mt-1 ml-1">
+            Enter to send · Shift+Enter for new line
+          </p>
+        )}
       </div>
     </main>
   );
