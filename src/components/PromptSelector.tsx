@@ -103,7 +103,7 @@ export default function PromptSelector({ onSelectPrompt, externalOpen, onExterna
       {/* Dropdown Panel */}
       {isOpen && (
           <div
-            className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-96 bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50 animate-dropdown"
+            className="absolute bottom-full mb-2 right-0 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-lg border border-slate-200 p-4 z-50 overflow-y-auto max-h-[60vh] animate-dropdown"
           >
             {/* Category Selector */}
             <div className="mb-4">

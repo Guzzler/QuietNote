@@ -503,7 +503,9 @@ export default function ChatPanel({
       <div className="border-t border-slate-200 mt-2 pt-2">
         {/* Mode selector + Prompt Selector */}
         <div className="mb-2 flex items-center justify-between gap-2">
-          <JournalingModeSelector mode={journalingMode} onChange={onJournalingModeChange} />
+          <div className="min-w-0 flex-1">
+            <JournalingModeSelector mode={journalingMode} onChange={onJournalingModeChange} />
+          </div>
           <PromptSelector onSelectPrompt={(prompt: string) => setUserInput(prompt)} externalOpen={promptSelectorOpen} onExternalOpenHandled={() => setPromptSelectorOpen(false)} />
         </div>
 
