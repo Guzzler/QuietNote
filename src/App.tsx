@@ -106,6 +106,36 @@ function uid() {
   return crypto.randomUUID();
 }
 
+// Extract a meaningful title from the first message
+function smartTitle(text: string): string {
+  if (!text.trim()) return "Quietnote";
+
+  const cleaned = text.trim();
+
+  // Try to find first sentence (up to . ! ?)
+  const sentenceMatch = cleaned.match(/^(.+?[.!?])(?:\s|$)/);
+  if (sentenceMatch && sentenceMatch[1].length <= 80) {
+    return sentenceMatch[1];
+  }
+
+  // No short sentence — take first ~10 words
+  const words = cleaned.split(/\s+/).slice(0, 10);
+  const result = words.join(" ");
+
+  if (result.length > 80) {
+    // Truncate to 80 chars at a word boundary
+    const truncated = result.slice(0, 80).replace(/\s+\S*$/, "");
+    return truncated + "\u2026";
+  }
+
+  // If we used fewer words than the original, add ellipsis
+  if (words.length < cleaned.split(/\s+/).length) {
+    return result + "\u2026";
+  }
+
+  return result;
+}
+
 // Truncate text to the last complete sentence
 function truncateToLastSentence(text: string): string {
   if (!text) return text;
@@ -262,7 +292,7 @@ export default function App() {
 
     const sess: Session = {
       id: uid(),
-      title: firstMessage.slice(0, 48) || "Quietnote",
+      title: smartTitle(firstMessage),
       affirmation: "",
       questions: [],
       threads: [
@@ -617,6 +647,11 @@ export default function App() {
         sessionId={currentId ?? undefined}
         initialEmotion={moodPreFill?.emotion}
         initialIntensity={moodPreFill?.intensity}
+        onViewSession={(id) => {
+          loadExisting(id);
+          setShowMoodTracker(false);
+          setMoodPreFill(null);
+        }}
       />
       <PrivacyDashboard
         isOpen={showPrivacyDashboard}
