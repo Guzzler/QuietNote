@@ -141,6 +141,19 @@ export default function ChatPanel({
     animatedMessageIds.current = new Set();
   }, [current?.id]);
 
+  // Track message IDs that were shown via streaming (temp === true)
+  const streamedMessageIds = useRef<Set<string>>(new Set());
+
+  // Track when a message is being streamed so we can skip the typing animation later
+  useEffect(() => {
+    if (!activeThread) return;
+    const msgs = activeThread.messages;
+    const last = msgs[msgs.length - 1];
+    if (last?.role === "assistant" && last.temp) {
+      streamedMessageIds.current.add(last.id);
+    }
+  }, [activeThread?.messages?.length, activeThread?.messages?.[activeThread?.messages?.length - 1]?.temp]);
+
   // Typing animation for the latest assistant message — only after finalization, only once per message
   useEffect(() => {
     if (!activeThread) return;
@@ -148,9 +161,10 @@ export default function ChatPanel({
     const last = msgs[msgs.length - 1];
     // Only animate once the message is finalized (not during streaming)
     if (last?.role === "assistant" && !last.temp) {
-      // Skip animation if this message was already animated
-      if (animatedMessageIds.current.has(last.id)) {
+      // Skip animation if this message was already animated OR was streamed live
+      if (animatedMessageIds.current.has(last.id) || streamedMessageIds.current.has(last.id)) {
         setAnimated(last.content || "");
+        animatedMessageIds.current.add(last.id);
         return;
       }
       let i = 0;
