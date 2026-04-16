@@ -15,6 +15,19 @@ import type {
 
 const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX";
 
+// Gemma chat template for tokenizers that don't include one
+const GEMMA_CHAT_TEMPLATE =
+  "{% for message in messages %}" +
+  "{% if message['role'] == 'user' %}" +
+  "<start_of_turn>user\n{{ message['content'] }}<end_of_turn>\n" +
+  "{% elif message['role'] == 'assistant' %}" +
+  "<start_of_turn>model\n{{ message['content'] }}<end_of_turn>\n" +
+  "{% elif message['role'] == 'system' %}" +
+  "<start_of_turn>user\n{{ message['content'] }}<end_of_turn>\n" +
+  "{% endif %}" +
+  "{% endfor %}" +
+  "{% if add_generation_prompt %}<start_of_turn>model\n{% endif %}";
+
 export class TransformersJSEngine implements InferenceEngine, EngineCapability {
   readonly name = "Transformers.js";
   private tokenizer: any = null;
@@ -57,6 +70,12 @@ export class TransformersJSEngine implements InferenceEngine, EngineCapability {
       onProgress?.({ progress: 0.05, message: "Loading tokenizer…" });
 
       this.tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID);
+
+      // Some ONNX community models don't include a chat_template in their
+      // tokenizer config. Set the Gemma template if missing.
+      if (!this.tokenizer.chat_template) {
+        this.tokenizer.chat_template = GEMMA_CHAT_TEMPLATE;
+      }
 
       onProgress?.({ progress: 0.15, message: "Downloading model…" });
 
