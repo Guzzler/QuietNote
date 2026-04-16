@@ -118,15 +118,60 @@ export class TransformersJSEngine implements InferenceEngine, EngineCapability {
       add_generation_prompt: true,
     });
 
+    // Resolve the EOS token ID(s) for Gemma — includes <end_of_turn> (107)
+    // and the standard EOS token so the model stops after its turn
+    const eosTokenIds: number[] = [];
+    const eosId = this.tokenizer.eos_token_id;
+    if (typeof eosId === "number") eosTokenIds.push(eosId);
+    else if (Array.isArray(eosId)) eosTokenIds.push(...eosId);
+    // Encode <end_of_turn> to get its token ID — critical for stopping generation
+    const endOfTurnIds = this.tokenizer.encode("<end_of_turn>", { add_special_tokens: false });
+    for (const id of endOfTurnIds) {
+      if (typeof id === "number" && !eosTokenIds.includes(id)) {
+        eosTokenIds.push(id);
+      }
+    }
+
     // Set up streaming via a TextStreamer that pushes tokens to a queue
     const tokenQueue: string[] = [];
     let resolveNext: (() => void) | null = null;
     let done = false;
+    let hitStop = false;
 
     const streamer = new TextStreamer(this.tokenizer, {
       skip_prompt: true,
       skip_special_tokens: true,
       callback_function: (text: string) => {
+        if (hitStop) return;
+
+        // Check for leaked special tokens and stop/strip them
+        const stopIdx = text.indexOf("<end_of_turn>");
+        if (stopIdx !== -1) {
+          hitStop = true;
+          const clean = text.slice(0, stopIdx);
+          if (clean) tokenQueue.push(clean);
+          done = true;
+          if (resolveNext) {
+            resolveNext();
+            resolveNext = null;
+          }
+          return;
+        }
+
+        // Also check for <start_of_turn> which means the model went past its turn
+        const startIdx = text.indexOf("<start_of_turn>");
+        if (startIdx !== -1) {
+          hitStop = true;
+          const clean = text.slice(0, startIdx);
+          if (clean) tokenQueue.push(clean);
+          done = true;
+          if (resolveNext) {
+            resolveNext();
+            resolveNext = null;
+          }
+          return;
+        }
+
         tokenQueue.push(text);
         if (resolveNext) {
           resolveNext();
@@ -144,6 +189,7 @@ export class TransformersJSEngine implements InferenceEngine, EngineCapability {
         repetition_penalty: options.repetitionPenalty ?? 1.3,
         do_sample: true,
         streamer,
+        eos_token_id: eosTokenIds.length > 0 ? eosTokenIds : undefined,
       })
       .then(() => {
         done = true;
