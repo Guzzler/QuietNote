@@ -15,18 +15,31 @@ import type {
 
 const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX";
 
-// Gemma chat template for tokenizers that don't include one
-const GEMMA_CHAT_TEMPLATE =
-  "{% for message in messages %}" +
-  "{% if message['role'] == 'user' %}" +
-  "<start_of_turn>user\n{{ message['content'] }}<end_of_turn>\n" +
-  "{% elif message['role'] == 'assistant' %}" +
-  "<start_of_turn>model\n{{ message['content'] }}<end_of_turn>\n" +
-  "{% elif message['role'] == 'system' %}" +
-  "<start_of_turn>user\n{{ message['content'] }}<end_of_turn>\n" +
-  "{% endif %}" +
-  "{% endfor %}" +
-  "{% if add_generation_prompt %}<start_of_turn>model\n{% endif %}";
+/**
+ * Build Gemma chat prompt manually. System instructions are prepended
+ * to the first user message since Gemma doesn't have a dedicated system role.
+ */
+function buildGemmaPrompt(messages: { role: string; content: string }[]): string {
+  const parts: string[] = [];
+  let systemPrefix = "";
+
+  for (const msg of messages) {
+    if (msg.role === "system") {
+      // Accumulate system messages to prepend to first user turn
+      systemPrefix += msg.content + "\n\n";
+    } else if (msg.role === "user") {
+      const content = systemPrefix ? systemPrefix + msg.content : msg.content;
+      systemPrefix = ""; // Only prepend to first user message
+      parts.push(`<start_of_turn>user\n${content}<end_of_turn>`);
+    } else if (msg.role === "assistant") {
+      parts.push(`<start_of_turn>model\n${msg.content}<end_of_turn>`);
+    }
+  }
+
+  // Add generation prompt for model's turn
+  parts.push("<start_of_turn>model");
+  return parts.join("\n") + "\n";
+}
 
 export class TransformersJSEngine implements InferenceEngine, EngineCapability {
   readonly name = "Transformers.js";
@@ -71,12 +84,6 @@ export class TransformersJSEngine implements InferenceEngine, EngineCapability {
 
       this.tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID);
 
-      // Some ONNX community models don't include a chat_template in their
-      // tokenizer config. Set the Gemma template if missing.
-      if (!this.tokenizer.chat_template) {
-        this.tokenizer.chat_template = GEMMA_CHAT_TEMPLATE;
-      }
-
       onProgress?.({ progress: 0.15, message: "Downloading model…" });
 
       this.model = await AutoModelForCausalLM.from_pretrained(MODEL_ID, {
@@ -111,14 +118,14 @@ export class TransformersJSEngine implements InferenceEngine, EngineCapability {
 
     const { TextStreamer } = await import("@huggingface/transformers");
 
-    // Apply the chat template to format messages for the model
-    const inputs = this.tokenizer.apply_chat_template(messages, {
-      tokenize: true,
-      return_dict: true,
-      add_generation_prompt: true,
+    // Build the prompt manually — the ONNX tokenizer doesn't have a
+    // reliable chat_template, so we format the Gemma turns ourselves
+    const promptText = buildGemmaPrompt(messages);
+    const inputs = this.tokenizer(promptText, {
+      add_special_tokens: false,
     });
 
-    // Resolve the EOS token ID(s) for Gemma — includes <end_of_turn> (107)
+    // Resolve the EOS token ID(s) for Gemma — includes <end_of_turn>
     // and the standard EOS token so the model stops after its turn
     const eosTokenIds: number[] = [];
     const eosId = this.tokenizer.eos_token_id;

@@ -109,27 +109,51 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
   ): AsyncIterable<string> {
     if (!this.inference) throw new Error("Engine not loaded");
 
-    // Build prompt from messages using Gemma turn markers
-    const prompt = messages
-      .map((m) => {
-        if (m.role === "system")
-          return `<start_of_turn>user\n${m.content}<end_of_turn>`;
-        if (m.role === "user")
-          return `<start_of_turn>user\n${m.content}<end_of_turn>`;
-        return `<start_of_turn>model\n${m.content}<end_of_turn>`;
-      })
-      .join("\n") + "\n<start_of_turn>model\n";
+    // Build prompt from messages — prepend system instructions to first user message
+    // since Gemma doesn't have a dedicated system role
+    let systemPrefix = "";
+    const parts: string[] = [];
+
+    for (const m of messages) {
+      if (m.role === "system") {
+        systemPrefix += m.content + "\n\n";
+      } else if (m.role === "user") {
+        const content = systemPrefix ? systemPrefix + m.content : m.content;
+        systemPrefix = "";
+        parts.push(`<start_of_turn>user\n${content}<end_of_turn>`);
+      } else if (m.role === "assistant") {
+        parts.push(`<start_of_turn>model\n${m.content}<end_of_turn>`);
+      }
+    }
+    parts.push("<start_of_turn>model");
+    const prompt = parts.join("\n") + "\n";
 
     // MediaPipe uses callback-based streaming — wrap in async iterator
     const chunks: string[] = [];
     let resolve: (() => void) | null = null;
     let done = false;
+    let hitStop = false;
 
     const resultPromise = this.inference.generateResponse(
       prompt,
       (partialResult: string, complete: boolean) => {
-        chunks.push(partialResult);
-        if (complete) done = true;
+        if (hitStop) return;
+
+        // Strip leaked special tokens
+        let text = partialResult;
+        const endIdx = text.indexOf("<end_of_turn>");
+        if (endIdx !== -1) {
+          text = text.slice(0, endIdx);
+          hitStop = true;
+        }
+        const startIdx = text.indexOf("<start_of_turn>");
+        if (startIdx !== -1) {
+          text = text.slice(0, startIdx);
+          hitStop = true;
+        }
+
+        if (text) chunks.push(text);
+        if (complete || hitStop) done = true;
         if (resolve) {
           resolve();
           resolve = null;
