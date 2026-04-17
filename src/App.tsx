@@ -8,7 +8,7 @@ import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
 import WebGPUFallback from "./components/WebGPUFallback";
 import { useInferenceEngine } from "./hooks/useInferenceEngine";
-import { putSession, listSessions, getSession, putMood, deleteSession } from "./storage";
+import { putSession, listSessions, getSession, putMood, deleteSession, listMoods } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
@@ -212,6 +212,9 @@ export default function App() {
   // Mobile sessions panel toggle
   const [showMobileSessions, setShowMobileSessions] = useState(false);
 
+  // Centralized moods state — shared by ChatPanel (welcome) and MoodTracker
+  const [allMoods, setAllMoods] = useState<MoodEntry[]>([]);
+
   // Listen for crisis resources open event from ChatPanel disclaimer link
   useEffect(() => {
     const handleOpenCrisis = () => setShowCrisisResources(true);
@@ -222,6 +225,7 @@ export default function App() {
   // Handle saving mood
   const handleSaveMood = async (mood: MoodEntry) => {
     await putMood(mood);
+    setAllMoods(await listMoods());
   };
 
   // Handle data cleared from privacy dashboard
@@ -248,6 +252,7 @@ export default function App() {
 
   useEffect(() => {
     listSessions().then(setSessions);
+    listMoods().then(setAllMoods);
   }, []);
 
   useEffect(() => {
@@ -752,6 +757,7 @@ export default function App() {
             modelError={modelError}
             clearModelError={clearModelError}
             onRetryLoad={loadModel}
+            moods={allMoods}
             journalingMode={journalingMode}
             onJournalingModeChange={(mode: JournalingMode) => {
               setJournalingMode(mode);

@@ -18,6 +18,7 @@ import type { MoodEmotion, MoodContext, MoodEntry } from "../types";
 import { listMoods } from "../storage";
 import MoodInsightsCard from "./MoodInsightsCard";
 import MoodHistoryPanel from "./MoodHistoryPanel";
+import WellnessSummary from "./WellnessSummary";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface MoodTrackerProps {
@@ -350,7 +351,10 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                     <MoodInsightsCard moods={allMoods} />
                   </>
                 ) : (
-                  <MoodHistoryPanel moods={allMoods} onViewSession={onViewSession} />
+                  <>
+                    <WellnessSummary moods={allMoods} />
+                    <MoodHistoryPanel moods={allMoods} onViewSession={onViewSession} />
+                  </>
                 )}
               </div>
 
