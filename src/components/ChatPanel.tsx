@@ -1,5 +1,5 @@
-import { Loader2, Send, MessageSquare, Info, AlertCircle, RefreshCw, Lock, Sparkles, Heart } from "lucide-react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { Loader2, Send, MessageSquare, Info, AlertCircle, RefreshCw, Lock, Sparkles, Heart, TrendingUp, TrendingDown, Minus, X } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PromptSelector from "./PromptSelector";
 import MoodSuggestionCard from "./MoodSuggestionCard";
@@ -12,6 +12,7 @@ import type { JournalingMode } from "./JournalingModeSelector";
 import { getTopEmotion } from "../utils/emotionExtractor";
 import { getTopTheme } from "../utils/themeExtractor";
 import { getPromptByCategory } from "../data/journalPrompts";
+import { analyzeMoodTrend, findTopEmotions } from "../utils/moodPatterns";
 import type { ChatMessage, MoodEmotion, MoodEntry, PromptCategory, Session, Thread } from "../types";
 
 // Guardrail constants for mood suggestions
@@ -63,6 +64,7 @@ interface ChatPanelProps {
   onSaveMood?: (mood: MoodEntry) => void;
   onOpenMoodTracker?: (emotion?: MoodEmotion, intensity?: number) => void;
   sessionId?: string;
+  moods?: MoodEntry[];
   modelError: string | null;
   clearModelError?: () => void;
   onRetryLoad?: () => void;
@@ -89,6 +91,7 @@ export default function ChatPanel({
   onSaveMood,
   onOpenMoodTracker,
   sessionId,
+  moods = [],
   modelError,
   clearModelError,
   onRetryLoad,
@@ -121,6 +124,53 @@ export default function ChatPanel({
 
   // Keyboard shortcut hints visibility
   const [inputFocused, setInputFocused] = useState(false);
+
+  // Dismissible context trimming notice
+  const [showTrimNotice, setShowTrimNotice] = useState(true);
+
+  // Reset trim notice when new trimming occurs
+  useEffect(() => {
+    if (contextTrimmed) setShowTrimNotice(true);
+  }, [contextTrimmed]);
+
+  // Personalized welcome: compute greeting and suggestions from mood data
+  const personalizedWelcome = useMemo(() => {
+    const hour = new Date().getHours();
+    let greeting: string;
+    let suggestion: { text: string; mode: JournalingMode } | null = null;
+
+    if (hour >= 5 && hour < 12) {
+      greeting = "Good morning";
+      suggestion = { text: "Start with a morning check-in?", mode: "checkin" };
+    } else if (hour >= 12 && hour < 17) {
+      greeting = "Good afternoon";
+    } else if (hour >= 17 && hour < 21) {
+      greeting = "Good evening";
+      suggestion = { text: "Wind down with an evening reflection?", mode: "checkin" };
+    } else {
+      greeting = "Hello";
+    }
+
+    let moodTrend: "improving" | "stable" | "declining" | null = null;
+    let topEmotion: string | null = null;
+
+    if (moods.length >= 5) {
+      moodTrend = analyzeMoodTrend(moods);
+      const top = findTopEmotions(moods, 1);
+      if (top.length > 0) topEmotion = top[0].emotion;
+
+      // Override suggestion based on recent mood patterns
+      const recentMoods = moods.slice(0, 5);
+      const anxiousOrStressed = recentMoods.filter(
+        (m) => m.emotion === "anxious" || m.emotion === "frustrated" || m.emotion === "angry"
+      );
+      if (anxiousOrStressed.length >= 2) {
+        suggestion = { text: "Feeling overwhelmed? Try a thought record.", mode: "thoughtrecord" };
+      }
+    }
+
+    return { greeting, suggestion, moodTrend, topEmotion, hasMoodData: moods.length > 0 };
+  }, [moods]);
 
   // Auto-scroll to bottom when messages change or typing animation updates
   useEffect(() => {
@@ -343,10 +393,50 @@ export default function ChatPanel({
               <div className="mx-auto mb-4 w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center">
                 <MessageSquare className="h-6 w-6 text-indigo-600" />
               </div>
-              <h2 className="text-lg font-semibold text-slate-800 mb-1">Welcome to Quietnote</h2>
-              <p className="text-sm text-slate-500 mb-5">A private space to reflect on your thoughts and feelings.</p>
+              <h2 className="text-lg font-semibold text-slate-800 mb-1">{personalizedWelcome.greeting}</h2>
+              <p className="text-sm text-slate-500 mb-4">A private space to reflect on your thoughts and feelings.</p>
 
-              <div className="text-left space-y-3 mb-5">
+              {/* Personalized mood summary + suggestion */}
+              {personalizedWelcome.hasMoodData && personalizedWelcome.moodTrend ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4 text-left">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {personalizedWelcome.moodTrend === "improving" && <TrendingUp className="h-3.5 w-3.5 text-green-500" />}
+                    {personalizedWelcome.moodTrend === "stable" && <Minus className="h-3.5 w-3.5 text-slate-500" />}
+                    {personalizedWelcome.moodTrend === "declining" && <TrendingDown className="h-3.5 w-3.5 text-amber-500" />}
+                    <span className="text-xs font-medium text-slate-600">
+                      {personalizedWelcome.moodTrend === "improving" && "Your mood has been trending up"}
+                      {personalizedWelcome.moodTrend === "stable" && "Your mood has been steady"}
+                      {personalizedWelcome.moodTrend === "declining" && "You\u2019ve been going through a tough stretch"}
+                    </span>
+                  </div>
+                  {personalizedWelcome.topEmotion && (
+                    <p className="text-[11px] text-slate-500">Most logged: {personalizedWelcome.topEmotion}</p>
+                  )}
+                  {personalizedWelcome.suggestion && (
+                    <button
+                      onClick={() => onJournalingModeChange(personalizedWelcome.suggestion!.mode)}
+                      className="mt-2 text-xs text-indigo-600 hover:text-indigo-700 underline transition-colors"
+                    >
+                      {personalizedWelcome.suggestion.text}
+                    </button>
+                  )}
+                </div>
+              ) : !personalizedWelcome.hasMoodData ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4 text-left">
+                  <p className="text-xs text-slate-500">Track your mood to get personalized insights here.</p>
+                </div>
+              ) : personalizedWelcome.suggestion ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4 text-left">
+                  <button
+                    onClick={() => onJournalingModeChange(personalizedWelcome.suggestion!.mode)}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 underline transition-colors"
+                  >
+                    {personalizedWelcome.suggestion.text}
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="text-left space-y-3 mb-4">
                 <div className="flex items-start gap-2.5">
                   <Lock className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                   <p className="text-sm text-slate-600">After setup, everything stays on your device — your journal entries are never sent anywhere</p>
@@ -400,10 +490,17 @@ export default function ChatPanel({
                   </p>
                 </div>
 
-                {contextTrimmed && (
+                {contextTrimmed && showTrimNotice && (
                   <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mx-1">
                     <Info className="h-3 w-3 flex-shrink-0" />
-                    <span>Earlier messages are no longer in context. The model may not recall the start of this conversation.</span>
+                    <span className="flex-1">Earlier messages are no longer in context. The model may not recall the start of this conversation.</span>
+                    <button
+                      onClick={() => setShowTrimNotice(false)}
+                      aria-label="Dismiss notice"
+                      className="p-0.5 hover:bg-amber-100 rounded transition-colors flex-shrink-0"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
                 )}
                 <AnimatePresence>
