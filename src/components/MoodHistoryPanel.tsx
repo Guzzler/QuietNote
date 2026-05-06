@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Clock, MessageSquare } from "lucide-react";
 import type { MoodEntry, MoodEmotion } from "../types";
+import MoodChart from "./MoodChart";
 
 const EMOTION_COLORS: Record<MoodEmotion, string> = {
   happy: "bg-yellow-100 text-yellow-700",
@@ -83,6 +84,7 @@ export default function MoodHistoryPanel({ moods, onViewSession }: MoodHistoryPa
 
   return (
     <div className="space-y-5">
+      <MoodChart moods={moods} />
       {grouped.map(({ label, entries }) => (
         <div key={label}>
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
