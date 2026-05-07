@@ -1,7 +1,7 @@
-# 2026-05-06 — Visual Mood Chart
+# 2026-05-06 — Visual Mood Chart & Mood Editing
 
 ## Summary
-Added an SVG-based mood intensity chart to the MoodTracker History tab, giving users a visual timeline of their mood entries over time.
+Added an SVG-based mood intensity chart to the MoodTracker History tab, giving users a visual timeline of their mood entries over time. Also added mood entry editing so users can correct or update previously logged moods.
 
 ## What Changed
 
@@ -20,6 +20,10 @@ Users could log moods and see them in a list, but had no way to visualize trends
 - Dots use `EMOTION_DOT_COLORS` mapping for consistent emotion colors
 - Tooltip rendered as SVG elements with position clamping to prevent overflow
 
+### Mood Entry Editing
+- **`src/components/MoodHistoryPanel.tsx`** (modified): Added `onEditMood` callback prop and pencil edit button on each mood entry (visible on hover for desktop, always visible on mobile).
+- **`src/components/MoodTracker.tsx`** (modified): Added `editingMood` state. Clicking edit pre-fills the Log tab with the mood's values. Save preserves the original id/timestamp. Header shows "Edit Mood Entry" / "Update your mood entry". Footer shows "Cancel Edit" / "Update Mood" buttons.
+
 ## Tests
 - 10 new tests in `src/components/__tests__/MoodChart.test.ts`:
   - Minimum data threshold (< 2 entries returns null)
@@ -30,12 +34,19 @@ Users could log moods and see them in a list, but had no way to visualize trends
   - Unique emotion collection
   - Empty filtered range handling
   - Same-timestamp edge case (no division by zero)
+- 6 new tests in `src/components/__tests__/MoodEditing.test.ts`:
+  - Preserves original id and timestamp when editing
+  - Creates new id and timestamp for new entries
+  - Pre-fills edit form values from existing mood entry
+  - Handles mood with no note or empty contexts
+  - Does not duplicate entry when updating
 
 ## Screenshots
 - `docs/screenshots/2026-05-06/mood-chart-desktop.png`
 - `docs/screenshots/2026-05-06/mood-chart-mobile.png`
+- `docs/screenshots/2026-05-06/mood-history-edit-button.png`
+- `docs/screenshots/2026-05-06/mood-edit-form.png`
 
 ## Next Steps
 - Mood-journal correlation view ("when you journaled about work, you felt anxious 60% of the time")
 - Weekly/monthly reflection summaries
-- Mood entry editing/deletion
