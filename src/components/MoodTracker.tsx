@@ -65,6 +65,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
   const [note, setNote] = useState("");
   const [showContexts, setShowContexts] = useState(false);
   const [allMoods, setAllMoods] = useState<MoodEntry[]>([]);
+  const [editingMood, setEditingMood] = useState<MoodEntry | null>(null);
 
   // Load moods for insights when modal opens
   useEffect(() => {
@@ -102,17 +103,16 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
     if (!selectedEmotion) return;
 
     const moodEntry: MoodEntry = {
-      id: crypto.randomUUID(),
-      sessionId,
+      id: editingMood?.id ?? crypto.randomUUID(),
+      sessionId: editingMood?.sessionId ?? sessionId,
       emotion: selectedEmotion,
       intensity,
       contexts: selectedContexts,
       note: note.trim() || undefined,
-      ts: Date.now(),
+      ts: editingMood?.ts ?? Date.now(),
     };
 
     await onSaveMood(moodEntry);
-    // Refresh mood list so count updates immediately
     const updated = await listMoods();
     setAllMoods(updated);
     handleReset();
@@ -125,6 +125,17 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
     setSelectedContexts([]);
     setNote("");
     setShowContexts(false);
+    setEditingMood(null);
+  };
+
+  const handleEditMood = (mood: MoodEntry) => {
+    setSelectedEmotion(mood.emotion);
+    setIntensity(mood.intensity);
+    setSelectedContexts(mood.contexts);
+    setNote(mood.note || "");
+    setShowContexts(mood.contexts.length > 0);
+    setEditingMood(mood);
+    setActiveTab("log");
   };
 
   const toggleContext = (context: MoodContext) => {
@@ -171,11 +182,13 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h2 id={titleId} className="text-xl font-semibold text-slate-800">
-                      {activeTab === "log" ? "How are you feeling?" : "Mood History"}
+                      {activeTab === "log"
+                        ? editingMood ? "Edit Mood Entry" : "How are you feeling?"
+                        : "Mood History"}
                     </h2>
                     <p className="text-sm text-slate-500 mt-1">
                       {activeTab === "log"
-                        ? "Track your mood to discover patterns"
+                        ? editingMood ? "Update your mood entry" : "Track your mood to discover patterns"
                         : `${allMoods.length} ${allMoods.length === 1 ? "entry" : "entries"} logged`}
                     </p>
                   </div>
@@ -353,7 +366,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                 ) : (
                   <>
                     <WellnessSummary moods={allMoods} />
-                    <MoodHistoryPanel moods={allMoods} onViewSession={onViewSession} />
+                    <MoodHistoryPanel moods={allMoods} onViewSession={onViewSession} onEditMood={handleEditMood} />
                   </>
                 )}
               </div>
@@ -362,10 +375,10 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
               {activeTab === "log" && (
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3">
                   <button
-                    onClick={handleReset}
+                    onClick={editingMood ? () => { handleReset(); setActiveTab("history"); } : handleReset}
                     className="flex-1 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
                   >
-                    Reset
+                    {editingMood ? "Cancel Edit" : "Reset"}
                   </button>
                   <button
                     onClick={handleSave}
@@ -373,7 +386,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                     className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     <Check className="h-4 w-4" />
-                    Save Mood
+                    {editingMood ? "Update Mood" : "Save Mood"}
                   </button>
                 </div>
               )}
