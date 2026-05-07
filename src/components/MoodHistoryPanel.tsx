@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { Clock, MessageSquare } from "lucide-react";
+import { Clock, MessageSquare, Pencil } from "lucide-react";
 import type { MoodEntry, MoodEmotion } from "../types";
+import MoodChart from "./MoodChart";
 
 const EMOTION_COLORS: Record<MoodEmotion, string> = {
   happy: "bg-yellow-100 text-yellow-700",
@@ -31,6 +32,7 @@ const EMOTION_LABELS: Record<MoodEmotion, string> = {
 interface MoodHistoryPanelProps {
   moods: MoodEntry[];
   onViewSession?: (sessionId: string) => void;
+  onEditMood?: (mood: MoodEntry) => void;
 }
 
 function getDateGroup(ts: number): string {
@@ -55,7 +57,7 @@ function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-export default function MoodHistoryPanel({ moods, onViewSession }: MoodHistoryPanelProps) {
+export default function MoodHistoryPanel({ moods, onViewSession, onEditMood }: MoodHistoryPanelProps) {
   const grouped = useMemo(() => {
     const groups: Record<string, MoodEntry[]> = {};
     const order = ["Today", "Yesterday", "This Week", "Earlier"];
@@ -83,6 +85,7 @@ export default function MoodHistoryPanel({ moods, onViewSession }: MoodHistoryPa
 
   return (
     <div className="space-y-5">
+      <MoodChart moods={moods} />
       {grouped.map(({ label, entries }) => (
         <div key={label}>
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
@@ -92,7 +95,7 @@ export default function MoodHistoryPanel({ moods, onViewSession }: MoodHistoryPa
             {entries.map((mood) => (
               <div
                 key={mood.id}
-                className="rounded-xl border border-slate-200 bg-white p-3"
+                className="group/entry rounded-xl border border-slate-200 bg-white p-3"
               >
                 <div className="flex items-center gap-2">
                   <span
@@ -115,6 +118,15 @@ export default function MoodHistoryPanel({ moods, onViewSession }: MoodHistoryPa
                       ? formatDate(mood.ts)
                       : formatTime(mood.ts)}
                   </span>
+                  {onEditMood && (
+                    <button
+                      onClick={() => onEditMood(mood)}
+                      aria-label={`Edit ${EMOTION_LABELS[mood.emotion]} mood`}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors opacity-0 group-hover/entry:opacity-100 sm:opacity-0 max-sm:opacity-100 min-w-[32px] min-h-[32px] flex items-center justify-center"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Context tags */}
