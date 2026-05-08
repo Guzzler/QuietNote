@@ -657,6 +657,19 @@ export default function App() {
           setShowMoodTracker(false);
           setMoodPreFill(null);
         }}
+        hasActiveSession={!!current}
+        onUsePromptFromMood={(promptText) => {
+          setShowMoodTracker(false);
+          setMoodPreFill(null);
+          setJournalingMode("freewrite");
+          setUserInput(promptText);
+        }}
+        onStartReflection={(prompt) => {
+          setShowMoodTracker(false);
+          setMoodPreFill(null);
+          setJournalingMode("freewrite");
+          setUserInput(prompt);
+        }}
       />
       <PrivacyDashboard
         isOpen={showPrivacyDashboard}

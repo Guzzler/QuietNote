@@ -13,6 +13,7 @@ import {
   Check,
   ChevronDown,
   Clock,
+  BookOpen,
 } from "lucide-react";
 import type { MoodEmotion, MoodContext, MoodEntry } from "../types";
 import { listMoods } from "../storage";
@@ -20,6 +21,7 @@ import MoodInsightsCard from "./MoodInsightsCard";
 import MoodHistoryPanel from "./MoodHistoryPanel";
 import WellnessSummary from "./WellnessSummary";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { getMoodAwarePrompts } from "../utils/moodPromptMapper";
 
 interface MoodTrackerProps {
   isOpen: boolean;
@@ -29,6 +31,9 @@ interface MoodTrackerProps {
   initialEmotion?: MoodEmotion;
   initialIntensity?: number;
   onViewSession?: (sessionId: string) => void;
+  onUsePromptFromMood?: (promptText: string) => void;
+  hasActiveSession?: boolean;
+  onStartReflection?: (prompt: string) => void;
 }
 
 const EMOTIONS: { value: MoodEmotion; label: string; icon: React.ReactNode; color: string }[] = [
@@ -55,7 +60,7 @@ const CONTEXTS: { value: MoodContext; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, initialEmotion, initialIntensity, onViewSession }: MoodTrackerProps) {
+export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, initialEmotion, initialIntensity, onViewSession, onUsePromptFromMood, hasActiveSession, onStartReflection }: MoodTrackerProps) {
   const titleId = useId();
   const focusTrapRef = useFocusTrap(isOpen);
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
@@ -66,6 +71,8 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
   const [showContexts, setShowContexts] = useState(false);
   const [allMoods, setAllMoods] = useState<MoodEntry[]>([]);
   const [editingMood, setEditingMood] = useState<MoodEntry | null>(null);
+  const [postSavePrompts, setPostSavePrompts] = useState<{ text: string; category: string }[] | null>(null);
+  const [savedEmotion, setSavedEmotion] = useState<MoodEmotion | null>(null);
 
   // Load moods for insights when modal opens
   useEffect(() => {
@@ -112,11 +119,25 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
       ts: editingMood?.ts ?? Date.now(),
     };
 
+    const emotionForPrompts = selectedEmotion;
     await onSaveMood(moodEntry);
     const updated = await listMoods();
     setAllMoods(updated);
-    handleReset();
-    onClose();
+
+    if (!hasActiveSession && onUsePromptFromMood) {
+      const prompts = getMoodAwarePrompts(emotionForPrompts, 3);
+      setSelectedEmotion(null);
+      setIntensity(5);
+      setSelectedContexts([]);
+      setNote("");
+      setShowContexts(false);
+      setEditingMood(null);
+      setSavedEmotion(emotionForPrompts);
+      setPostSavePrompts(prompts.map((p) => ({ text: p.text, category: p.category })));
+    } else {
+      handleReset();
+      onClose();
+    }
   };
 
   const handleReset = () => {
@@ -126,6 +147,8 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
     setNote("");
     setShowContexts(false);
     setEditingMood(null);
+    setPostSavePrompts(null);
+    setSavedEmotion(null);
   };
 
   const handleEditMood = (mood: MoodEntry) => {
@@ -232,7 +255,50 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
 
               {/* Content */}
               <div className="p-5 overflow-y-auto max-h-[calc(90vh-200px)]">
-                {activeTab === "log" ? (
+                {activeTab === "log" && postSavePrompts ? (
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium mb-3">
+                        <Check className="h-4 w-4" />
+                        Mood saved
+                      </div>
+                      <p className="text-sm text-slate-600">
+                        Want to journal about feeling {savedEmotion}?
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {postSavePrompts.map((prompt, idx) => (
+                        <motion.button
+                          key={idx}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.1 }}
+                          onClick={() => {
+                            onUsePromptFromMood?.(prompt.text);
+                          }}
+                          className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all group"
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <BookOpen className="h-4 w-4 text-indigo-400 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm text-slate-700 group-hover:text-indigo-700 transition-colors">{prompt.text}</p>
+                              <span className="text-[10px] text-slate-400 mt-1 block capitalize">{prompt.category}</span>
+                            </div>
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        handleReset();
+                        onClose();
+                      }}
+                      className="w-full text-center text-sm text-slate-500 hover:text-slate-700 py-2 transition-colors"
+                    >
+                      Not now
+                    </button>
+                  </div>
+                ) : activeTab === "log" ? (
                   <>
                     {/* Emotion Grid */}
                     <div className="mb-6">
@@ -365,14 +431,14 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                   </>
                 ) : (
                   <>
-                    <WellnessSummary moods={allMoods} />
+                    <WellnessSummary moods={allMoods} onStartReflection={onStartReflection} />
                     <MoodHistoryPanel moods={allMoods} onViewSession={onViewSession} onEditMood={handleEditMood} />
                   </>
                 )}
               </div>
 
-              {/* Footer — only show for log tab */}
-              {activeTab === "log" && (
+              {/* Footer — only show for log tab when not showing post-save prompts */}
+              {activeTab === "log" && !postSavePrompts && (
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3">
                   <button
                     onClick={editingMood ? () => { handleReset(); setActiveTab("history"); } : handleReset}
