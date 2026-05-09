@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, BarChart3, BookOpen } from "lucide-react";
 import { generateWeeklyReport, MIN_ENTRIES_FOR_PATTERNS } from "../utils/moodPatterns";
 import type { MoodEntry, MoodEmotion } from "../types";
 
@@ -52,9 +52,30 @@ const TREND_CONFIG = {
 
 interface WellnessSummaryProps {
   moods: MoodEntry[];
+  onStartReflection?: (prompt: string) => void;
 }
 
-export default function WellnessSummary({ moods }: WellnessSummaryProps) {
+function buildReflectionPrompt(trend: "improving" | "stable" | "declining", topEmotion: string): string {
+  const trendIntro =
+    trend === "improving"
+      ? "Your mood has been improving this week"
+      : trend === "declining"
+        ? "It’s been a tougher stretch lately"
+        : "Your mood has been steady this week";
+
+  const emotionNote = `, and you’ve been feeling ${topEmotion} most often.`;
+
+  const question =
+    trend === "improving"
+      ? " What’s been helping? How can you keep this momentum going?"
+      : trend === "declining"
+        ? " What would help you feel more supported right now? Is there something small you can do for yourself today?"
+        : " What’s been on your mind? Is there something you’d like to change or explore?";
+
+  return trendIntro + emotionNote + question;
+}
+
+export default function WellnessSummary({ moods, onStartReflection }: WellnessSummaryProps) {
   const report = useMemo(() => generateWeeklyReport(moods), [moods]);
 
   // Progress state: not enough moods yet
@@ -166,6 +187,23 @@ export default function WellnessSummary({ moods }: WellnessSummaryProps) {
               {insight}
             </p>
           ))}
+        </div>
+      )}
+
+      {/* Weekly reflection entry point */}
+      {onStartReflection && report.topEmotions.length > 0 && (
+        <div className="border-t border-slate-100 pt-3">
+          <button
+            onClick={() => {
+              const topEmotion = EMOTION_LABELS[report.topEmotions[0].emotion];
+              const prompt = buildReflectionPrompt(report.moodTrend, topEmotion.toLowerCase());
+              onStartReflection(prompt);
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+          >
+            <BookOpen className="h-4 w-4" />
+            Reflect on your week
+          </button>
         </div>
       )}
     </div>
