@@ -12,6 +12,7 @@ import { putSession, listSessions, getSession, putMood, deleteSession, listMoods
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
+import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
 import type { JournalingMode } from "./components/JournalingModeSelector";
 import type { Session, ChatMessage, MoodEntry, MoodEmotion } from "./types";
 
@@ -81,11 +82,17 @@ function isMorning(): boolean {
   return hour >= 5 && hour < 12;
 }
 
-function getSystemInstruction(mode: JournalingMode): string {
-  if (mode === "gratitude") return GRATITUDE_SYSTEM_INSTRUCTION;
-  if (mode === "checkin") return isMorning() ? CHECKIN_MORNING_INSTRUCTION : CHECKIN_EVENING_INSTRUCTION;
-  if (mode === "thoughtrecord") return THOUGHT_RECORD_INSTRUCTION;
-  return SYSTEM_INSTRUCTION;
+function getSystemInstruction(mode: JournalingMode, contextBlock?: string): string {
+  let base: string;
+  if (mode === "gratitude") base = GRATITUDE_SYSTEM_INSTRUCTION;
+  else if (mode === "checkin") base = isMorning() ? CHECKIN_MORNING_INSTRUCTION : CHECKIN_EVENING_INSTRUCTION;
+  else if (mode === "thoughtrecord") base = THOUGHT_RECORD_INSTRUCTION;
+  else base = SYSTEM_INSTRUCTION;
+
+  if (contextBlock) {
+    return `${base}\n\nContext about this user:\n${contextBlock}`;
+  }
+  return base;
 }
 
 // Build messages array for the chat API with context window management.
@@ -334,7 +341,9 @@ export default function App() {
 
     try {
       // Build messages for the chat API
-      const { messages, trimmed } = buildMessages(firstMessage, getSystemInstruction(journalingMode));
+      const sessionCtx = buildSessionContext(sessions, allMoods, sess.id);
+      const ctxBlock = formatContextForPrompt(sessionCtx);
+      const { messages, trimmed } = buildMessages(firstMessage, getSystemInstruction(journalingMode, ctxBlock || undefined));
       setContextTrimmed(trimmed);
 
       let acc = "";
@@ -491,8 +500,9 @@ export default function App() {
     });
 
     try {
-      // Build messages with conversation history (context-managed)
-      const { messages, trimmed } = buildMessages(text, getSystemInstruction(journalingMode), conversationHistory);
+      const sessionCtx = buildSessionContext(sessions, allMoods, current.id);
+      const ctxBlock = formatContextForPrompt(sessionCtx);
+      const { messages, trimmed } = buildMessages(text, getSystemInstruction(journalingMode, ctxBlock || undefined), conversationHistory);
       setContextTrimmed(trimmed);
 
       let acc = "";
@@ -770,6 +780,7 @@ export default function App() {
             modelError={modelError}
             clearModelError={clearModelError}
             onRetryLoad={loadModel}
+            sessions={sessions}
             moods={allMoods}
             journalingMode={journalingMode}
             onJournalingModeChange={(mode: JournalingMode) => {
