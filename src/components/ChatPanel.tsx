@@ -13,6 +13,7 @@ import { getTopEmotion } from "../utils/emotionExtractor";
 import { getTopTheme } from "../utils/themeExtractor";
 import { getPromptByCategory } from "../data/journalPrompts";
 import { analyzeMoodTrend, findTopEmotions } from "../utils/moodPatterns";
+import { computeStreak } from "../utils/streakTracker";
 import type { ChatMessage, MoodEmotion, MoodEntry, PromptCategory, Session, Thread } from "../types";
 
 // Guardrail constants for mood suggestions
@@ -64,6 +65,7 @@ interface ChatPanelProps {
   onSaveMood?: (mood: MoodEntry) => void;
   onOpenMoodTracker?: (emotion?: MoodEmotion, intensity?: number) => void;
   sessionId?: string;
+  sessions?: Session[];
   moods?: MoodEntry[];
   modelError: string | null;
   clearModelError?: () => void;
@@ -91,6 +93,7 @@ export default function ChatPanel({
   onSaveMood,
   onOpenMoodTracker,
   sessionId,
+  sessions: allSessions = [],
   moods = [],
   modelError,
   clearModelError,
@@ -171,6 +174,8 @@ export default function ChatPanel({
 
     return { greeting, suggestion, moodTrend, topEmotion, hasMoodData: moods.length > 0 };
   }, [moods]);
+
+  const streakInfo = useMemo(() => computeStreak(allSessions), [allSessions]);
 
   // Auto-scroll to bottom when messages change or typing animation updates
   useEffect(() => {
@@ -394,7 +399,25 @@ export default function ChatPanel({
                 <MessageSquare className="h-6 w-6 text-indigo-600" />
               </div>
               <h2 className="text-lg font-semibold text-slate-800 mb-1">{personalizedWelcome.greeting}</h2>
-              <p className="text-sm text-slate-500 mb-4">A private space to reflect on your thoughts and feelings.</p>
+              <p className="text-sm text-slate-500 mb-3">A private space to reflect on your thoughts and feelings.</p>
+
+              {streakInfo.currentStreak >= 2 && (
+                <div className="inline-flex items-center gap-1.5 text-sm text-amber-600 bg-amber-50 rounded-full px-3 py-1 mb-4">
+                  <span>🔥</span>
+                  <span>{streakInfo.currentStreak}-day journaling streak!</span>
+                </div>
+              )}
+              {streakInfo.currentStreak === 1 && streakInfo.journaledToday && (
+                <div className="inline-flex items-center gap-1.5 text-sm text-green-600 bg-green-50 rounded-full px-3 py-1 mb-4">
+                  <span>✓</span>
+                  <span>You've journaled today</span>
+                </div>
+              )}
+              {streakInfo.currentStreak === 0 && streakInfo.totalDays > 0 && (
+                <div className="inline-flex items-center gap-1.5 text-sm text-slate-500 bg-slate-50 rounded-full px-3 py-1 mb-4">
+                  <span>Start a new streak{streakInfo.longestStreak > 1 ? ` — your best was ${streakInfo.longestStreak} days` : ""}</span>
+                </div>
+              )}
 
               {/* Personalized mood summary + suggestion */}
               {personalizedWelcome.hasMoodData && personalizedWelcome.moodTrend ? (
