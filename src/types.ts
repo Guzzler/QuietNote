@@ -26,6 +26,8 @@ export interface Session {
   createdAt: number;
   updatedAt: number;
   model: ModelRef;
+  reflection?: string;
+  reflectionUpdatedAt?: number;
 }
 
 export interface ModelRef {
