@@ -1,7 +1,8 @@
 const DB_NAME = "quietnote-db";
-const DB_VERSION = 2; // Bumped for moods store
+const DB_VERSION = 3; // Bumped for settings store
 const SESSIONS_STORE = "sessions";
 const MOODS_STORE = "moods";
+const SETTINGS_STORE = "settings";
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -14,12 +15,17 @@ function openDB(): Promise<IDBDatabase> {
         db.createObjectStore(SESSIONS_STORE, { keyPath: "id" });
       }
 
-      // Moods store (new)
+      // Moods store
       if (!db.objectStoreNames.contains(MOODS_STORE)) {
         const moodsStore = db.createObjectStore(MOODS_STORE, { keyPath: "id" });
         moodsStore.createIndex("ts", "ts", { unique: false });
         moodsStore.createIndex("emotion", "emotion", { unique: false });
         moodsStore.createIndex("sessionId", "sessionId", { unique: false });
+      }
+
+      // Settings store
+      if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+        db.createObjectStore(SETTINGS_STORE, { keyPath: "key" });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -156,13 +162,35 @@ export async function getStorageStats() {
   });
 }
 
+// Settings operations
+export async function getSetting<T>(key: string): Promise<T | undefined> {
+  const db = await openDB();
+  return new Promise<T | undefined>((resolve, reject) => {
+    const tx = db.transaction(SETTINGS_STORE, "readonly");
+    const req = tx.objectStore(SETTINGS_STORE).get(key);
+    req.onsuccess = () => resolve(req.result?.value as T | undefined);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function putSetting<T>(key: string, value: T): Promise<void> {
+  const db = await openDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(SETTINGS_STORE, "readwrite");
+    tx.objectStore(SETTINGS_STORE).put({ key, value });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // Clear all data
 export async function clearAllData() {
   const db = await openDB();
   return new Promise<void>((resolve, reject) => {
-    const tx = db.transaction([SESSIONS_STORE, MOODS_STORE], "readwrite");
+    const tx = db.transaction([SESSIONS_STORE, MOODS_STORE, SETTINGS_STORE], "readwrite");
     tx.objectStore(SESSIONS_STORE).clear();
     tx.objectStore(MOODS_STORE).clear();
+    tx.objectStore(SETTINGS_STORE).clear();
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });

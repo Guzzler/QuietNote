@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Brain, Shield, Loader2, Heart, Lock, Plus, BookOpen } from "lucide-react";
+import { Brain, Shield, Loader2, Heart, Lock, Plus, BookOpen, Settings } from "lucide-react";
 import Layout from "./components/Layout";
 import ChatPanel from "./components/ChatPanel";
 import SessionsPanel from "./components/SessionsPanel";
@@ -8,11 +8,15 @@ import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
 import WebGPUFallback from "./components/WebGPUFallback";
 import { useInferenceEngine } from "./hooks/useInferenceEngine";
-import { putSession, listSessions, getSession, putMood, deleteSession, listMoods } from "./storage";
+import { putSession, listSessions, getSession, putMood, deleteSession, listMoods, getSetting, putSetting } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
 import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
+import { generateReflection, shouldRegenerate } from "./utils/sessionReflection";
+import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personalityPrompt";
+import type { PersonalitySettings } from "./utils/personalityPrompt";
+import SettingsPanel from "./components/SettingsPanel";
 import type { JournalingMode } from "./components/JournalingModeSelector";
 import type { Session, ChatMessage, MoodEntry, MoodEmotion } from "./types";
 
@@ -82,12 +86,16 @@ function isMorning(): boolean {
   return hour >= 5 && hour < 12;
 }
 
-function getSystemInstruction(mode: JournalingMode, contextBlock?: string): string {
+function getSystemInstruction(mode: JournalingMode, contextBlock?: string, personalityDirective?: string): string {
   let base: string;
   if (mode === "gratitude") base = GRATITUDE_SYSTEM_INSTRUCTION;
   else if (mode === "checkin") base = isMorning() ? CHECKIN_MORNING_INSTRUCTION : CHECKIN_EVENING_INSTRUCTION;
   else if (mode === "thoughtrecord") base = THOUGHT_RECORD_INSTRUCTION;
   else base = SYSTEM_INSTRUCTION;
+
+  if (personalityDirective) {
+    base = `${base}\n\nPersonality preferences:\n${personalityDirective}`;
+  }
 
   if (contextBlock) {
     return `${base}\n\nContext about this user:\n${contextBlock}`;
@@ -222,6 +230,10 @@ export default function App() {
   // Centralized moods state — shared by ChatPanel (welcome) and MoodTracker
   const [allMoods, setAllMoods] = useState<MoodEntry[]>([]);
 
+  // AI personality settings
+  const [personality, setPersonality] = useState<PersonalitySettings>(DEFAULT_PERSONALITY);
+  const [showSettings, setShowSettings] = useState(false);
+
   // Listen for crisis resources open event from ChatPanel disclaimer link
   useEffect(() => {
     const handleOpenCrisis = () => setShowCrisisResources(true);
@@ -257,9 +269,17 @@ export default function App() {
     setSessions(await listSessions());
   };
 
+  const handleSavePersonality = async (s: PersonalitySettings) => {
+    setPersonality(s);
+    await putSetting("personality", s);
+  };
+
   useEffect(() => {
     listSessions().then(setSessions);
     listMoods().then(setAllMoods);
+    getSetting<PersonalitySettings>("personality").then((s) => {
+      if (s) setPersonality(s);
+    });
   }, []);
 
   useEffect(() => {
@@ -343,7 +363,7 @@ export default function App() {
       // Build messages for the chat API
       const sessionCtx = buildSessionContext(sessions, allMoods, sess.id);
       const ctxBlock = formatContextForPrompt(sessionCtx);
-      const { messages, trimmed } = buildMessages(firstMessage, getSystemInstruction(journalingMode, ctxBlock || undefined));
+      const { messages, trimmed } = buildMessages(firstMessage, getSystemInstruction(journalingMode, ctxBlock || undefined, buildPersonalityDirective(personality)));
       setContextTrimmed(trimmed);
 
       let acc = "";
@@ -384,7 +404,7 @@ export default function App() {
 
       setCurrent((prev) => {
         if (!prev) return prev;
-        return {
+        const updated = {
           ...prev,
           updatedAt: Date.now(),
           threads: prev.threads.map((t, idx) =>
@@ -399,6 +419,13 @@ export default function App() {
               : t
           ),
         };
+
+        if (shouldRegenerate(updated)) {
+          updated.reflection = generateReflection(updated);
+          updated.reflectionUpdatedAt = Date.now();
+        }
+
+        return updated;
       });
 
       setSessions(await listSessions());
@@ -502,7 +529,7 @@ export default function App() {
     try {
       const sessionCtx = buildSessionContext(sessions, allMoods, current.id);
       const ctxBlock = formatContextForPrompt(sessionCtx);
-      const { messages, trimmed } = buildMessages(text, getSystemInstruction(journalingMode, ctxBlock || undefined), conversationHistory);
+      const { messages, trimmed } = buildMessages(text, getSystemInstruction(journalingMode, ctxBlock || undefined, buildPersonalityDirective(personality)), conversationHistory);
       setContextTrimmed(trimmed);
 
       let acc = "";
@@ -558,7 +585,13 @@ export default function App() {
               : t
           ),
         };
-        // Persist after finalizing
+
+        // Generate reflection after reply
+        if (shouldRegenerate(updated)) {
+          updated.reflection = generateReflection(updated);
+          updated.reflectionUpdatedAt = Date.now();
+        }
+
         putSession(updated);
         return updated;
       });
@@ -689,6 +722,12 @@ export default function App() {
         onRuntimeChange={switchRuntime}
         engineLoading={loading}
       />
+      <SettingsPanel
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        settings={personality}
+        onSave={handleSavePersonality}
+      />
 
       <header className="sticky top-0 z-10 backdrop-blur bg-white/60 border-b border-slate-200 shadow-sm">
         <div className="w-full px-6 py-3 flex items-center gap-3">
@@ -739,6 +778,16 @@ export default function App() {
             >
               <Heart className="h-4 w-4" />
               <span className="hidden sm:inline">Mood</span>
+            </button>
+            {/* Settings Button */}
+            <button
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-2 px-3 py-2.5 text-sm bg-slate-50 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors min-h-[44px]"
+              title="AI personality settings"
+              aria-label="AI personality settings"
+            >
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Settings</span>
             </button>
             {/* Privacy Dashboard Button */}
             <button

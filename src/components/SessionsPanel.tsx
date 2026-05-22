@@ -127,7 +127,12 @@ export default function SessionsPanel({
                       >
                         {s.title}
                       </div>
-                      <div className="text-[11px] text-slate-500">
+                      {s.reflection && (
+                        <div className="text-xs text-slate-500 line-clamp-2 leading-snug mt-0.5">
+                          {s.reflection}
+                        </div>
+                      )}
+                      <div className="text-[11px] text-slate-400 mt-0.5">
                         {new Date(s.updatedAt).toLocaleString()}
                       </div>
                     </div>

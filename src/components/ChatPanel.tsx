@@ -14,6 +14,8 @@ import { getTopTheme } from "../utils/themeExtractor";
 import { getPromptByCategory } from "../data/journalPrompts";
 import { analyzeMoodTrend, findTopEmotions } from "../utils/moodPatterns";
 import { computeStreak } from "../utils/streakTracker";
+import { buildContinuityPrompt } from "../utils/continuityPrompt";
+import ContinuityCard from "./ContinuityCard";
 import type { ChatMessage, MoodEmotion, MoodEntry, PromptCategory, Session, Thread } from "../types";
 
 // Guardrail constants for mood suggestions
@@ -176,6 +178,11 @@ export default function ChatPanel({
   }, [moods]);
 
   const streakInfo = useMemo(() => computeStreak(allSessions), [allSessions]);
+
+  const continuityPrompt = useMemo(
+    () => buildContinuityPrompt(allSessions, moods, sessionId),
+    [allSessions, moods, sessionId]
+  );
 
   // Auto-scroll to bottom when messages change or typing animation updates
   useEffect(() => {
@@ -416,6 +423,19 @@ export default function ChatPanel({
               {streakInfo.currentStreak === 0 && streakInfo.totalDays > 0 && (
                 <div className="inline-flex items-center gap-1.5 text-sm text-slate-500 bg-slate-50 rounded-full px-3 py-1 mb-4">
                   <span>Start a new streak{streakInfo.longestStreak > 1 ? ` — your best was ${streakInfo.longestStreak} days` : ""}</span>
+                </div>
+              )}
+
+              {/* Continuity card — pick up where you left off */}
+              {continuityPrompt && (
+                <div className="mb-4">
+                  <ContinuityCard
+                    prompt={continuityPrompt}
+                    onClick={(text) => {
+                      setUserInput(text);
+                      textareaRef.current?.focus();
+                    }}
+                  />
                 </div>
               )}
 
