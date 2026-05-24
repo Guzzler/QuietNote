@@ -1,7 +1,11 @@
-import { useMemo } from "react";
-import { Clock, MessageSquare, Pencil } from "lucide-react";
-import type { MoodEntry, MoodEmotion } from "../types";
+import { useMemo, useState, useEffect } from "react";
+import { Clock, MessageSquare, Pencil, Brain } from "lucide-react";
+import type { MoodEntry, MoodEmotion, Session } from "../types";
 import MoodChart from "./MoodChart";
+import MoodJournalCorrelations from "./MoodJournalCorrelations";
+import { buildCorrelations } from "../utils/moodJournalCorrelations";
+import { listThoughtRecords } from "../storage";
+import ThoughtRecordHistory from "./ThoughtRecordHistory";
 
 const EMOTION_COLORS: Record<MoodEmotion, string> = {
   happy: "bg-yellow-100 text-yellow-700",
@@ -31,6 +35,7 @@ const EMOTION_LABELS: Record<MoodEmotion, string> = {
 
 interface MoodHistoryPanelProps {
   moods: MoodEntry[];
+  sessions?: Session[];
   onViewSession?: (sessionId: string) => void;
   onEditMood?: (mood: MoodEntry) => void;
 }
@@ -57,7 +62,14 @@ function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-export default function MoodHistoryPanel({ moods, onViewSession, onEditMood }: MoodHistoryPanelProps) {
+export default function MoodHistoryPanel({ moods, sessions, onViewSession, onEditMood }: MoodHistoryPanelProps) {
+  const [hasThoughtRecords, setHasThoughtRecords] = useState(false);
+  const [showThoughtRecordHistory, setShowThoughtRecordHistory] = useState(false);
+
+  useEffect(() => {
+    listThoughtRecords().then((records) => setHasThoughtRecords(records.length > 0));
+  }, []);
+
   const grouped = useMemo(() => {
     const groups: Record<string, MoodEntry[]> = {};
     const order = ["Today", "Yesterday", "This Week", "Earlier"];
@@ -73,18 +85,52 @@ export default function MoodHistoryPanel({ moods, onViewSession, onEditMood }: M
       .map((label) => ({ label, entries: groups[label] }));
   }, [moods]);
 
+  const correlations = useMemo(
+    () => (sessions ? buildCorrelations(sessions, moods) : []),
+    [sessions, moods]
+  );
+
   if (moods.length === 0) {
     return (
-      <div className="text-center py-10 text-slate-500">
-        <Clock className="h-8 w-8 mx-auto mb-3 text-slate-300" />
-        <p className="text-sm font-medium">No moods logged yet</p>
-        <p className="text-xs mt-1">Use the Log Mood tab to track how you're feeling.</p>
-      </div>
+      <>
+        <div className="text-center py-10 text-slate-500">
+          <Clock className="h-8 w-8 mx-auto mb-3 text-slate-300" />
+          <p className="text-sm font-medium">No moods logged yet</p>
+          <p className="text-xs mt-1">Use the Log Mood tab to track how you're feeling.</p>
+        </div>
+        {hasThoughtRecords && (
+          <button
+            onClick={() => setShowThoughtRecordHistory(true)}
+            className="flex items-center gap-2 mx-auto text-xs text-purple-600 hover:text-purple-700 transition-colors"
+          >
+            <Brain className="h-3.5 w-3.5" />
+            View Thought Records
+          </button>
+        )}
+        <ThoughtRecordHistory
+          isOpen={showThoughtRecordHistory}
+          onClose={() => setShowThoughtRecordHistory(false)}
+        />
+      </>
     );
   }
 
   return (
     <div className="space-y-5">
+      <MoodJournalCorrelations observations={correlations} />
+      {hasThoughtRecords && (
+        <button
+          onClick={() => setShowThoughtRecordHistory(true)}
+          className="flex items-center gap-2 text-xs text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg px-3 py-2 transition-colors"
+        >
+          <Brain className="h-3.5 w-3.5" />
+          View Thought Records
+        </button>
+      )}
+      <ThoughtRecordHistory
+        isOpen={showThoughtRecordHistory}
+        onClose={() => setShowThoughtRecordHistory(false)}
+      />
       <MoodChart moods={moods} />
       {grouped.map(({ label, entries }) => (
         <div key={label}>

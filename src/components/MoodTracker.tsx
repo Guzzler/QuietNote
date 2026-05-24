@@ -15,7 +15,7 @@ import {
   Clock,
   BookOpen,
 } from "lucide-react";
-import type { MoodEmotion, MoodContext, MoodEntry } from "../types";
+import type { MoodEmotion, MoodContext, MoodEntry, Session } from "../types";
 import { listMoods } from "../storage";
 import MoodInsightsCard from "./MoodInsightsCard";
 import MoodHistoryPanel from "./MoodHistoryPanel";
@@ -34,6 +34,7 @@ interface MoodTrackerProps {
   onUsePromptFromMood?: (promptText: string) => void;
   hasActiveSession?: boolean;
   onStartReflection?: (prompt: string) => void;
+  sessions?: Session[];
 }
 
 const EMOTIONS: { value: MoodEmotion; label: string; icon: React.ReactNode; color: string }[] = [
@@ -60,7 +61,7 @@ const CONTEXTS: { value: MoodContext; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, initialEmotion, initialIntensity, onViewSession, onUsePromptFromMood, hasActiveSession, onStartReflection }: MoodTrackerProps) {
+export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, initialEmotion, initialIntensity, onViewSession, onUsePromptFromMood, hasActiveSession, onStartReflection, sessions }: MoodTrackerProps) {
   const titleId = useId();
   const focusTrapRef = useFocusTrap(isOpen);
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
@@ -432,7 +433,7 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
                 ) : (
                   <>
                     <WellnessSummary moods={allMoods} onStartReflection={onStartReflection} />
-                    <MoodHistoryPanel moods={allMoods} onViewSession={onViewSession} onEditMood={handleEditMood} />
+                    <MoodHistoryPanel moods={allMoods} sessions={sessions} onViewSession={onViewSession} onEditMood={handleEditMood} />
                   </>
                 )}
               </div>

@@ -16,6 +16,8 @@ import { analyzeMoodTrend, findTopEmotions } from "../utils/moodPatterns";
 import { computeStreak } from "../utils/streakTracker";
 import { buildContinuityPrompt } from "../utils/continuityPrompt";
 import ContinuityCard from "./ContinuityCard";
+import MoodJournalCorrelations from "./MoodJournalCorrelations";
+import { buildCorrelations } from "../utils/moodJournalCorrelations";
 import type { ChatMessage, MoodEmotion, MoodEntry, PromptCategory, Session, Thread } from "../types";
 
 // Guardrail constants for mood suggestions
@@ -183,6 +185,12 @@ export default function ChatPanel({
     () => buildContinuityPrompt(allSessions, moods, sessionId),
     [allSessions, moods, sessionId]
   );
+
+  const welcomeCorrelations = useMemo(() => {
+    const obs = buildCorrelations(allSessions, moods);
+    const highOrMedium = obs.filter((o) => o.confidence === "high" || o.confidence === "medium");
+    return highOrMedium.length >= 2 ? obs : [];
+  }, [allSessions, moods]);
 
   // Auto-scroll to bottom when messages change or typing animation updates
   useEffect(() => {
@@ -436,6 +444,13 @@ export default function ChatPanel({
                       textareaRef.current?.focus();
                     }}
                   />
+                </div>
+              )}
+
+              {/* Mood-journal correlations */}
+              {welcomeCorrelations.length > 0 && (
+                <div className="mb-4">
+                  <MoodJournalCorrelations observations={welcomeCorrelations} />
                 </div>
               )}
 

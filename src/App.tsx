@@ -8,7 +8,7 @@ import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
 import WebGPUFallback from "./components/WebGPUFallback";
 import { useInferenceEngine } from "./hooks/useInferenceEngine";
-import { putSession, listSessions, getSession, putMood, deleteSession, listMoods, getSetting, putSetting } from "./storage";
+import { putSession, listSessions, getSession, putMood, deleteSession, listMoods, getSetting, putSetting, saveThoughtRecord } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
@@ -18,7 +18,7 @@ import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personal
 import type { PersonalitySettings } from "./utils/personalityPrompt";
 import SettingsPanel from "./components/SettingsPanel";
 import type { JournalingMode } from "./components/JournalingModeSelector";
-import type { Session, ChatMessage, MoodEntry, MoodEmotion } from "./types";
+import type { Session, ChatMessage, MoodEntry, MoodEmotion, ThoughtRecord } from "./types";
 
 // System instruction for the model — free-write mode
 const SYSTEM_INSTRUCTION = `You are Quietnote, a thoughtful journaling companion. Your role is to help users explore their thoughts and feelings through gentle reflection.
@@ -119,6 +119,16 @@ function buildMessages(
 
 function uid() {
   return crypto.randomUUID();
+}
+
+function parseEmotions(text: string): { emotion: string; intensity: number }[] {
+  const intensityMatch = text.match(/(\d+)\s*(?:\/\s*10|out of 10)?/);
+  const intensity = intensityMatch ? Math.min(10, Math.max(1, parseInt(intensityMatch[1]))) : 5;
+  const words = text.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
+  const emotionKeywords = ["anxious", "sad", "angry", "happy", "scared", "worried", "frustrated", "calm", "guilty", "ashamed", "hopeless", "overwhelmed", "nervous", "fearful", "excited", "grateful"];
+  const found = words.filter((w) => emotionKeywords.includes(w));
+  if (found.length === 0) return [{ emotion: words.slice(0, 2).join(" ") || "unspecified", intensity }];
+  return [...new Set(found)].map((e) => ({ emotion: e, intensity }));
 }
 
 // Extract a meaningful title from the first message
@@ -298,6 +308,41 @@ export default function App() {
     setCheckinStep(1);
     setThoughtRecordStep(1);
   }, [currentId]);
+
+  // Persist structured ThoughtRecord when the 5-step flow completes
+  const thoughtRecordSaved = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      journalingMode !== "thoughtrecord" ||
+      thoughtRecordStep <= 5 ||
+      !current ||
+      thoughtRecordSaved.current === current.id
+    ) return;
+
+    const userMessages = current.threads
+      .flatMap((t) => t.messages)
+      .filter((m) => m.role === "user")
+      .slice(0, 5);
+
+    if (userMessages.length < 5) return;
+
+    const record: ThoughtRecord = {
+      id: crypto.randomUUID(),
+      sessionId: current.id,
+      situation: userMessages[0].content,
+      automaticThought: userMessages[1].content,
+      emotions: parseEmotions(userMessages[2].content),
+      evidenceFor: [userMessages[3].content],
+      evidenceAgainst: [],
+      alternativeThought: userMessages[4].content,
+      reratings: [],
+      ts: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    thoughtRecordSaved.current = current.id;
+    saveThoughtRecord(record).catch(console.error);
+  }, [thoughtRecordStep, journalingMode, current]);
 
   // Start a new session with the first user entry
   const newSession = async (firstMessage: string) => {
@@ -707,6 +752,7 @@ export default function App() {
           setJournalingMode("freewrite");
           setUserInput(promptText);
         }}
+        sessions={sessions}
         onStartReflection={(prompt) => {
           setShowMoodTracker(false);
           setMoodPreFill(null);

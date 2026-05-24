@@ -131,6 +131,7 @@ export interface JournalPrompt {
   category: PromptCategory;
   used: boolean;
   lastUsed?: number;
+  timeOfDay?: "morning" | "afternoon" | "evening" | "night";
 }
 
 // User settings

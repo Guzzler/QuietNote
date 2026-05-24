@@ -1,9 +1,11 @@
 import type { PromptCategory } from "../types";
+import { currentTimeBucket } from "../utils/timeOfDay";
 
 export interface PromptData {
   id: string;
   text: string;
   category: PromptCategory;
+  timeOfDay?: "morning" | "afternoon" | "evening" | "night";
 }
 
 /**
@@ -16,6 +18,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "gratitude-1",
     text: "What are three things you're grateful for today, and why?",
     category: "gratitude",
+    timeOfDay: "morning",
   },
   {
     id: "gratitude-2",
@@ -26,6 +29,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "gratitude-3",
     text: "What small pleasures brought you joy this week?",
     category: "gratitude",
+    timeOfDay: "evening",
   },
   {
     id: "gratitude-4",
@@ -36,6 +40,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "gratitude-5",
     text: "What aspects of your daily routine are you thankful for?",
     category: "gratitude",
+    timeOfDay: "morning",
   },
   {
     id: "gratitude-6",
@@ -51,6 +56,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "gratitude-8",
     text: "Describe a place that brings you peace. What makes it special?",
     category: "gratitude",
+    timeOfDay: "night",
   },
 
   // Self-reflection prompts
@@ -58,11 +64,13 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "reflection-1",
     text: "How are you truly feeling right now? What emotions are present?",
     category: "self-reflection",
+    timeOfDay: "morning",
   },
   {
     id: "reflection-2",
     text: "What patterns have you noticed in your thoughts or behaviors lately?",
     category: "self-reflection",
+    timeOfDay: "evening",
   },
   {
     id: "reflection-3",
@@ -88,6 +96,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "reflection-7",
     text: "What needs more attention in your life right now?",
     category: "self-reflection",
+    timeOfDay: "afternoon",
   },
   {
     id: "reflection-8",
@@ -103,6 +112,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "reflection-10",
     text: "If you could change one thing about your daily life, what would it be?",
     category: "self-reflection",
+    timeOfDay: "night",
   },
 
   // Goals prompts
@@ -110,6 +120,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "goals-1",
     text: "What is one small step you can take today toward a larger goal?",
     category: "goals",
+    timeOfDay: "morning",
   },
   {
     id: "goals-2",
@@ -135,6 +146,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "goals-6",
     text: "What does your ideal day look like? What parts can you create now?",
     category: "goals",
+    timeOfDay: "morning",
   },
   {
     id: "goals-7",
@@ -152,6 +164,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "challenges-1",
     text: "What's weighing on your mind today? Why does it matter to you?",
     category: "challenges",
+    timeOfDay: "evening",
   },
   {
     id: "challenges-2",
@@ -172,11 +185,13 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "challenges-5",
     text: "What has helped you through difficult times in the past?",
     category: "challenges",
+    timeOfDay: "evening",
   },
   {
     id: "challenges-6",
     text: "What's one thing you can do to care for yourself today?",
     category: "challenges",
+    timeOfDay: "night",
   },
   {
     id: "challenges-7",
@@ -298,6 +313,7 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     id: "creativity-5",
     text: "Write a letter to your future self one year from now.",
     category: "creativity",
+    timeOfDay: "night",
   },
   {
     id: "creativity-6",
@@ -369,18 +385,35 @@ export const THOUGHT_RECORD_SEQUENCE = [
 ] as const;
 
 /**
- * Get a random prompt from a specific category
+ * Get a random prompt from a specific category.
+ * 70% chance to prefer a time-matched prompt if one is available.
  */
 export function getPromptByCategory(category: PromptCategory): PromptData | null {
   const categoryPrompts = JOURNAL_PROMPTS.filter((p) => p.category === category);
   if (categoryPrompts.length === 0) return null;
+
+  const bucket = currentTimeBucket();
+  const timeMatched = categoryPrompts.filter((p) => p.timeOfDay === bucket);
+
+  if (timeMatched.length > 0 && Math.random() < 0.7) {
+    return timeMatched[Math.floor(Math.random() * timeMatched.length)];
+  }
+
   return categoryPrompts[Math.floor(Math.random() * categoryPrompts.length)];
 }
 
 /**
- * Get a random prompt from any category
+ * Get a random prompt from any category.
+ * 70% chance to prefer a time-matched prompt if one is available.
  */
 export function getRandomPrompt(): PromptData {
+  const bucket = currentTimeBucket();
+  const timeMatched = JOURNAL_PROMPTS.filter((p) => p.timeOfDay === bucket);
+
+  if (timeMatched.length > 0 && Math.random() < 0.7) {
+    return timeMatched[Math.floor(Math.random() * timeMatched.length)];
+  }
+
   return JOURNAL_PROMPTS[Math.floor(Math.random() * JOURNAL_PROMPTS.length)];
 }
 

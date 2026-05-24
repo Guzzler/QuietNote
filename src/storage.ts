@@ -1,8 +1,9 @@
 const DB_NAME = "quietnote-db";
-const DB_VERSION = 3; // Bumped for settings store
+const DB_VERSION = 4; // Bumped for thoughtRecords store
 const SESSIONS_STORE = "sessions";
 const MOODS_STORE = "moods";
 const SETTINGS_STORE = "settings";
+const THOUGHT_RECORDS_STORE = "thoughtRecords";
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -26,6 +27,13 @@ function openDB(): Promise<IDBDatabase> {
       // Settings store
       if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
         db.createObjectStore(SETTINGS_STORE, { keyPath: "key" });
+      }
+
+      // Thought records store
+      if (!db.objectStoreNames.contains(THOUGHT_RECORDS_STORE)) {
+        const trStore = db.createObjectStore(THOUGHT_RECORDS_STORE, { keyPath: "id" });
+        trStore.createIndex("sessionId", "sessionId", { unique: false });
+        trStore.createIndex("ts", "ts", { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -183,14 +191,46 @@ export async function putSetting<T>(key: string, value: T): Promise<void> {
   });
 }
 
+// Thought record operations
+export async function saveThoughtRecord(record: import("./types").ThoughtRecord) {
+  const db = await openDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(THOUGHT_RECORDS_STORE, "readwrite");
+    tx.objectStore(THOUGHT_RECORDS_STORE).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function listThoughtRecords() {
+  const db = await openDB();
+  return new Promise<import("./types").ThoughtRecord[]>((resolve, reject) => {
+    const tx = db.transaction(THOUGHT_RECORDS_STORE, "readonly");
+    const req = tx.objectStore(THOUGHT_RECORDS_STORE).getAll();
+    req.onsuccess = () => resolve((req.result as any[])?.sort((a, b) => b.ts - a.ts) ?? []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function deleteThoughtRecord(id: string) {
+  const db = await openDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(THOUGHT_RECORDS_STORE, "readwrite");
+    tx.objectStore(THOUGHT_RECORDS_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // Clear all data
 export async function clearAllData() {
   const db = await openDB();
   return new Promise<void>((resolve, reject) => {
-    const tx = db.transaction([SESSIONS_STORE, MOODS_STORE, SETTINGS_STORE], "readwrite");
+    const tx = db.transaction([SESSIONS_STORE, MOODS_STORE, SETTINGS_STORE, THOUGHT_RECORDS_STORE], "readwrite");
     tx.objectStore(SESSIONS_STORE).clear();
     tx.objectStore(MOODS_STORE).clear();
     tx.objectStore(SETTINGS_STORE).clear();
+    tx.objectStore(THOUGHT_RECORDS_STORE).clear();
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
