@@ -1,7 +1,8 @@
 /**
  * Token estimation and conversation history trimming for context window management.
  *
- * The model (TinyLlama 1.1B) has a limited context window. Without trimming,
+ * Gemma 2 2B (8192 ctx via WebLLM) / Gemma 4 E2B (LiteRT + ONNX backends).
+ * We use a conservative 4096-token working budget. Without trimming,
  * long conversations silently overflow, causing incoherent or garbled responses.
  * This is a safety issue in a mental health context.
  */
@@ -10,13 +11,13 @@
 const CHARS_PER_TOKEN = 3.5;
 
 /** Model context window size in tokens */
-export const MODEL_CONTEXT_LIMIT = 2048;
+export const MODEL_CONTEXT_LIMIT = 4096;
 
 /** Tokens reserved for model generation output */
-export const RESERVED_FOR_GENERATION = 512;
+export const RESERVED_FOR_GENERATION = 384;
 
 /** Tokens reserved for the system prompt */
-export const RESERVED_FOR_SYSTEM = 200;
+export const RESERVED_FOR_SYSTEM = 600;
 
 /** Tokens available for conversation history */
 export const AVAILABLE_FOR_HISTORY =

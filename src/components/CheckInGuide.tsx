@@ -4,6 +4,7 @@ import { MORNING_CHECKIN_SEQUENCE, EVENING_CHECKIN_SEQUENCE } from "../data/jour
 
 interface Props {
   currentStep: number; // 1-based (1, 2, or 3)
+  compact?: boolean;
 }
 
 function isMorning(): boolean {
@@ -11,7 +12,7 @@ function isMorning(): boolean {
   return hour >= 5 && hour < 12;
 }
 
-export default function CheckInGuide({ currentStep }: Props) {
+export default function CheckInGuide({ currentStep, compact }: Props) {
   const morning = isMorning();
   const sequence = morning ? MORNING_CHECKIN_SEQUENCE : EVENING_CHECKIN_SEQUENCE;
   const step = sequence[Math.min(currentStep - 1, sequence.length - 1)];
@@ -25,6 +26,43 @@ export default function CheckInGuide({ currentStep }: Props) {
   const accentText = morning ? "text-amber-600" : "text-indigo-600";
   const barActive = morning ? "bg-amber-400" : "bg-indigo-400";
   const barCurrent = morning ? "bg-amber-500" : "bg-indigo-500";
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 py-2 px-3" data-testid="guided-mode-banner">
+        <div className={`w-7 h-7 rounded-lg ${accentBg} flex items-center justify-center flex-shrink-0`}>
+          <Icon className={`h-4 w-4 ${accentText}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-800">{title}</span>
+            {!isComplete && (
+              <span className="text-xs text-slate-400">Step {displayStep} of {total}</span>
+            )}
+            <div className="flex items-center gap-1 ml-auto">
+              {sequence.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i + 1 < displayStep
+                      ? `w-4 ${barActive}`
+                      : i + 1 === displayStep
+                        ? `w-5 ${barCurrent}`
+                        : "w-4 bg-slate-200"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          {isComplete ? (
+            <p className="text-xs text-slate-500 truncate">Complete — feel free to continue or start a new session.</p>
+          ) : (
+            <p className="text-xs text-slate-500 truncate">{step.prompt}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div

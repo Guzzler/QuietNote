@@ -6,6 +6,7 @@ import {
   AVAILABLE_FOR_HISTORY,
   MODEL_CONTEXT_LIMIT,
   RESERVED_FOR_GENERATION,
+  RESERVED_FOR_SYSTEM,
   type SimpleMessage,
 } from "../tokenEstimator";
 
@@ -176,12 +177,12 @@ describe("buildManagedMessages", () => {
 describe("constants", () => {
   it("available history budget is consistent", () => {
     expect(AVAILABLE_FOR_HISTORY).toBe(
-      MODEL_CONTEXT_LIMIT - RESERVED_FOR_GENERATION - 200
+      MODEL_CONTEXT_LIMIT - RESERVED_FOR_GENERATION - RESERVED_FOR_SYSTEM
     );
   });
 
   it("model context limit is reasonable for small LLM", () => {
-    expect(MODEL_CONTEXT_LIMIT).toBeGreaterThanOrEqual(2048);
+    expect(MODEL_CONTEXT_LIMIT).toBeGreaterThanOrEqual(4096);
     expect(MODEL_CONTEXT_LIMIT).toBeLessThanOrEqual(8192);
   });
 });
