@@ -4,13 +4,51 @@ import { GRATITUDE_SEQUENCE } from "../data/journalPrompts";
 
 interface Props {
   currentStep: number; // 1-based (1, 2, or 3)
+  compact?: boolean;
 }
 
-export default function GratitudeGuide({ currentStep }: Props) {
+export default function GratitudeGuide({ currentStep, compact }: Props) {
   const step = GRATITUDE_SEQUENCE[Math.min(currentStep - 1, GRATITUDE_SEQUENCE.length - 1)];
   const total = GRATITUDE_SEQUENCE.length;
   const displayStep = Math.min(currentStep, total);
   const isComplete = currentStep > total;
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 py-2 px-3" data-testid="guided-mode-banner">
+        <div className="w-7 h-7 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
+          <Heart className="h-4 w-4 text-pink-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-800">Gratitude Journal</span>
+            {!isComplete && (
+              <span className="text-xs text-slate-400">Step {displayStep} of {total}</span>
+            )}
+            <div className="flex items-center gap-1 ml-auto">
+              {GRATITUDE_SEQUENCE.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i + 1 < displayStep
+                      ? "w-4 bg-pink-400"
+                      : i + 1 === displayStep
+                        ? "w-5 bg-pink-500"
+                        : "w-4 bg-slate-200"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          {isComplete ? (
+            <p className="text-xs text-slate-500 truncate">Complete — feel free to continue or start a new session.</p>
+          ) : (
+            <p className="text-xs text-slate-500 truncate">{step.prompt}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div

@@ -528,6 +528,13 @@ export default function ChatPanel({
             </div>
           ) : (
             <>
+              {journalingMode !== "freewrite" && (
+                <div className="sticky top-0 z-10 mb-2 pb-2 border-b border-slate-100 bg-white/80 backdrop-blur-sm rounded-t-xl">
+                  {journalingMode === "gratitude" && <GratitudeGuide currentStep={gratitudeStep} compact />}
+                  {journalingMode === "checkin" && <CheckInGuide currentStep={checkinStep} compact />}
+                  {journalingMode === "thoughtrecord" && <ThoughtRecordGuide currentStep={thoughtRecordStep} compact />}
+                </div>
+              )}
               <div className="flex-1 overflow-auto space-y-3 pb-2">
                 {/* AI Limitations Disclaimer — always shown at top of conversation */}
                 <div className="flex items-start gap-2 text-xs text-stone-400 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 mx-1">
