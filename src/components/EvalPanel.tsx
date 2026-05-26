@@ -69,6 +69,7 @@ export default function EvalPanel({ engine, getSystemInstruction, modelLabel }: 
     const systemInstruction = getSystemInstruction(mode);
 
     const generate = async (messages: { role: string; content: string }[]): Promise<string> => {
+      await engine.resetContext();
       let acc = "";
       for await (const token of engine.generate(messages, {
         temperature: 0.7,
