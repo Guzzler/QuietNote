@@ -17,6 +17,7 @@ import { generateReflection, shouldRegenerate } from "./utils/sessionReflection"
 import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personalityPrompt";
 import type { PersonalitySettings } from "./utils/personalityPrompt";
 import SettingsPanel from "./components/SettingsPanel";
+import EvalPanel from "./components/EvalPanel";
 import type { JournalingMode } from "./components/JournalingModeSelector";
 import type { Session, ChatMessage, MoodEntry, MoodEmotion, ThoughtRecord } from "./types";
 
@@ -200,7 +201,7 @@ function getLoadingMessage(progress: number): string {
 }
 
 export default function App() {
-  const { loadModel, loading, progress, webgpuUnsupported, error: modelError, clearError: clearModelError, runtimeId, switchRuntime, modelRef } = useInferenceEngine();
+  const { engine, loadModel, loading, progress, webgpuUnsupported, error: modelError, clearError: clearModelError, runtimeId, switchRuntime, modelRef } = useInferenceEngine();
   const hasSeenLoading = useRef(false);
   if (loading) hasSeenLoading.current = true;
 
@@ -773,6 +774,11 @@ export default function App() {
         onClose={() => setShowSettings(false)}
         settings={personality}
         onSave={handleSavePersonality}
+      />
+      <EvalPanel
+        engine={engine}
+        getSystemInstruction={(mode) => getSystemInstruction(mode)}
+        modelLabel={modelRef.modelId}
       />
 
       <header className="sticky top-0 z-10 backdrop-blur bg-white/60 border-b border-slate-200 shadow-sm">
