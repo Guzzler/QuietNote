@@ -42,6 +42,7 @@ export async function runEvalSuite(
     try {
       response = await opts.generate([
         { role: "system", content: opts.systemInstruction },
+        ...(c.priorTurns ?? []),
         { role: "user", content: c.prompt },
       ]);
     } catch (err) {

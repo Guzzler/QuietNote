@@ -119,6 +119,46 @@ describe("runEvalSuite", () => {
   });
 });
 
+describe("priorTurns handling", () => {
+  it("passes priorTurns between system and user prompt", async () => {
+    const generate = vi.fn<GenerateFn>(async () => "Sarah must be important to you.");
+    await runEvalSuite({
+      systemInstruction: SYSTEM,
+      generate,
+      dimensions: ["empathy"],
+    });
+
+    const multiTurnCalls = generate.mock.calls.filter(
+      (call) => call[0].length > 2
+    );
+    expect(multiTurnCalls.length).toBeGreaterThan(0);
+
+    for (const call of multiTurnCalls) {
+      const msgs = call[0];
+      expect(msgs[0].role).toBe("system");
+      expect(msgs[msgs.length - 1].role).toBe("user");
+      for (let i = 1; i < msgs.length - 1; i++) {
+        expect(["user", "assistant"]).toContain(msgs[i].role);
+      }
+    }
+  });
+
+  it("handles cases with no priorTurns as before", async () => {
+    const generate = mockGenerate("journal reflect feeling");
+    await runEvalSuite({
+      systemInstruction: SYSTEM,
+      generate,
+      dimensions: ["persona"],
+    });
+
+    for (const call of generate.mock.calls) {
+      expect(call[0]).toHaveLength(2);
+      expect(call[0][0].role).toBe("system");
+      expect(call[0][1].role).toBe("user");
+    }
+  });
+});
+
 describe("reportToMarkdown", () => {
   it("produces non-empty markdown with expected sections", async () => {
     const generate = mockGenerate("journal reflect feeling");

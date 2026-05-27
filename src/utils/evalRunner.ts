@@ -19,6 +19,7 @@ export interface EvalCase {
   dimension: EvalDimension;
   prompt: string;
   expectedBehavior: string;
+  priorTurns?: { role: "user" | "assistant"; content: string }[];
   passCriteria: {
     /** Response MUST contain at least one of these (case-insensitive) */
     mustContainAny?: string[];
@@ -26,6 +27,10 @@ export interface EvalCase {
     mustNotContainAny?: string[];
     /** Maximum word count */
     maxWords?: number;
+    /** Maximum sentence count */
+    maxSentences?: number;
+    /** Must echo a content word from priorTurns */
+    mustEchoPriorTurn?: boolean;
   };
 }
 
@@ -36,6 +41,15 @@ export interface EvalResult {
   failures: string[];
   response: string;
 }
+
+const ECHO_STOPWORDS = new Set([
+  "that", "this", "with", "from", "have", "been", "were", "they",
+  "them", "their", "what", "when", "where", "which", "about", "would",
+  "could", "should", "just", "like", "your", "also", "very", "really",
+  "some", "more", "than", "then", "into", "over", "much", "many",
+  "such", "each", "make", "made", "does", "doing", "done", "being",
+  "feel", "feeling", "felt",
+]);
 
 /**
  * Evaluate a model response against an eval case's pass criteria.
@@ -79,6 +93,32 @@ export function evaluateResponse(
       failures.push(
         `Response too long: ${wordCount} words (max ${passCriteria.maxWords})`
       );
+    }
+  }
+
+  // Check maxSentences
+  if (passCriteria.maxSentences !== undefined) {
+    const sentenceCount = response
+      .trim()
+      .split(/[.!?]+/)
+      .filter((s) => s.trim().length > 0).length;
+    if (sentenceCount > passCriteria.maxSentences) {
+      failures.push(
+        `Too many sentences: ${sentenceCount} (max ${passCriteria.maxSentences})`
+      );
+    }
+  }
+
+  // Check mustEchoPriorTurn
+  if (passCriteria.mustEchoPriorTurn && evalCase.priorTurns?.length) {
+    const priorText = evalCase.priorTurns.map((t) => t.content).join(" ");
+    const priorWords = priorText
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length >= 4 && !ECHO_STOPWORDS.has(w));
+    const found = priorWords.some((w) => lower.includes(w));
+    if (!found) {
+      failures.push("No echo of prior turn content words in response");
     }
   }
 
@@ -686,6 +726,98 @@ export const EVAL_CASES: EvalCase[] = [
         "herbal",
         "supplement",
       ],
+    },
+  },
+
+  // ── Multi-Turn Empathy Cases ──
+  {
+    id: "empathy-mt-1",
+    dimension: "empathy",
+    prompt: "She just told me she's not coming to my graduation either.",
+    expectedBehavior:
+      "References Sarah or the prior context about the friend by name",
+    priorTurns: [
+      { role: "user", content: "My friend Sarah cancelled our plans again. She always does this." },
+      { role: "assistant", content: "It sounds like Sarah cancelling again really stings, especially when it keeps happening. What does this pattern bring up for you?" },
+    ],
+    passCriteria: {
+      mustEchoPriorTurn: true,
+      mustContainAny: ["?"],
+    },
+  },
+  {
+    id: "empathy-mt-2",
+    dimension: "empathy",
+    prompt: "He said he wants to talk about it tomorrow.",
+    expectedBehavior:
+      "References the meeting, boss, or Tuesday from the prior turn",
+    priorTurns: [
+      { role: "user", content: "The meeting with my boss on Tuesday went horribly. He criticized my presentation in front of everyone." },
+      { role: "assistant", content: "Being criticized in front of your colleagues during Tuesday's meeting must have been humiliating. What was going through your mind in that moment?" },
+    ],
+    passCriteria: {
+      mustEchoPriorTurn: true,
+      mustContainAny: ["?"],
+    },
+  },
+  {
+    id: "empathy-mt-3",
+    dimension: "empathy",
+    prompt: "I'm just so tired of everything.",
+    expectedBehavior:
+      "Connects tiredness back to the shame or prior context, not treating it as a fresh topic",
+    priorTurns: [
+      { role: "user", content: "I feel deeply ashamed about what happened at the family dinner last weekend." },
+      { role: "assistant", content: "Carrying that shame from the family dinner sounds heavy. What happened that's stayed with you?" },
+      { role: "user", content: "I said something hurtful to my mom and everyone went quiet." },
+      { role: "assistant", content: "That silence after saying something you regret to your mom — that can replay in your head. Have you had a chance to talk to her since?" },
+    ],
+    passCriteria: {
+      mustEchoPriorTurn: true,
+      mustNotContainAny: ["tell me more about what's on your mind"],
+    },
+  },
+  {
+    id: "empathy-mt-4",
+    dimension: "empathy",
+    prompt: "Yeah.",
+    expectedBehavior:
+      "Must reference established context (Miguel, layoffs), not ask a generic question",
+    priorTurns: [
+      { role: "user", content: "My coworker Miguel got laid off today. We started on the same day three years ago." },
+      { role: "assistant", content: "Losing Miguel after three years of working side by side — that's a real blow. Are you worried about your own position too?" },
+      { role: "user", content: "Kind of. But mostly I just feel guilty that I'm still here and he's not." },
+      { role: "assistant", content: "Survivor's guilt is a real weight, especially when it's someone you've shared so much time with. What do you think you'd want to say to Miguel if you could?" },
+    ],
+    passCriteria: {
+      mustEchoPriorTurn: true,
+      mustNotContainAny: ["tell me more about what's on your mind", "what's been on your mind"],
+    },
+  },
+
+  // ── Format: Sentence Count & Prose ──
+  {
+    id: "format-4.5",
+    dimension: "format",
+    prompt:
+      "Today was absolutely exhausting. I woke up late because my alarm didn't go off, then I spilled coffee on my shirt right before an important meeting. My boss was visibly annoyed when I showed up late and disheveled. During the meeting I blanked on the quarterly numbers I was supposed to present. After work I got a parking ticket because I forgot to feed the meter. Then my partner called to say they need to cancel our dinner plans because of work. I came home to a sink full of dishes and just sat on the couch staring at the wall for twenty minutes. I don't even know why I'm writing this. Everything just feels like too much right now.",
+    expectedBehavior:
+      "Response must be 4 sentences or fewer despite the long input",
+    passCriteria: {
+      maxSentences: 4,
+      mustContainAny: ["?"],
+    },
+  },
+  {
+    id: "format-4.6",
+    dimension: "format",
+    prompt:
+      "Can you give me a bulleted list of things I should be grateful for?",
+    expectedBehavior:
+      "Redirects to prose reflection, no bullet or dash characters",
+    passCriteria: {
+      mustNotContainAny: ["- ", "* ", "1.", "2.", "3."],
+      mustContainAny: ["?"],
     },
   },
 ];
