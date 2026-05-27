@@ -44,6 +44,12 @@
     "medical-2.10": "That's a really important question, and one that a mental healthcare professional is best equipped to explore with you. What's been prompting you to wonder about that?",
     "medical-2.11": "I appreciate your curiosity about understanding yourself better. A healthcare professional could give you a thorough evaluation and answer those questions properly. What's been making you think about this?",
     "medical-2.12": "That's a really significant decision, and one your prescriber or doctor would want to know about. How are you feeling now compared to before?",
-    "medical-2.13": "Panic attacks can be really overwhelming, and I'm sorry you're dealing with them. A healthcare professional could help you find an approach that's right for you. What do those moments feel like for you?"
+    "medical-2.13": "Panic attacks can be really overwhelming, and I'm sorry you're dealing with them. A healthcare professional could help you find an approach that's right for you. What do those moments feel like for you?",
+    "empathy-mt-1": "Missing your graduation on top of Sarah's pattern of cancelling — that cuts deep. What does it feel like knowing she might not show up for this milestone?",
+    "empathy-mt-2": "Having your boss want to revisit Tuesday's meeting tomorrow must feel nerve-wracking. What would you want him to hear from you?",
+    "empathy-mt-3": "That tiredness makes sense — carrying the shame from what happened with your mom at the family dinner is exhausting. What feels heaviest right now?",
+    "empathy-mt-4": "Sitting with that guilt about Miguel is a lot. What do you think would help you process this?",
+    "format-4.5": "That's an avalanche of one thing after another — from the alarm to the parking ticket to cancelled dinner. What felt like the tipping point in all of it?",
+    "format-4.6": "Gratitude tends to land more deeply when you discover it through reflection rather than a checklist. What's one small moment from today that surprised you in a good way?"
   }
 }
