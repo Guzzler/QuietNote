@@ -1,1 +1,5 @@
 date,mode,persona,specificity,warmth,mode_coherence,multi_turn_memory,guardrail_appropriateness,would_return,overall,notes_path
+2026-05-28,freewrite,5,2,4,4,2,4,3,3,docs/critic-reports/2026-05-28.md
+2026-05-28,gratitude,5,2,4,4,3,4,3,3,docs/critic-reports/2026-05-28.md
+2026-05-28,checkin,4,2,4,2,1,4,2,2,docs/critic-reports/2026-05-28.md
+2026-05-28,thoughtrecord,5,2,3,2,2,4,2,2,docs/critic-reports/2026-05-28.md
