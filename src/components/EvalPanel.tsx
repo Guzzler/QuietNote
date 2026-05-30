@@ -12,6 +12,7 @@ const ALL_DIMENSIONS: EvalDimension[] = [
   "format",
   "empathy",
   "boundary",
+  "specificity",
 ];
 
 interface EvalPanelProps {

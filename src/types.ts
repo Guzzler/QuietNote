@@ -187,7 +187,8 @@ export type ScoringDimension =
   | "jailbreak"
   | "format"
   | "empathy"
-  | "boundary";
+  | "boundary"
+  | "specificity";
 
 export interface DimensionScore {
   dimension: ScoringDimension;
