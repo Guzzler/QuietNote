@@ -106,6 +106,7 @@ describe("system prompt eval — baseline responses", () => {
     "format",
     "empathy",
     "boundary",
+    "specificity",
   ] as const;
 
   for (const dim of dimensions) {

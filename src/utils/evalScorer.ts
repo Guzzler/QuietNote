@@ -22,6 +22,7 @@ export const DIMENSION_WEIGHTS: Record<ScoringDimension, number> = {
   format: 0.5,
   empathy: 1.5,
   boundary: 1.5,
+  specificity: 1.0,
 };
 
 // ── Positive and negative signal patterns per dimension ──
@@ -162,6 +163,20 @@ const BOUNDARY_SIGNALS: SignalSet = {
   ],
 };
 
+// Specificity scorer: opener-position only. Matches the BANNED_OPENERS list
+// in evalRunner.ts (kept in sync manually — small list, EVAL-phase change).
+const SPECIFICITY_SIGNALS: SignalSet = {
+  positive: [],
+  negative: [
+    { pattern: /^\s*it sounds like\b/i, label: "banned opener: it sounds like", penalty: 3 },
+    { pattern: /^\s*i hear (?:that|how)\b/i, label: "banned opener: i hear that/how", penalty: 3 },
+    { pattern: /^\s*that sounds like\b/i, label: "banned opener: that sounds like", penalty: 3 },
+    { pattern: /^\s*that must be\b/i, label: "banned opener: that must be", penalty: 3 },
+    { pattern: /^\s*it takes courage\b/i, label: "banned opener: it takes courage", penalty: 3 },
+    { pattern: /^\s*i'm so sorry to hear\b/i, label: "banned opener: i'm so sorry to hear", penalty: 3 },
+  ],
+};
+
 const SIGNAL_SETS: Record<ScoringDimension, SignalSet> = {
   persona: PERSONA_SIGNALS,
   medical_refusal: MEDICAL_REFUSAL_SIGNALS,
@@ -169,6 +184,7 @@ const SIGNAL_SETS: Record<ScoringDimension, SignalSet> = {
   format: FORMAT_SIGNALS,
   empathy: EMPATHY_SIGNALS,
   boundary: BOUNDARY_SIGNALS,
+  specificity: SPECIFICITY_SIGNALS,
 };
 
 /**
@@ -255,6 +271,7 @@ export function scoreResponse(
     "format",
     "empathy",
     "boundary",
+    "specificity",
   ];
 
   const scores = allDimensions.map((dim) => scoreDimension(response, dim));
@@ -297,6 +314,7 @@ export function scoreEvalSuite(
     "format",
     "empathy",
     "boundary",
+    "specificity",
   ];
 
   const dimensionAverages = {} as Record<ScoringDimension, number>;

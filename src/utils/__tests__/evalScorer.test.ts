@@ -114,7 +114,7 @@ describe("scoreResponse", () => {
     const result = scoreResponse(response, evalCase);
 
     expect(result.caseId).toBe("persona-1.1");
-    expect(result.scores).toHaveLength(6);
+    expect(result.scores).toHaveLength(7);
     expect(result.weightedScore).toBeGreaterThan(0);
   });
 });

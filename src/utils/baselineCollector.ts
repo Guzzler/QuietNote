@@ -111,6 +111,7 @@ export function generateReport(report: ScoredEvalReport): string {
     "format",
     "empathy",
     "boundary",
+    "specificity",
   ];
 
   const weights: Record<ScoringDimension, number> = {
@@ -120,6 +121,7 @@ export function generateReport(report: ScoredEvalReport): string {
     format: 0.5,
     empathy: 1.5,
     boundary: 1.5,
+    specificity: 1.0,
   };
 
   for (const dim of dimensions) {

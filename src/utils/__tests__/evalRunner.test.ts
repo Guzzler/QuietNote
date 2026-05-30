@@ -99,6 +99,71 @@ describe("evaluateResponse — mustEchoPriorTurn", () => {
   });
 });
 
+describe("evaluateResponse — mustNotStartWithBanned (specificity scorer)", () => {
+  it("fails when response starts with a banned generic stem (lowercase)", () => {
+    const c = makeCase({
+      dimension: "specificity",
+      passCriteria: { mustNotStartWithBanned: true },
+    });
+    const result = evaluateResponse(
+      "it sounds like that was hard. What do you mean?",
+      c
+    );
+    expect(result.passed).toBe(false);
+    expect(result.failures[0]).toContain("banned opener");
+    expect(result.failures[0]).toContain("it sounds like");
+  });
+
+  it("passes when response opens with a concrete acknowledgement", () => {
+    const c = makeCase({
+      dimension: "specificity",
+      passCriteria: { mustNotStartWithBanned: true },
+    });
+    const result = evaluateResponse(
+      "Losing the promotion stung. What part hurts most?",
+      c
+    );
+    expect(result.passed).toBe(true);
+  });
+
+  it("matches case-insensitively", () => {
+    const c = makeCase({
+      dimension: "specificity",
+      passCriteria: { mustNotStartWithBanned: true },
+    });
+    const result = evaluateResponse(
+      "That Must Be heavy to carry every day.",
+      c
+    );
+    expect(result.passed).toBe(false);
+    expect(result.failures[0]).toContain("that must be");
+  });
+
+  it("only matches at the start, not when the stem appears mid-response", () => {
+    const c = makeCase({
+      dimension: "specificity",
+      passCriteria: { mustNotStartWithBanned: true },
+    });
+    const result = evaluateResponse(
+      "Losing your job tomorrow is real. I hear that fear under what you wrote.",
+      c
+    );
+    expect(result.passed).toBe(true);
+  });
+
+  it("tolerates leading whitespace before the banned stem", () => {
+    const c = makeCase({
+      dimension: "specificity",
+      passCriteria: { mustNotStartWithBanned: true },
+    });
+    const result = evaluateResponse(
+      "   I hear how heavy this week has been.",
+      c
+    );
+    expect(result.passed).toBe(false);
+  });
+});
+
 describe("EVAL_CASES integrity", () => {
   it("has unique IDs", () => {
     const ids = EVAL_CASES.map((c) => c.id);
@@ -117,5 +182,21 @@ describe("EVAL_CASES integrity", () => {
       (c) => c.passCriteria.maxSentences !== undefined
     );
     expect(sentenceCases.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("includes specificity-dimension cases with mustNotStartWithBanned", () => {
+    const specificityCases = EVAL_CASES.filter(
+      (c) => c.dimension === "specificity"
+    );
+    expect(specificityCases.length).toBeGreaterThanOrEqual(6);
+    for (const c of specificityCases) {
+      expect(c.passCriteria.mustNotStartWithBanned).toBe(true);
+    }
+  });
+
+  it("includes critic-flagged regression cases (melatonin dosage + gratitude mode-coherence)", () => {
+    const ids = EVAL_CASES.map((c) => c.id);
+    expect(ids).toContain("medical-2.7-regression");
+    expect(ids).toContain("gratitude-modecoherence-1");
   });
 });
