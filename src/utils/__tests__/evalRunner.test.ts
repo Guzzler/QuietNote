@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluateResponse, EVAL_CASES } from "../evalRunner";
+import { evaluateResponse, EVAL_CASES, runEvalSuite } from "../evalRunner";
 import type { EvalCase } from "../evalRunner";
 
 function makeCase(overrides: Partial<EvalCase>): EvalCase {
@@ -198,5 +198,70 @@ describe("EVAL_CASES integrity", () => {
     const ids = EVAL_CASES.map((c) => c.id);
     expect(ids).toContain("medical-2.7-regression");
     expect(ids).toContain("gratitude-modecoherence-1");
+  });
+
+  it("includes cross-mode specificity cases for gratitude, check-in, and thought-record", () => {
+    const ids = EVAL_CASES.map((c) => c.id);
+    for (const prefix of ["gratitude-specificity-", "checkin-specificity-", "thoughtrecord-specificity-"]) {
+      const matches = ids.filter((id) => id.startsWith(prefix));
+      expect(matches.length).toBeGreaterThanOrEqual(3);
+    }
+    const crossMode = EVAL_CASES.filter(
+      (c) =>
+        c.dimension === "specificity" &&
+        (c.id.startsWith("gratitude-") ||
+          c.id.startsWith("checkin-") ||
+          c.id.startsWith("thoughtrecord-"))
+    );
+    for (const c of crossMode) {
+      expect(c.passCriteria.mustNotStartWithBanned).toBe(true);
+      expect(c.passCriteria.maxSentences).toBe(3);
+    }
+  });
+
+  it("tags every medical_refusal case with medicalIndirect (direct or indirect)", () => {
+    const medical = EVAL_CASES.filter((c) => c.dimension === "medical_refusal");
+    expect(medical.length).toBeGreaterThan(0);
+    for (const c of medical) {
+      expect(typeof c.medicalIndirect).toBe("boolean");
+    }
+  });
+});
+
+describe("runEvalSuite — medical refusal direct/indirect split", () => {
+  it("emits separate direct and indirect counts for tagged medical cases", () => {
+    // Build responses for medical cases — make all pass by including 'professional'.
+    const responses: Record<string, string> = {};
+    for (const c of EVAL_CASES) {
+      if (c.dimension === "medical_refusal") {
+        responses[c.id] = "Please talk to a professional doctor about this.";
+      }
+    }
+    const { summary } = runEvalSuite(responses);
+    const directTotal = summary.medicalRefusalDirect.passed + summary.medicalRefusalDirect.failed;
+    const indirectTotal = summary.medicalRefusalIndirect.passed + summary.medicalRefusalIndirect.failed;
+    expect(directTotal).toBeGreaterThan(0);
+    expect(indirectTotal).toBeGreaterThan(0);
+    const totalTagged =
+      summary.medicalRefusalDirect.passed +
+      summary.medicalRefusalDirect.failed +
+      summary.medicalRefusalIndirect.passed +
+      summary.medicalRefusalIndirect.failed;
+    const medicalCount = EVAL_CASES.filter((c) => c.dimension === "medical_refusal").length;
+    expect(totalTagged).toBe(medicalCount);
+  });
+
+  it("legacy untagged medical case still counts toward overall medical_refusal pass-rate", () => {
+    // Simulate a hypothetical untagged case by checking aggregation invariants:
+    // every medical_refusal result must appear in byDimension regardless of tag.
+    const responses: Record<string, string> = {};
+    for (const c of EVAL_CASES) {
+      if (c.dimension === "medical_refusal") {
+        responses[c.id] = "Please consult a professional.";
+      }
+    }
+    const { summary } = runEvalSuite(responses);
+    const medicalCount = EVAL_CASES.filter((c) => c.dimension === "medical_refusal").length;
+    expect(summary.byDimension.medical_refusal.passed + summary.byDimension.medical_refusal.failed).toBe(medicalCount);
   });
 });

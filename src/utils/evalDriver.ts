@@ -20,6 +20,8 @@ export interface EvalRunReport {
     passed: number;
     failed: number;
     byDimension: Record<string, { passed: number; failed: number; total: number }>;
+    medicalRefusalDirect: { passed: number; failed: number; total: number };
+    medicalRefusalIndirect: { passed: number; failed: number; total: number };
   };
 }
 
@@ -64,6 +66,9 @@ export async function runEvalSuite(
   }
 
   const byDimension: Record<string, { passed: number; failed: number; total: number }> = {};
+  const medicalRefusalDirect = { passed: 0, failed: 0, total: 0 };
+  const medicalRefusalIndirect = { passed: 0, failed: 0, total: 0 };
+  const caseById = new Map(cases.map((c) => [c.id, c]));
   for (const r of results) {
     if (!byDimension[r.dimension]) {
       byDimension[r.dimension] = { passed: 0, failed: 0, total: 0 };
@@ -71,6 +76,16 @@ export async function runEvalSuite(
     byDimension[r.dimension].total++;
     if (r.passed) byDimension[r.dimension].passed++;
     else byDimension[r.dimension].failed++;
+
+    if (r.dimension === "medical_refusal") {
+      const c = caseById.get(r.caseId);
+      if (c && c.medicalIndirect !== undefined) {
+        const bucket = c.medicalIndirect ? medicalRefusalIndirect : medicalRefusalDirect;
+        bucket.total++;
+        if (r.passed) bucket.passed++;
+        else bucket.failed++;
+      }
+    }
   }
 
   return {
@@ -84,6 +99,8 @@ export async function runEvalSuite(
       passed: results.filter((r) => r.passed).length,
       failed: results.filter((r) => !r.passed).length,
       byDimension,
+      medicalRefusalDirect,
+      medicalRefusalIndirect,
     },
   };
 }
@@ -108,6 +125,21 @@ export function reportToMarkdown(report: EvalRunReport): string {
     lines.push(`| ${dim} | ${stats.passed} | ${stats.failed} | ${stats.total} | ${rate}% |`);
   }
   lines.push("");
+
+  // Medical refusal — direct vs indirect split (added 2026-05-30)
+  const mrDirect = report.summary.medicalRefusalDirect;
+  const mrIndirect = report.summary.medicalRefusalIndirect;
+  if (mrDirect.total > 0 || mrIndirect.total > 0) {
+    lines.push("## Medical Refusal — Direct vs Indirect");
+    lines.push("");
+    lines.push("| Cohort | Passed | Failed | Total | Pass Rate |");
+    lines.push("|--------|--------|--------|-------|-----------|");
+    const dRate = mrDirect.total > 0 ? Math.round((mrDirect.passed / mrDirect.total) * 100) : 0;
+    const iRate = mrIndirect.total > 0 ? Math.round((mrIndirect.passed / mrIndirect.total) * 100) : 0;
+    lines.push(`| medical_refusal_direct | ${mrDirect.passed} | ${mrDirect.failed} | ${mrDirect.total} | ${dRate}% |`);
+    lines.push(`| medical_refusal_indirect | ${mrIndirect.passed} | ${mrIndirect.failed} | ${mrIndirect.total} | ${iRate}% |`);
+    lines.push("");
+  }
 
   // Weakest dimensions
   const sorted = Object.entries(report.summary.byDimension)
