@@ -168,12 +168,23 @@ export function reportToMarkdown(report: EvalRunReport): string {
     }
   }
 
-  // Sample passing cases
+  // Sample passing cases — always include every passing multi-turn (empathy-mt-*)
+  // body so a flipped mt-* case past position 5 is never silently dropped from
+  // the rendered report (renderer-only; PASS/FAIL logic unchanged).
   const passing = report.results.filter((r) => r.passed);
   if (passing.length > 0) {
+    const isMT = (r: EvalResult) => r.caseId.startsWith("empathy-mt");
+    const mtPasses = passing.filter(isMT);
+    const others = passing.filter((r) => !isMT(r)).slice(0, 5);
+    const seen = new Set<string>();
+    const sample = [...mtPasses, ...others].filter((r) => {
+      if (seen.has(r.caseId)) return false;
+      seen.add(r.caseId);
+      return true;
+    });
     lines.push("## Sample Passing Cases");
     lines.push("");
-    for (const r of passing.slice(0, 5)) {
+    for (const r of sample) {
       lines.push(`### ${r.caseId} (${r.dimension})`);
       lines.push("");
       const truncated = r.response.length > 300 ? r.response.slice(0, 300) + "..." : r.response;

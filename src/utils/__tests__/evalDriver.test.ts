@@ -174,4 +174,46 @@ describe("reportToMarkdown", () => {
     expect(md).toContain("## Weakest Dimensions");
     expect(md.length).toBeGreaterThan(100);
   });
+
+  it("always includes passing empathy-mt-* bodies even past position 5", () => {
+    // Synthetic report where a passing empathy-mt-3 sits at position 8 in
+    // the passing list — the previous renderer (passing.slice(0,5)) would
+    // have dropped it. The renderer must always surface multi-turn passes.
+    const passingFillers = Array.from({ length: 8 }).map((_, i) => ({
+      caseId: `filler-${i}`,
+      dimension: "persona" as const,
+      passed: true,
+      failures: [],
+      response: `filler body ${i}`,
+    }));
+    const mtPass = {
+      caseId: "empathy-mt-3",
+      dimension: "empathy" as const,
+      passed: true,
+      failures: [],
+      response: "I remember you mentioned the family dinner and what your mom said.",
+    };
+    const report = {
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      modelLabel: "test",
+      systemInstruction: SYSTEM,
+      results: [...passingFillers, mtPass],
+      summary: {
+        total: 9,
+        passed: 9,
+        failed: 0,
+        byDimension: {
+          persona: { passed: 8, failed: 0, total: 8 },
+          empathy: { passed: 1, failed: 0, total: 1 },
+        },
+        medicalRefusalDirect: { passed: 0, failed: 0, total: 0 },
+        medicalRefusalIndirect: { passed: 0, failed: 0, total: 0 },
+      },
+    };
+
+    const md = reportToMarkdown(report);
+    expect(md).toContain("empathy-mt-3");
+    expect(md).toContain("family dinner");
+  });
 });
