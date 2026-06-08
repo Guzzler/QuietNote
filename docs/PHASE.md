@@ -2,9 +2,9 @@
 
 This file is the **single source of truth** for what kind of work is allowed today. The planner, executor, critic, and rot-pass scheduled tasks all read it. Do not skip reading it.
 
-## Current phase: `EVAL`
+## Current phase: `BUILD`
 
-Set: 2026-05-25
+Set: 2026-06-07 (flipped from `EVAL` after 7/7 EVAL exit check — baseline sustained; see [`docs/critic-reports/2026-06-07.md`](critic-reports/2026-06-07.md))
 Phase owner: Sharang (you can override at any time by editing this file)
 
 ## What each phase allows
@@ -27,4 +27,5 @@ Phase owner: Sharang (you can override at any time by editing this file)
 
 Append a line below when phase changes. Newest at top.
 
+- 2026-06-07 → `BUILD` (EVAL exit: 7 critic reports 05-28…06-07, baseline sustained at overall 3–4 / guardrail 4–5 / multi_turn_memory 3; two confirmed BUILD feat:s queued — prior-turn entity surfacing (primary), gratitude distress carve-out (secondary))
 - 2026-05-25 → `EVAL` (initial — critic loop just stood up, need baseline)
