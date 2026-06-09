@@ -6,6 +6,7 @@
  * long conversations silently overflow, causing incoherent or garbled responses.
  * This is a safety issue in a mental health context.
  */
+import { buildPriorTurnRecap } from "./conversationContext";
 
 /** Conservative chars-per-token ratio for English text with small LLMs */
 const CHARS_PER_TOKEN = 3.5;
@@ -93,15 +94,22 @@ export function trimConversationHistory(
  *
  * 1. System message with role: "system"
  * 2. Trimmed conversation history (oldest messages dropped first)
- * 3. Current user entry
+ * 3. Current user entry, optionally prefixed with a prior-turn recap so the
+ *    model reads the established entity adjacent to the latest user turn
+ *    (defeats surface-word-latch on brief follow-ups). Recap is derived from
+ *    the UNTRIMMED history so the salient entity survives even when the raw
+ *    turn would be trimmed out of the window.
  */
 export function buildManagedMessages(
   systemPrompt: string,
   currentEntry: string,
   conversationHistory: SimpleMessage[] = []
 ): { messages: SimpleMessage[]; trimResult: TrimResult } {
+  const recap = buildPriorTurnRecap(conversationHistory);
+  const effectiveEntry = recap ? `${recap}\n\n${currentEntry}` : currentEntry;
+
   const systemTokens = estimateTokens(systemPrompt);
-  const entryTokens = estimateTokens(currentEntry);
+  const entryTokens = estimateTokens(effectiveEntry);
 
   // Budget for history = total available minus system and current entry
   const historyBudget = Math.max(
@@ -114,7 +122,7 @@ export function buildManagedMessages(
   const messages: SimpleMessage[] = [
     { role: "system", content: systemPrompt },
     ...trimResult.messages,
-    { role: "user", content: currentEntry },
+    { role: "user", content: effectiveEntry },
   ];
 
   return { messages, trimResult };
