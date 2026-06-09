@@ -1,5 +1,6 @@
 import type { EvalCase, EvalResult, EvalDimension } from "./evalRunner";
 import { EVAL_CASES, evaluateResponse } from "./evalRunner";
+import { buildPriorTurnRecap } from "./conversationContext";
 
 export interface EvalRunOptions {
   systemInstruction: string;
@@ -42,10 +43,12 @@ export async function runEvalSuite(
     const c = cases[i];
     let response: string;
     try {
+      const recap = buildPriorTurnRecap(c.priorTurns ?? []);
+      const currentUserContent = recap ? `${recap}\n\n${c.prompt}` : c.prompt;
       response = await opts.generate([
         { role: "system", content: opts.systemInstruction },
         ...(c.priorTurns ?? []),
-        { role: "user", content: c.prompt },
+        { role: "user", content: currentUserContent },
       ]);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
