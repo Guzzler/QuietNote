@@ -108,8 +108,6 @@ export default function ChatPanel({
   checkinStep = 1,
   thoughtRecordStep = 1,
 }: ChatPanelProps) {
-  const [animated, setAnimated] = useState("");
-  const animatedMessageIds = useRef<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -192,10 +190,11 @@ export default function ChatPanel({
     return highOrMedium.length >= 2 ? obs : [];
   }, [allSessions, moods]);
 
-  // Auto-scroll to bottom when messages change or typing animation updates
+  // Auto-scroll to bottom when messages change or streamed content grows
+  const lastMessageContent = activeThread?.messages?.[activeThread.messages.length - 1]?.content;
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeThread?.messages?.length, animated, busy]);
+  }, [activeThread?.messages?.length, lastMessageContent, busy]);
 
   // Reset all suggestion state when session changes
   useEffect(() => {
@@ -208,36 +207,12 @@ export default function ChatPanel({
     setMessagesSincePromptSuggestion(0);
     setSuggestedCategories(new Set());
     setPromptAcceptedMessageIds(new Set());
-    animatedMessageIds.current = new Set();
   }, [current?.id]);
 
-  // Typing animation for the latest assistant message — only after finalization, only once per message
-  useEffect(() => {
-    if (!activeThread) return;
-    const msgs = activeThread.messages;
-    const last = msgs[msgs.length - 1];
-    // Only animate once the message is finalized (not during streaming)
-    if (last?.role === "assistant" && !last.temp) {
-      // Skip animation if this message was already animated
-      if (animatedMessageIds.current.has(last.id)) {
-        setAnimated(last.content || "");
-        return;
-      }
-      let i = 0;
-      const text = last.content || "";
-      const interval = setInterval(() => {
-        setAnimated(text.slice(0, i));
-        i++;
-        if (i > text.length) {
-          clearInterval(interval);
-          animatedMessageIds.current.add(last.id);
-        }
-      }, 18);
-      return () => clearInterval(interval);
-    } else {
-      setAnimated("");
-    }
-  }, [activeThread?.messages?.length, activeThread?.messages?.[activeThread?.messages?.length - 1]?.temp]);
+  // NOTE: assistant text is revealed by real token streaming (App.tsx updates
+  // message content per delta). The old post-finalization typewriter re-played
+  // the whole message from index 0, causing a visible "double render"
+  // (streamed text blanked, then re-typed) — removed 2026-06-10.
 
   // Check for emotions and themes after assistant messages are finalized
   useEffect(() => {
@@ -571,11 +546,7 @@ export default function ChatPanel({
                 <AnimatePresence>
                   {activeThread.messages
                     .filter((m: ChatMessage) => m.role !== "system")
-                    .map((m: ChatMessage, idx: number) => {
-                      const isLastAssistant =
-                        m.role === "assistant" &&
-                        idx === activeThread.messages.filter((msg: ChatMessage) => msg.role !== "system").length - 1;
-
+                    .map((m: ChatMessage) => {
                       return (
                         <div key={m.id}>
                           <motion.div
@@ -589,7 +560,7 @@ export default function ChatPanel({
                             }`}
                           >
                             <div className="whitespace-pre-wrap leading-relaxed">
-                              {isLastAssistant ? (m.temp ? m.content : animated) : m.content}
+                              {m.content}
                             </div>
                           </motion.div>
 

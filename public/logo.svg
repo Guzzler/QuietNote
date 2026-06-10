@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Quietnote sleeping-book mark — outline variant for in-app use (header,
+       loading screen). Book only (no "z"), maximized in frame, transparent
+       background. -->
+  <g stroke="#5B5EA6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- back cover, peeking out right + bottom -->
+    <path d="M168 46 q14 2 14 16 v102 q0 18 -18 18 h-102 q-16 0 -18 -14" stroke-width="12"/>
+    <!-- front cover -->
+    <rect x="20" y="16" width="144" height="148" rx="22" stroke-width="13"/>
+    <!-- spine band on the left -->
+    <path d="M40 26 v128" stroke-width="19"/>
+    <!-- closed eyes -->
+    <path d="M64 82 q10 12 20 0" stroke-width="11"/>
+    <path d="M102 82 q10 12 20 0" stroke-width="11"/>
+    <!-- smile -->
+    <path d="M80 116 q13 14 26 0" stroke-width="11"/>
+  </g>
+</svg>

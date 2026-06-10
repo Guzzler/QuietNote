@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Brain, Shield, Loader2, Heart, Lock, Plus, BookOpen, Settings } from "lucide-react";
+import { Shield, Loader2, Heart, Lock, Plus, BookOpen, Settings } from "lucide-react";
 import Layout from "./components/Layout";
 import ChatPanel from "./components/ChatPanel";
 import SessionsPanel from "./components/SessionsPanel";
@@ -636,7 +636,7 @@ export default function App() {
           {/* App identity */}
           <div className="flex items-center justify-center gap-2 mb-1">
             <div className="p-1.5 rounded-xl bg-indigo-100">
-              <Brain className="h-5 w-5 text-indigo-600" />
+              <img src="/logo.svg" alt="" className="h-5 w-5" />
             </div>
             <h2 className="text-lg font-semibold text-slate-800">Quietnote</h2>
           </div>
@@ -730,7 +730,7 @@ export default function App() {
       <header className="sticky top-0 z-10 backdrop-blur bg-white/60 border-b border-slate-200 shadow-sm">
         <div className="w-full px-6 py-3 flex items-center gap-3">
           <div className="p-2 rounded-2xl bg-indigo-100 border border-indigo-200">
-            <Brain className="h-5 w-5" />
+            <img src="/logo.svg" alt="Quietnote logo" className="h-5 w-5" />
           </div>
           <div>
             <h1 className="text-xl font-semibold">Quietnote</h1>

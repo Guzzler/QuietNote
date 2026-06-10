@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Quietnote sleeping-book favicon — filled variant for legibility at 16px,
+       transparent background, auto-swaps to light fill on dark browser themes. -->
+  <style>
+    .mark { stroke: #5B5EA6; }
+    .fill { fill: #5B5EA6; }
+    .face { stroke: #FFFFFF; }
+    @media (prefers-color-scheme: dark) {
+      .mark { stroke: #F5F2E8; }
+      .fill { fill: #F5F2E8; }
+      .face { stroke: #1E2235; }
+    }
+  </style>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <!-- back cover, peeking out right + bottom -->
+    <path class="mark" d="M154 66 q8 2 8 12 v76 q0 14 -14 14 h-76 q-10 0 -12 -8" stroke-width="12" fill="none"/>
+    <!-- front cover, filled -->
+    <rect class="fill mark" x="44" y="48" width="106" height="116" rx="16" stroke-width="13"/>
+    <!-- closed eyes -->
+    <path class="face" d="M84 98 q8 9 16 0" stroke-width="10" fill="none"/>
+    <path class="face" d="M118 98 q8 9 16 0" stroke-width="10" fill="none"/>
+    <!-- smile -->
+    <path class="face" d="M99 126 q10 11 20 0" stroke-width="10" fill="none"/>
+    <!-- z -->
+    <path class="mark" d="M160 12 h20 l-20 22 h20" stroke-width="11" fill="none"/>
+  </g>
+</svg>
