@@ -33,6 +33,7 @@ import { fileURLToPath } from "node:url";
 import { runEvalSuite, reportToMarkdown, type EvalRunReport } from "../src/utils/evalDriver.ts";
 import { EVAL_CASES, type EvalDimension } from "../src/utils/evalRunner.ts";
 import { getBaseSystemInstruction } from "../src/prompts/systemPrompts.ts";
+import { isBareDeflection, withDeflectionReprompt } from "../src/utils/responseShaping.ts";
 import type { JournalingMode } from "../src/components/JournalingModeSelector.tsx";
 
 const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX"; // mirrors transformersjs-engine.ts:16
@@ -89,7 +90,16 @@ async function main() {
   console.log(`\n[run-eval] Model loaded — ready to generate.`);
 
   // Build a stateless `generate` matching evalDriver's signature.
+  // Mirrors the app's send path (src/App.tsx): if the first pass is a bare
+  // crisis-resource deflection, issue ONE re-generation with the shaping
+  // instruction and take the second response unconditionally (mechanism B).
   async function generate(messages: { role: string; content: string }[]): Promise<string> {
+    const first = await generateOnce(messages);
+    if (!isBareDeflection(first)) return first;
+    return generateOnce(withDeflectionReprompt(messages));
+  }
+
+  async function generateOnce(messages: { role: string; content: string }[]): Promise<string> {
     const inputs = (tokenizer as any).apply_chat_template(messages, {
       tokenize: true,
       return_dict: true,

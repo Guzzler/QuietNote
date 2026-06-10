@@ -12,6 +12,7 @@ import { putSession, listSessions, getSession, putMood, deleteSession, listMoods
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
+import { isBareDeflection, withDeflectionReprompt } from "./utils/responseShaping";
 import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
 import { generateReflection, shouldRegenerate } from "./utils/sessionReflection";
 import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personalityPrompt";
@@ -334,26 +335,38 @@ export default function App() {
       setContextTrimmed(trimmed);
 
       let acc = "";
-      for await (const delta of e.generate(messages, { temperature, maxTokens, repetitionPenalty: 1.3 })) {
-        acc += delta;
+      const streamTo = async (msgs: typeof messages) => {
+        acc = "";
+        for await (const delta of e.generate(msgs, { temperature, maxTokens, repetitionPenalty: 1.3 })) {
+          acc += delta;
 
-        // Update the assistant message content immutably
-        setCurrent((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            threads: prev.threads.map((t, idx) =>
-              idx === 0
-                ? {
-                    ...t,
-                    messages: t.messages.map((m) =>
-                      m.id === assistantMsgId ? { ...m, content: acc } : m
-                    ),
-                  }
-                : t
-            ),
-          };
-        });
+          // Update the assistant message content immutably
+          setCurrent((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              threads: prev.threads.map((t, idx) =>
+                idx === 0
+                  ? {
+                      ...t,
+                      messages: t.messages.map((m) =>
+                        m.id === assistantMsgId ? { ...m, content: acc } : m
+                      ),
+                    }
+                  : t
+              ),
+            };
+          });
+        }
+      };
+      await streamTo(messages);
+
+      // Deflection-shape guard (mechanism B): a bare crisis-resource
+      // deflection gets ONE re-generation with the shaping instruction; the
+      // second response is taken unconditionally. Guardrails still run below.
+      if (isBareDeflection(truncateToLastSentence(acc))) {
+        console.warn("[ResponseShaping] Bare deflection detected — re-generating once");
+        await streamTo(withDeflectionReprompt(messages));
       }
 
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamp
@@ -500,26 +513,38 @@ export default function App() {
       setContextTrimmed(trimmed);
 
       let acc = "";
-      for await (const delta of e.generate(messages, { temperature, maxTokens, repetitionPenalty: 1.3 })) {
-        acc += delta;
+      const streamTo = async (msgs: typeof messages) => {
+        acc = "";
+        for await (const delta of e.generate(msgs, { temperature, maxTokens, repetitionPenalty: 1.3 })) {
+          acc += delta;
 
-        // Update assistant message content immutably
-        setCurrent((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            threads: prev.threads.map((t) =>
-              t.id === threadId
-                ? {
-                    ...t,
-                    messages: t.messages.map((m) =>
-                      m.id === assistantMsgId ? { ...m, content: acc } : m
-                    ),
-                  }
-                : t
-            ),
-          };
-        });
+          // Update assistant message content immutably
+          setCurrent((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              threads: prev.threads.map((t) =>
+                t.id === threadId
+                  ? {
+                      ...t,
+                      messages: t.messages.map((m) =>
+                        m.id === assistantMsgId ? { ...m, content: acc } : m
+                      ),
+                    }
+                  : t
+              ),
+            };
+          });
+        }
+      };
+      await streamTo(messages);
+
+      // Deflection-shape guard (mechanism B): a bare crisis-resource
+      // deflection gets ONE re-generation with the shaping instruction; the
+      // second response is taken unconditionally. Guardrails still run below.
+      if (isBareDeflection(truncateToLastSentence(acc))) {
+        console.warn("[ResponseShaping] Bare deflection detected — re-generating once");
+        await streamTo(withDeflectionReprompt(messages));
       }
 
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamps
