@@ -18,6 +18,14 @@ function daysBetween(a: string, b: string): number {
   return Math.round(Math.abs(da.getTime() - db.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+// Quiet informational badge shown near today's entry in the sessions panel.
+// Only meaningful for an active streak the user added to today; single days
+// and broken streaks show nothing — this is information, not celebration.
+export function getStreakBadgeText(info: StreakInfo): string | null {
+  if (info.currentStreak < 2 || !info.journaledToday) return null;
+  return `🔥 ${info.currentStreak}-day streak`;
+}
+
 export function computeStreak(sessions: Session[]): StreakInfo {
   if (sessions.length === 0) {
     return { currentStreak: 0, longestStreak: 0, totalDays: 0, journaledToday: false };

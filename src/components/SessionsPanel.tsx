@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { BookOpen, Trash2, Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { computeStreak, getStreakBadgeText } from "../utils/streakTracker";
 import type { Session } from "../types";
 
 export default function SessionsPanel({
@@ -16,6 +17,11 @@ export default function SessionsPanel({
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const streakBadge = useMemo(
+    () => getStreakBadgeText(computeStreak(sessions)),
+    [sessions]
+  );
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return sessions;
@@ -33,6 +39,9 @@ export default function SessionsPanel({
       <div className="flex items-center gap-2 mb-2">
         <BookOpen className="h-4 w-4 text-indigo-600" />
         <h2 className="text-sm font-semibold text-slate-700">Sessions</h2>
+        {streakBadge && (
+          <span className="ml-auto text-[11px] text-slate-400 whitespace-nowrap">{streakBadge}</span>
+        )}
       </div>
 
       {/* Search input */}
