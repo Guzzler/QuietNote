@@ -1,4 +1,4 @@
-import { Loader2, Send, MessageSquare, Info, AlertCircle, RefreshCw, Lock, Sparkles, Heart, TrendingUp, TrendingDown, Minus, X } from "lucide-react";
+import { Loader2, Send, Info, AlertCircle, RefreshCw, X } from "lucide-react";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PromptSelector from "./PromptSelector";
@@ -13,11 +13,8 @@ import { getTopEmotion } from "../utils/emotionExtractor";
 import { getTopTheme } from "../utils/themeExtractor";
 import { getPromptByCategory } from "../data/journalPrompts";
 import { analyzeMoodTrend, findTopEmotions } from "../utils/moodPatterns";
-import { computeStreak } from "../utils/streakTracker";
 import { buildContinuityPrompt } from "../utils/continuityPrompt";
-import ContinuityCard from "./ContinuityCard";
-import MoodJournalCorrelations from "./MoodJournalCorrelations";
-import { buildCorrelations } from "../utils/moodJournalCorrelations";
+import WelcomeEmptyState from "./WelcomeEmptyState";
 import type { ChatMessage, MoodEmotion, MoodEntry, PromptCategory, Session, Thread } from "../types";
 
 // Guardrail constants for mood suggestions
@@ -177,18 +174,19 @@ export default function ChatPanel({
     return { greeting, suggestion, moodTrend, topEmotion, hasMoodData: moods.length > 0 };
   }, [moods]);
 
-  const streakInfo = useMemo(() => computeStreak(allSessions), [allSessions]);
-
   const continuityPrompt = useMemo(
     () => buildContinuityPrompt(allSessions, moods, sessionId),
     [allSessions, moods, sessionId]
   );
 
-  const welcomeCorrelations = useMemo(() => {
-    const obs = buildCorrelations(allSessions, moods);
-    const highOrMedium = obs.filter((o) => o.confidence === "high" || o.confidence === "medium");
-    return highOrMedium.length >= 2 ? obs : [];
-  }, [allSessions, moods]);
+  // On the freewrite empty state the page should be ready to write in —
+  // focus the textarea so the first keystroke lands in it. Re-run when model
+  // loading finishes, since the panel mounts behind the loading screen.
+  useEffect(() => {
+    if (!current && !loading && journalingMode === "freewrite") {
+      textareaRef.current?.focus();
+    }
+  }, [current, loading, journalingMode]);
 
   // Auto-scroll to bottom when messages change or streamed content grows
   const lastMessageContent = activeThread?.messages?.[activeThread.messages.length - 1]?.content;
@@ -379,113 +377,17 @@ export default function ChatPanel({
           ) : journalingMode === "thoughtrecord" ? (
             <ThoughtRecordGuide currentStep={thoughtRecordStep} />
           ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4 }}
-              className="text-center max-w-sm px-4"
-            >
-              <div className="mx-auto mb-4 w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-indigo-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-slate-800 mb-1">{personalizedWelcome.greeting}</h2>
-              <p className="text-sm text-slate-500 mb-3">A private space to reflect on your thoughts and feelings.</p>
-
-              {streakInfo.currentStreak >= 2 && (
-                <div className="inline-flex items-center gap-1.5 text-sm text-amber-600 bg-amber-50 rounded-full px-3 py-1 mb-4">
-                  <span>🔥</span>
-                  <span>{streakInfo.currentStreak}-day journaling streak!</span>
-                </div>
-              )}
-              {streakInfo.currentStreak === 1 && streakInfo.journaledToday && (
-                <div className="inline-flex items-center gap-1.5 text-sm text-green-600 bg-green-50 rounded-full px-3 py-1 mb-4">
-                  <span>✓</span>
-                  <span>You've journaled today</span>
-                </div>
-              )}
-              {streakInfo.currentStreak === 0 && streakInfo.totalDays > 0 && (
-                <div className="inline-flex items-center gap-1.5 text-sm text-slate-500 bg-slate-50 rounded-full px-3 py-1 mb-4">
-                  <span>Start a new streak{streakInfo.longestStreak > 1 ? ` — your best was ${streakInfo.longestStreak} days` : ""}</span>
-                </div>
-              )}
-
-              {/* Continuity card — pick up where you left off */}
-              {continuityPrompt && (
-                <div className="mb-4">
-                  <ContinuityCard
-                    prompt={continuityPrompt}
-                    onClick={(text) => {
-                      setUserInput(text);
-                      textareaRef.current?.focus();
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Mood-journal correlations */}
-              {welcomeCorrelations.length > 0 && (
-                <div className="mb-4">
-                  <MoodJournalCorrelations observations={welcomeCorrelations} />
-                </div>
-              )}
-
-              {/* Personalized mood summary + suggestion */}
-              {personalizedWelcome.hasMoodData && personalizedWelcome.moodTrend ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4 text-left">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    {personalizedWelcome.moodTrend === "improving" && <TrendingUp className="h-3.5 w-3.5 text-green-500" />}
-                    {personalizedWelcome.moodTrend === "stable" && <Minus className="h-3.5 w-3.5 text-slate-500" />}
-                    {personalizedWelcome.moodTrend === "declining" && <TrendingDown className="h-3.5 w-3.5 text-amber-500" />}
-                    <span className="text-xs font-medium text-slate-600">
-                      {personalizedWelcome.moodTrend === "improving" && "Your mood has been trending up"}
-                      {personalizedWelcome.moodTrend === "stable" && "Your mood has been steady"}
-                      {personalizedWelcome.moodTrend === "declining" && "You\u2019ve been going through a tough stretch"}
-                    </span>
-                  </div>
-                  {personalizedWelcome.topEmotion && (
-                    <p className="text-[11px] text-slate-500">Most logged: {personalizedWelcome.topEmotion}</p>
-                  )}
-                  {personalizedWelcome.suggestion && (
-                    <button
-                      onClick={() => onJournalingModeChange(personalizedWelcome.suggestion!.mode)}
-                      className="mt-2 text-xs text-indigo-600 hover:text-indigo-700 underline transition-colors"
-                    >
-                      {personalizedWelcome.suggestion.text}
-                    </button>
-                  )}
-                </div>
-              ) : !personalizedWelcome.hasMoodData ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4 text-left">
-                  <p className="text-xs text-slate-500">Track your mood to get personalized insights here.</p>
-                </div>
-              ) : personalizedWelcome.suggestion ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4 text-left">
-                  <button
-                    onClick={() => onJournalingModeChange(personalizedWelcome.suggestion!.mode)}
-                    className="text-xs text-indigo-600 hover:text-indigo-700 underline transition-colors"
-                  >
-                    {personalizedWelcome.suggestion.text}
-                  </button>
-                </div>
-              ) : null}
-
-              <div className="text-left space-y-3 mb-4">
-                <div className="flex items-start gap-2.5">
-                  <Lock className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-slate-600">After setup, everything stays on your device — your journal entries are never sent anywhere</p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <Sparkles className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-slate-600">Try a <button onClick={() => setPromptSelectorOpen(true)} className="inline text-indigo-600 underline hover:text-indigo-700 transition-colors">journal prompt</button> to get started, or just start typing</p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <Heart className="h-4 w-4 text-pink-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-slate-600">Track your mood over time to discover patterns</p>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-400">Your thoughts are safe here.</p>
-            </motion.div>
+            <WelcomeEmptyState
+              greeting={personalizedWelcome.greeting}
+              suggestion={personalizedWelcome.suggestion}
+              continuityPrompt={continuityPrompt}
+              onUseContinuity={(text) => {
+                setUserInput(text);
+                textareaRef.current?.focus();
+              }}
+              onSuggestMode={onJournalingModeChange}
+              onOpenPrompts={() => setPromptSelectorOpen(true)}
+            />
           )}
         </div>
       ) : (
@@ -659,7 +561,7 @@ export default function ChatPanel({
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             placeholder="What's on your mind?"
-            className="flex-1 min-h-[52px] max-h-36 resize-none rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all bg-white/80"
+            className={`flex-1 ${current ? "min-h-[52px]" : "min-h-[88px]"} max-h-36 resize-none rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all bg-white/80`}
           />
           <button
             onClick={handleSend}
