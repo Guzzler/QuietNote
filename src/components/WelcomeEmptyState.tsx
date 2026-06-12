@@ -37,11 +37,9 @@ export default function WelcomeEmptyState({
       transition={{ duration: 0.4 }}
       className="text-center max-w-sm px-4"
     >
-      <div className="mx-auto mb-4 w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center">
-        <MessageSquare className="h-5 w-5 text-indigo-600" />
-      </div>
-      <h2 className="text-lg font-semibold text-slate-800 mb-1">{greeting}</h2>
-      <p className="text-sm text-slate-500 mb-5">{INVITATION_TEXT}</p>
+      <MessageSquare className="mx-auto mb-4 h-6 w-6 text-indigo-300" />
+      <h2 className="font-serif text-xl font-semibold text-slate-800 mb-1">{greeting}</h2>
+      <p className="font-serif text-[15px] text-slate-500 mb-5">{INVITATION_TEXT}</p>
 
       {auxiliary === "continuity" && continuityPrompt && (
         <div className="mb-5">

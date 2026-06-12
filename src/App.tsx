@@ -66,7 +66,7 @@ function smartTitle(text: string): string {
     return sentenceMatch[1];
   }
 
-  // No short sentence â€” take first ~10 words
+  // No short sentence — take first ~10 words
   const words = cleaned.split(/\s+/).slice(0, 10);
   const result = words.join(" ");
 
@@ -160,7 +160,7 @@ export default function App() {
   // Mobile sessions panel toggle
   const [showMobileSessions, setShowMobileSessions] = useState(false);
 
-  // Centralized moods state â€” shared by ChatPanel (welcome) and MoodTracker
+  // Centralized moods state — shared by ChatPanel (welcome) and MoodTracker
   const [allMoods, setAllMoods] = useState<MoodEntry[]>([]);
 
   // AI personality settings
@@ -283,7 +283,7 @@ export default function App() {
 
     const e = await loadModel();
     if (!e) {
-      // Model failed to load â€” restore the user's input so it's not lost
+      // Model failed to load — restore the user's input so it's not lost
       setUserInput(firstMessage);
       return;
     }
@@ -372,13 +372,13 @@ export default function App() {
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamp
       const finalContent = truncateToLastSentence(acc);
 
-      // Run response guardrails â€” blocks medical/diagnostic responses with safe fallback
+      // Run response guardrails — blocks medical/diagnostic responses with safe fallback
       const guardrailResult = sanitizeResponse(finalContent);
       if (guardrailResult.warnings.length > 0) {
         console.warn("[Guardrails] Warnings:", guardrailResult.warnings.map(w => typeof w === 'object' ? JSON.stringify(w) : w).join(', '));
       }
       if (guardrailResult.isBlocked) {
-        console.warn("[Guardrails] Response BLOCKED â€” replaced with safe fallback");
+        console.warn("[Guardrails] Response BLOCKED — replaced with safe fallback");
       }
       const safeContent = guardrailResult.text;
 
@@ -463,7 +463,7 @@ export default function App() {
 
     const e = await loadModel();
     if (!e) {
-      // Model failed to load â€” restore the user's input so it's not lost
+      // Model failed to load — restore the user's input so it's not lost
       setUserInput(text);
       return;
     }
@@ -550,13 +550,13 @@ export default function App() {
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamps
       const finalContent = truncateToLastSentence(acc);
 
-      // Run response guardrails â€” blocks medical/diagnostic responses with safe fallback
+      // Run response guardrails — blocks medical/diagnostic responses with safe fallback
       const guardrailResult = sanitizeResponse(finalContent);
       if (guardrailResult.warnings.length > 0) {
         console.warn("[Guardrails] Warnings:", guardrailResult.warnings.map(w => typeof w === 'object' ? JSON.stringify(w) : w).join(', '));
       }
       if (guardrailResult.isBlocked) {
-        console.warn("[Guardrails] Response BLOCKED â€” replaced with safe fallback");
+        console.warn("[Guardrails] Response BLOCKED — replaced with safe fallback");
       }
       const safeContent = guardrailResult.text;
 
@@ -727,9 +727,9 @@ export default function App() {
         modelLabel={modelRef.modelId}
       />
 
-      <header className="sticky top-0 z-10 backdrop-blur bg-white/60 border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-10 backdrop-blur bg-white/60 border-b border-slate-200/70">
         <div className="w-full px-6 py-3 flex items-center gap-3">
-          <div className="p-2 rounded-2xl bg-indigo-100 border border-indigo-200">
+          <div className="p-2 rounded-xl bg-indigo-50">
             <img src="/logo.svg" alt="Quietnote logo" className="h-5 w-5" />
           </div>
           <div>
@@ -739,7 +739,7 @@ export default function App() {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-4">
-            {/* New Session Button â€” only visible when in a conversation */}
+            {/* New Session Button — only visible when in a conversation */}
             {current && (
               <button
                 onClick={() => {
@@ -749,7 +749,7 @@ export default function App() {
                   setUserInput("");
                   setContextTrimmed(false);
                 }}
-                className="flex items-center gap-2 px-3 py-2.5 text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors min-h-[44px]"
+                className="flex items-center gap-2 px-3 py-2.5 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/70 rounded-lg transition-colors min-h-[44px]"
                 title="New session"
                 aria-label="Start new session"
               >
@@ -757,10 +757,10 @@ export default function App() {
                 <span className="hidden sm:inline">New</span>
               </button>
             )}
-            {/* Sessions Button â€” mobile only */}
+            {/* Sessions Button — mobile only */}
             <button
               onClick={() => setShowMobileSessions((v) => !v)}
-              className="flex lg:hidden items-center gap-2 px-3 py-2.5 text-sm bg-slate-50 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors min-h-[44px]"
+              className="flex lg:hidden items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
               title="Sessions"
               aria-label="Toggle sessions panel"
             >
@@ -770,7 +770,7 @@ export default function App() {
             {/* Mood Tracker Button */}
             <button
               onClick={() => setShowMoodTracker(true)}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm bg-pink-50 text-pink-700 border border-pink-200 rounded-lg hover:bg-pink-100 transition-colors min-h-[44px]"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
               title="Track your mood"
               aria-label="Track your mood"
             >
@@ -780,7 +780,7 @@ export default function App() {
             {/* Settings Button */}
             <button
               onClick={() => setShowSettings(true)}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm bg-slate-50 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors min-h-[44px]"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
               title="AI personality settings"
               aria-label="AI personality settings"
             >
@@ -790,7 +790,7 @@ export default function App() {
             {/* Privacy Dashboard Button */}
             <button
               onClick={() => setShowPrivacyDashboard(true)}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors min-h-[44px]"
+              className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
               title="Privacy dashboard"
               aria-label="Privacy dashboard"
             >
@@ -857,7 +857,7 @@ export default function App() {
       />
 
       <footer className="text-center text-[11px] text-slate-500 py-4">
-        Quietnote â€¢ Your journal entries stay on this device
+        Quietnote • Your journal entries stay on this device
       </footer>
     </div>
   );
