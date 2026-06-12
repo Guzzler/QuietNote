@@ -14,6 +14,7 @@
     "eval:smoke": "tsx scripts/run-eval.ts --limit=5"
   },
   "dependencies": {
+    "@fontsource-variable/lora": "^5.2.8",
     "@huggingface/transformers": "^4.0.1",
     "@mediapipe/tasks-genai": "^0.10.27",
     "@mlc-ai/web-llm": "^0.2.80",
@@ -34,9 +35,9 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
+    "onnxruntime-node": "^1.22.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.14",
-    "onnxruntime-node": "^1.22.0",
     "tsx": "^4.22.4",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",

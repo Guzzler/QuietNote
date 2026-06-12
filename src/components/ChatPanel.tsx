@@ -366,7 +366,7 @@ export default function ChatPanel({
   };
 
   return (
-    <main className="rounded-2xl border border-slate-200 bg-white/80 p-4 flex flex-col h-full min-h-[75vh] shadow-sm backdrop-blur-sm transition-all duration-300">
+    <main className="rounded-2xl border border-slate-200/70 bg-white/60 p-4 flex flex-col h-full min-h-[75vh] backdrop-blur-sm transition-all duration-300">
       {/* Chat Area */}
       {!current ? (
         <div className="flex-1 grid place-items-center text-slate-600">
@@ -397,7 +397,7 @@ export default function ChatPanel({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="flex-1 flex flex-col bg-white/80 rounded-2xl border border-slate-200 p-3 shadow-sm"
+          className="flex-1 flex flex-col p-1"
         >
           {!activeThread ? (
             <div className="flex-1 grid place-items-center text-slate-500">
@@ -455,13 +455,13 @@ export default function ChatPanel({
                             initial={{ opacity: 0, y: 4 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.25 }}
-                            className={`max-w-[85%] rounded-2xl px-3 py-2 border text-sm shadow-sm hover:shadow-md transition-all ${
+                            className={`max-w-[85%] rounded-2xl px-4 py-2.5 border text-[15px] ${
                               m.role === "user"
-                                ? "ml-auto bg-indigo-600 text-white border-indigo-600"
-                                : "mr-auto bg-indigo-50 border-indigo-100 text-slate-800"
+                                ? "ml-auto bg-indigo-500 text-white border-indigo-500"
+                                : "mr-auto bg-white/70 border-slate-200/70 text-slate-800"
                             }`}
                           >
-                            <div className="whitespace-pre-wrap leading-relaxed">
+                            <div className="whitespace-pre-wrap leading-relaxed font-serif">
                               {m.content}
                             </div>
                           </motion.div>
@@ -561,7 +561,7 @@ export default function ChatPanel({
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             placeholder="What's on your mind?"
-            className={`flex-1 ${current ? "min-h-[52px]" : "min-h-[88px]"} max-h-36 resize-none rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all bg-white/80`}
+            className={`flex-1 ${current ? "min-h-[52px]" : "min-h-[88px]"} max-h-36 resize-none rounded-xl border border-slate-300 px-3 py-2 font-serif text-[15px] focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all bg-white/80`}
           />
           <button
             onClick={handleSend}

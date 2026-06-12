@@ -1,4 +1,10 @@
 @import "tailwindcss";
+/* Bundled serif for the writing surface — packaged woff2, no CDN fetch */
+@import "@fontsource-variable/lora";
+
+@theme {
+  --font-serif: "Lora Variable", Georgia, "Iowan Old Style", "Times New Roman", serif;
+}
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;

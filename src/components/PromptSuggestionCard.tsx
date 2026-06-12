@@ -31,21 +31,21 @@ export default function PromptSuggestionCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -4, scale: 0.97 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="mr-auto max-w-[85%] rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-3 py-2.5 shadow-sm"
+      className="mr-auto max-w-[85%] rounded-xl border border-slate-200/70 bg-white/70 px-3 py-2.5"
     >
       <div className="flex items-start gap-2">
-        <BookOpen className="h-4 w-4 flex-shrink-0 text-emerald-500 mt-0.5" />
+        <BookOpen className="h-4 w-4 flex-shrink-0 text-indigo-400 mt-0.5" />
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] text-emerald-600 font-medium mb-1">
+          <div className="text-[11px] text-indigo-600 font-medium mb-1">
             {CATEGORY_LABELS[category]} prompt
           </div>
-          <p className="text-xs text-slate-600 leading-relaxed mb-2">
+          <p className="font-serif text-[13px] text-slate-600 leading-relaxed mb-2">
             {prompt}
           </p>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => onUsePrompt(prompt)}
-              className="text-[11px] px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+              className="text-[11px] px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors"
             >
               Use this prompt
             </button>

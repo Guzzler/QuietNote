@@ -21,7 +21,7 @@ export default function GratitudeGuide({ currentStep, compact }: Props) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-800">Gratitude Journal</span>
+            <span className="font-serif text-sm font-medium text-slate-800">Gratitude Journal</span>
             {!isComplete && (
               <span className="text-xs text-slate-400">Step {displayStep} of {total}</span>
             )}
@@ -41,9 +41,9 @@ export default function GratitudeGuide({ currentStep, compact }: Props) {
             </div>
           </div>
           {isComplete ? (
-            <p className="text-xs text-slate-500 truncate">Complete — feel free to continue or start a new session.</p>
+            <p className="font-serif text-xs text-slate-500 truncate">Complete — feel free to continue or start a new session.</p>
           ) : (
-            <p className="text-xs text-slate-500 truncate">{step.prompt}</p>
+            <p className="font-serif text-xs text-slate-500 truncate">{step.prompt}</p>
           )}
         </div>
       </div>
@@ -60,10 +60,10 @@ export default function GratitudeGuide({ currentStep, compact }: Props) {
       <div className="mx-auto mb-3 w-10 h-10 rounded-xl bg-pink-100 flex items-center justify-center">
         <Heart className="h-5 w-5 text-pink-600" />
       </div>
-      <h3 className="text-base font-semibold text-slate-800 mb-1">Gratitude Journal</h3>
+      <h3 className="font-serif text-base font-semibold text-slate-800 mb-1">Gratitude Journal</h3>
 
       {isComplete ? (
-        <p className="text-sm text-slate-500">
+        <p className="font-serif text-[15px] text-slate-500">
           You've completed your gratitude reflection. Feel free to continue writing or start a new session.
         </p>
       ) : (
@@ -87,7 +87,7 @@ export default function GratitudeGuide({ currentStep, compact }: Props) {
           <p className="text-xs text-slate-400 mb-1">
             Step {displayStep} of {total}
           </p>
-          <p className="text-sm text-slate-600 font-medium">{step.prompt}</p>
+          <p className="font-serif text-[15px] text-slate-600 font-medium">{step.prompt}</p>
         </>
       )}
     </motion.div>
