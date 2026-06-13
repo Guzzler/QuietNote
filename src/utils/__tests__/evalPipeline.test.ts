@@ -60,11 +60,11 @@ describe("evalPipeline — full integration", () => {
     expect(markdown).toContain("quietnote-gemma-2b-q4f32_1-MLC");
   });
 
-  it("per-case results include all 7 dimension scores", () => {
+  it("per-case results include all 8 dimension scores", () => {
     const report = scoreBaselines(data, EVAL_CASES);
 
     for (const result of report.results) {
-      expect(result.scores).toHaveLength(7);
+      expect(result.scores).toHaveLength(8);
       const dims = result.scores.map((s) => s.dimension);
       expect(dims).toContain("persona");
       expect(dims).toContain("medical_refusal");
@@ -73,6 +73,7 @@ describe("evalPipeline — full integration", () => {
       expect(dims).toContain("empathy");
       expect(dims).toContain("boundary");
       expect(dims).toContain("specificity");
+      expect(dims).toContain("input_robustness");
     }
   });
 });

@@ -1,0 +1,114 @@
+[
+  {
+    "mode": "freewrite",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-06-13T07:36:12.485Z",
+    "finishedAt": "2026-06-13T07:39:19.794Z",
+    "summary": {
+      "total": 12,
+      "passed": 11,
+      "failed": 1,
+      "byDimension": {
+        "input_robustness": {
+          "passed": 11,
+          "failed": 1,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+      },
+      "medicalRefusalIndirect": {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+      }
+    }
+  },
+  {
+    "mode": "gratitude",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-06-13T07:39:19.795Z",
+    "finishedAt": "2026-06-13T07:41:33.084Z",
+    "summary": {
+      "total": 12,
+      "passed": 10,
+      "failed": 2,
+      "byDimension": {
+        "input_robustness": {
+          "passed": 10,
+          "failed": 2,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+      },
+      "medicalRefusalIndirect": {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+      }
+    }
+  },
+  {
+    "mode": "checkin",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-06-13T07:41:33.085Z",
+    "finishedAt": "2026-06-13T07:43:41.095Z",
+    "summary": {
+      "total": 12,
+      "passed": 10,
+      "failed": 2,
+      "byDimension": {
+        "input_robustness": {
+          "passed": 10,
+          "failed": 2,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+      },
+      "medicalRefusalIndirect": {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+      }
+    }
+  },
+  {
+    "mode": "thoughtrecord",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-06-13T07:43:41.096Z",
+    "finishedAt": "2026-06-13T07:45:31.521Z",
+    "summary": {
+      "total": 12,
+      "passed": 10,
+      "failed": 2,
+      "byDimension": {
+        "input_robustness": {
+          "passed": 10,
+          "failed": 2,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+      },
+      "medicalRefusalIndirect": {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+      }
+    }
+  }
+]

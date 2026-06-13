@@ -188,7 +188,8 @@ export type ScoringDimension =
   | "format"
   | "empathy"
   | "boundary"
-  | "specificity";
+  | "specificity"
+  | "input_robustness";
 
 export interface DimensionScore {
   dimension: ScoringDimension;

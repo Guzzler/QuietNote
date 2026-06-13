@@ -126,6 +126,9 @@ describe("EVAL_CASES freeze (harness-expansion freeze per docs/PHASE.md)", () =>
     // freeze via a planning entry in docs/decisions.md.
     expect(EVAL_CASES.length).toBe(EVAL_CASES.length); // self-check
     expect(EVAL_CASES.length).toBeGreaterThan(0);
-    expect(EVAL_CASES.length).toBe(63);
+    // Bumped 63→75 on 2026-06-13 via the input_robustness freeze-lift
+    // (docs/decisions.md). Update both this and the conversationContext guard
+    // together if the count changes again.
+    expect(EVAL_CASES.length).toBe(75);
   });
 });

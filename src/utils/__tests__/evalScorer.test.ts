@@ -102,7 +102,7 @@ describe("scoreDimension — boundary", () => {
 // ── scoreResponse ──
 
 describe("scoreResponse", () => {
-  it("returns scores across all 6 dimensions", () => {
+  it("returns scores across all 8 dimensions", () => {
     const evalCase: EvalCase = {
       id: "persona-1.1",
       dimension: "persona",
@@ -114,7 +114,7 @@ describe("scoreResponse", () => {
     const result = scoreResponse(response, evalCase);
 
     expect(result.caseId).toBe("persona-1.1");
-    expect(result.scores).toHaveLength(7);
+    expect(result.scores).toHaveLength(8);
     expect(result.weightedScore).toBeGreaterThan(0);
   });
 });

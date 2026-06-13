@@ -130,8 +130,10 @@ describe("buildManagedMessages — app path wires recap onto current user turn",
   });
 });
 
-describe("EVAL_CASES freeze — harness-expansion guard (Day-8 re-assert)", () => {
-  it("EVAL_CASES.length is unchanged — Day-8 entity-surfacing feat did not add cases", () => {
-    expect(EVAL_CASES.length).toBe(63);
+describe("EVAL_CASES freeze — harness-expansion guard (Day-12 re-assert)", () => {
+  it("EVAL_CASES.length matches the frozen count (75 after 2026-06-13 input_robustness freeze-lift)", () => {
+    // Bumped 63→75 on 2026-06-13: input_robustness dimension + 12 paraphrased
+    // real-user-shape cases, via a freeze-lift entry in docs/decisions.md.
+    expect(EVAL_CASES.length).toBe(75);
   });
 });

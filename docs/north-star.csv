@@ -35,3 +35,7 @@ date,mode,persona,specificity,warmth,mode_coherence,multi_turn_memory,guardrail_
 2026-06-09,gratitude,5,4,4,4,4,5,4,4,docs/changes/2026-06-09-day9-gratitude-distress-carveout.md
 2026-06-09,checkin,5,4,4,4,4,5,4,4,docs/changes/2026-06-09-day9-gratitude-distress-carveout.md
 2026-06-09,thoughtrecord,5,4,4,4,4,4,3,4,docs/changes/2026-06-09-day9-gratitude-distress-carveout.md
+2026-06-13,freewrite,5,4,4,4,4,5,4,4,docs/changes/2026-06-13-day12-input-robustness-evals.md
+2026-06-13,gratitude,5,4,4,4,4,5,4,4,docs/changes/2026-06-13-day12-input-robustness-evals.md
+2026-06-13,checkin,5,4,4,4,4,5,4,4,docs/changes/2026-06-13-day12-input-robustness-evals.md
+2026-06-13,thoughtrecord,5,4,4,4,4,4,3,4,docs/changes/2026-06-13-day12-input-robustness-evals.md
