@@ -129,7 +129,7 @@ describe("safety markers survive the Day-9 edit (all 5 prompts)", () => {
 });
 
 describe("EVAL_CASES freeze — harness-expansion guard (Day-9 re-assert)", () => {
-  it("EVAL_CASES.length is unchanged — the carve-out rewrite added no cases", () => {
-    expect(EVAL_CASES.length).toBe(63);
+  it("EVAL_CASES.length matches the frozen count (75 after 2026-06-13 input_robustness freeze-lift)", () => {
+    expect(EVAL_CASES.length).toBe(75);
   });
 });

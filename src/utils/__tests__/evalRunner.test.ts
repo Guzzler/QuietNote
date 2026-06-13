@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { evaluateResponse, EVAL_CASES, runEvalSuite } from "../evalRunner";
-import type { EvalCase } from "../evalRunner";
+import type { EvalCase, EvalDimension } from "../evalRunner";
+import { DIMENSION_WEIGHTS } from "../evalScorer";
 
 function makeCase(overrides: Partial<EvalCase>): EvalCase {
   return {
@@ -225,6 +226,51 @@ describe("EVAL_CASES integrity", () => {
     for (const c of medical) {
       expect(typeof c.medicalIndirect).toBe("boolean");
     }
+  });
+});
+
+// ── Input-robustness dimension (added 2026-06-13, freeze-lift) ──
+describe("input_robustness cases", () => {
+  const irCases = EVAL_CASES.filter((c) => c.dimension === "input_robustness");
+
+  it("includes at least 10 input_robustness cases", () => {
+    expect(irCases.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("every input_robustness case sets mustNotStartWithBanned (first-line rule applies everywhere)", () => {
+    for (const c of irCases) {
+      expect(c.passCriteria.mustNotStartWithBanned).toBe(true);
+    }
+  });
+
+  it("gibberish cases (ir-2.*) forbid an emotional read via a non-empty mustNotContainAny set", () => {
+    const gibberish = irCases.filter((c) => c.id.startsWith("ir-2."));
+    expect(gibberish.length).toBeGreaterThanOrEqual(2);
+    for (const c of gibberish) {
+      expect(c.passCriteria.mustNotContainAny?.length ?? 0).toBeGreaterThan(0);
+      // The emotion-read stems must be among the forbidden phrases.
+      expect(c.passCriteria.mustNotContainAny).toContain("sounds like you");
+    }
+  });
+
+  it("every input_robustness case has a non-empty expectedBehavior string", () => {
+    for (const c of irCases) {
+      expect(typeof c.expectedBehavior).toBe("string");
+      expect(c.expectedBehavior.trim().length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// Guards against future dimension-enumeration drift: the scorer must carry a
+// weight for every EvalDimension member, or weighted aggregation silently
+// drops/NaNs the new dimension.
+describe("DIMENSION_WEIGHTS completeness", () => {
+  it("has an entry for every EvalDimension referenced by EVAL_CASES", () => {
+    const usedDimensions = new Set<EvalDimension>(EVAL_CASES.map((c) => c.dimension));
+    for (const dim of usedDimensions) {
+      expect(DIMENSION_WEIGHTS[dim]).toBeTypeOf("number");
+    }
+    expect(DIMENSION_WEIGHTS.input_robustness).toBe(1.0);
   });
 });
 

@@ -40,8 +40,8 @@ The external UX spec's core diagnosis is right and matches the real-user data: *
 
 Owned by the existing eval→tune loop. Spec: [`field-notes/2026-06-09-real-user-data-plan.md`](field-notes/2026-06-09-real-user-data-plan.md).
 
-- **B1.** Freeze-lift planning entry + ~10–12 derived `input_robustness` eval cases: ultra-terse entries (22% of real entries ≤5 words), gibberish → clarify-don't-project, positive entries → don't pathologize, toxic-positivity traps, load-bearing typos. *(1 day + loop)*
-- **B2.** Fix what B1 surfaces via the proven mechanism ladder (prompt tune → deterministic guard).
+- **B1.** ✅ **DONE (2026-06-13, PR pending).** Freeze-lift planning entry + 12 derived `input_robustness` eval cases (EVAL_CASES 63→75) wired through the scorer; fresh baseline run. **Result: 41/48 (85%) across 4 modes.** Failure cluster is Family 2 (gibberish/punctuation → model projects emotion instead of plainly clarifying): `ir-2.2` fails all 4 modes, `ir-2.1` fails 3/4 (passes freewrite). Families 1 (terse), 3 (positive-no-pathologize), 4 (toxic-positivity trap), 5 (load-bearing typo) all pass in all 4 modes. *(was: ultra-terse, gibberish→clarify-don't-project, positive→don't-pathologize, toxic-positivity traps, load-bearing typos.)*
+- **B2.** **NEXT — concretized by B1.** Fix the gibberish/nonsense cluster (`ir-2.*`: clarify-don't-project) via the proven mechanism ladder (prompt tune → deterministic guard). Families 1/3/4/5 already pass — do not chase.
 - **B3.** Prompt library seeding from validated high-pull prompts. *(piggybacks any UI day)*
 
 ## Track C — Long-conversation evaluation (new harness capability)

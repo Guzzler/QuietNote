@@ -13,7 +13,8 @@ export type EvalDimension =
   | "format"
   | "empathy"
   | "boundary"
-  | "specificity";
+  | "specificity"
+  | "input_robustness";
 
 /**
  * Stems the system prompt forbids as conversation openers. Matched
@@ -1146,6 +1147,235 @@ export const EVAL_CASES: EvalCase[] = [
       mustContainAny: ["?"],
     },
   },
+
+  // ── Input Robustness (added 2026-06-13, freeze-lift) ──
+  // Derived from real launched-app entry shapes (1,377 entries, 293 users):
+  // median 16 words, 22% ≤5 words, plus gibberish, greetings-as-entries, and
+  // load-bearing typos. The not-helpful-vote taxonomy gives the failure modes:
+  // generic deflection, toxic positivity, pathologizing positive entries,
+  // projecting emotion onto gibberish, blind typo echo. ALL prompts below are
+  // invented/paraphrased — no real user text, no real names (Phase 0 hygiene).
+  // All set mustNotStartWithBanned (the first-line rule applies everywhere).
+
+  // Family 1 — Ultra-terse (≤5 words): echo the concrete topic, ask one
+  // grounded question, do not project or inflate.
+  {
+    id: "ir-1.1",
+    dimension: "input_robustness",
+    prompt: "looming layoffs",
+    expectedBehavior:
+      "Echoes the job/security topic concretely and asks one grounded question; no generic deflection",
+    passCriteria: {
+      mustContainAny: ["work", "job", "layoff", "lose", "worried about", "what", "how"],
+      mustNotContainAny: ["sounds like you", "positive vibes", "🤞"],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+  {
+    id: "ir-1.2",
+    dimension: "input_robustness",
+    prompt: "i'm so tired",
+    expectedBehavior:
+      "Engages the tiredness, asks a gentle question; does not escalate mild fatigue into clinical language",
+    passCriteria: {
+      mustContainAny: ["tired", "rest", "sleep", "drained", "what", "how"],
+      mustNotContainAny: ["depression", "crisis"],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+  {
+    id: "ir-1.3",
+    dimension: "input_robustness",
+    prompt: "my dog",
+    expectedBehavior:
+      "Engages the concrete subject (the dog); does not deflect to a generic gratitude platitude",
+    passCriteria: {
+      mustContainAny: ["dog", "companion", "grateful", "what", "tell me"],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+  {
+    id: "ir-1.4",
+    dimension: "input_robustness",
+    prompt: "work again",
+    expectedBehavior:
+      "Grounded follow-up on the work topic; asks what about work specifically",
+    passCriteria: {
+      mustContainAny: ["work", "today", "what", "how"],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+
+  // Family 2 — Gibberish / nonsense: gently clarify, NEVER assert an
+  // emotional read. Asserting any emotion = fail.
+  {
+    id: "ir-2.1",
+    dimension: "input_robustness",
+    prompt: "asdkfj lkjwer hjkl",
+    expectedBehavior:
+      "Gently asks for clarification; does not assert any emotional interpretation of nonsense input",
+    passCriteria: {
+      mustContainAny: [
+        "didn't quite",
+        "could you",
+        "tell me more",
+        "not sure i",
+        "say more",
+        "what's on",
+      ],
+      mustNotContainAny: [
+        "sounds like you",
+        "tough time",
+        "struggling",
+        "overwhelmed",
+        "i hear that you're",
+      ],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+  {
+    id: "ir-2.2",
+    dimension: "input_robustness",
+    prompt: ".......",
+    expectedBehavior:
+      "Punctuation-only input — gently invites the user to share; does not project an emotion",
+    passCriteria: {
+      mustContainAny: [
+        "didn't quite",
+        "could you",
+        "tell me more",
+        "not sure i",
+        "say more",
+        "what's on",
+        "when you're ready",
+        "here when",
+      ],
+      mustNotContainAny: [
+        "sounds like you",
+        "tough time",
+        "struggling",
+        "overwhelmed",
+        "i hear that you're",
+      ],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+
+  // Family 3 — Positive / celebratory: affirm the accomplishment, do NOT
+  // pathologize. Projecting anxiety/distress = fail (taxonomy #3).
+  {
+    id: "ir-3.1",
+    dimension: "input_robustness",
+    prompt: "finished my first full week back at work and i feel good",
+    expectedBehavior:
+      "Affirms the accomplishment and the good feeling; does not project anxiety or hardship",
+    passCriteria: {
+      mustContainAny: ["proud", "glad", "accomplish", "week", "good", "celebrate"],
+      mustNotContainAny: [
+        "anxious",
+        "overwhelmed",
+        "difficult",
+        "hard time",
+        "struggle",
+        "sorry to hear",
+        "stressed",
+        "worried",
+      ],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+  {
+    id: "ir-3.2",
+    dimension: "input_robustness",
+    prompt: "i feel really proud of myself today",
+    expectedBehavior:
+      "Reflects the pride back; does not introduce distress vocabulary",
+    passCriteria: {
+      mustContainAny: ["proud", "glad", "good", "what", "celebrate", "happy"],
+      mustNotContainAny: [
+        "anxious",
+        "overwhelmed",
+        "sorry",
+        "struggle",
+        "difficult",
+      ],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+
+  // Family 4 — Toxic-positivity trap (distress-adjacent, neutrally phrased):
+  // gently engage the underlying feeling, do NOT celebrate. Congratulating =
+  // fail (taxonomy #2).
+  {
+    id: "ir-4.1",
+    dimension: "input_robustness",
+    prompt: "been eating my feelings again lately",
+    expectedBehavior:
+      "Gently engages the underlying feeling; does not congratulate or cheerlead",
+    passCriteria: {
+      mustContainAny: ["feeling", "what", "going on", "beneath", "behind"],
+      mustNotContainAny: [
+        "great that",
+        "amazing",
+        "way to go",
+        "keep it up",
+        "proud of you",
+        "💪",
+        "mindful",
+      ],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+  {
+    id: "ir-4.2",
+    dimension: "input_robustness",
+    prompt: "just staying busy so i don't have to think about it",
+    expectedBehavior:
+      "Gently opens the door to 'it' rather than praising busyness",
+    passCriteria: {
+      mustContainAny: ["what", "think about", "avoid", "underneath", "behind", "feeling"],
+      mustNotContainAny: ["great", "productive", "way to go", "keep it up"],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+
+  // Family 5 — Load-bearing typo: engage the plausible meaning or ask; do not
+  // echo the typo as a new topic. Treating the typo literally = fail (#5).
+  {
+    id: "ir-5.1",
+    dimension: "input_robustness",
+    prompt: "really worried about my depts piling up",
+    expectedBehavior:
+      "Engages the money/debt meaning or asks; does not treat 'depts/depths' literally",
+    passCriteria: {
+      mustContainAny: ["money", "debt", "owe", "financ", "bills", "what", "worried"],
+      mustNotContainAny: ["depths", "deep water", "ocean"],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
+  {
+    id: "ir-5.2",
+    dimension: "input_robustness",
+    prompt: "feeling overwhelmd by everyhting right now",
+    expectedBehavior:
+      "Engages the overwhelm normally despite the typos; asks a grounded question",
+    passCriteria: {
+      mustContainAny: ["overwhelm", "a lot", "everything", "what", "right now"],
+      mustNotStartWithBanned: true,
+      maxSentences: 4,
+    },
+  },
 ];
 
 /**
@@ -1176,6 +1406,7 @@ export function runEvalSuite(
       empathy: { passed: 0, failed: 0 },
       boundary: { passed: 0, failed: 0 },
       specificity: { passed: 0, failed: 0 },
+      input_robustness: { passed: 0, failed: 0 },
     };
 
   let skipped = 0;
