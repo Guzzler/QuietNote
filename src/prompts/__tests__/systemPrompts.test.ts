@@ -128,6 +128,51 @@ describe("safety markers survive the Day-9 edit (all 5 prompts)", () => {
   });
 });
 
+// ── UNINTELLIGIBLE INPUT RULE contract (Day-12b / B2, 2026-06-13) ──
+// All 5 prompts gained a clarify-don't-project beat, scoped as an explicit
+// exception to the FIRST LINE RULE, so gibberish/punctuation-only input gets a
+// plain "I didn't quite catch that" instead of a manufactured emotional read.
+// These tests pin the beat and confirm it uses scorer-accepted clarify wording
+// without weakening the SAFETY CARVEOUT.
+
+describe("UNINTELLIGIBLE INPUT RULE contract (all 5 prompts)", () => {
+  const PROMPTS = [
+    ["freewrite", SYSTEM_INSTRUCTION],
+    ["gratitude", GRATITUDE_SYSTEM_INSTRUCTION],
+    ["checkin-morning", CHECKIN_MORNING_INSTRUCTION],
+    ["checkin-evening", CHECKIN_EVENING_INSTRUCTION],
+    ["thoughtrecord", THOUGHT_RECORD_INSTRUCTION],
+  ] as const;
+
+  it.each(PROMPTS)("%s carries the clarify beat scoped as a FIRST LINE RULE exception", (_label, prompt) => {
+    expect(prompt).toContain("UNINTELLIGIBLE INPUT RULE (exception to the FIRST LINE RULE)");
+    // Scorer-accepted plain-clarify phrasing must appear in the example.
+    expect(prompt).toMatch(/didn't quite catch/i);
+    expect(prompt).toMatch(/could you tell me more/i);
+  });
+
+  it.each(PROMPTS)("%s tells the model not to invent an emotion or concrete detail from noise", (_label, prompt) => {
+    expect(prompt).toContain("do NOT guess at or name any emotion");
+    expect(prompt).toContain(`do NOT invent a "concrete detail" from the noise`);
+  });
+
+  it("does not weaken the gratitude SAFETY CARVEOUT", () => {
+    // The carveout text must still be present and the beat must mark itself
+    // separate from it (gibberish is not a crisis signal).
+    expect(GRATITUDE_SYSTEM_INSTRUCTION).toContain("SAFETY CARVEOUT — strictest rule");
+    expect(GRATITUDE_SYSTEM_INSTRUCTION).toContain("gibberish is not a crisis signal");
+  });
+
+  it.each([
+    ["checkin-morning", CHECKIN_MORNING_INSTRUCTION],
+    ["checkin-evening", CHECKIN_EVENING_INSTRUCTION],
+    ["thoughtrecord", THOUGHT_RECORD_INSTRUCTION],
+  ] as const)("%s keeps its SAFETY CARVEOUT alongside the new beat", (_label, prompt) => {
+    expect(prompt).toContain("SAFETY CARVEOUT");
+    expect(prompt).toContain("gibberish is not a crisis signal");
+  });
+});
+
 describe("EVAL_CASES freeze — harness-expansion guard (Day-9 re-assert)", () => {
   it("EVAL_CASES.length matches the frozen count (75 after 2026-06-13 input_robustness freeze-lift)", () => {
     expect(EVAL_CASES.length).toBe(75);
