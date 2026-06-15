@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Settings } from "lucide-react";
+import { X, Settings, Shield, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import type { PersonalitySettings } from "../utils/personalityPrompt";
@@ -9,11 +9,13 @@ export default function SettingsPanel({
   onClose,
   settings,
   onSave,
+  onOpenPrivacy,
 }: {
   isOpen: boolean;
   onClose: () => void;
   settings: PersonalitySettings;
   onSave: (settings: PersonalitySettings) => void;
+  onOpenPrivacy: () => void;
 }) {
   const [warmth, setWarmth] = useState(settings.warmth);
   const [verbosity, setVerbosity] = useState(settings.verbosity);
@@ -153,6 +155,22 @@ export default function SettingsPanel({
                   {style === "direct" && "Shares observations and reflections directly"}
                 </p>
               </div>
+            </div>
+
+            {/* Privacy & your data — entry point to the data controls */}
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <button
+                onClick={onOpenPrivacy}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors min-h-[44px]"
+                aria-label="Open privacy and data controls"
+              >
+                <Shield className="h-4 w-4 text-slate-500 shrink-0" />
+                <span className="flex-1">
+                  <span className="block text-sm font-medium text-slate-700">Privacy &amp; your data</span>
+                  <span className="block text-[11px] text-slate-400">Export or erase your entries</span>
+                </span>
+                <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+              </button>
             </div>
 
             <button
