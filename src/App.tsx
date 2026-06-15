@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Shield, Loader2, Heart, Lock, Plus, BookOpen, Settings } from "lucide-react";
+import { Loader2, Heart, Lock, Plus, BookOpen, Settings } from "lucide-react";
 import Layout from "./components/Layout";
 import ChatPanel from "./components/ChatPanel";
 import SessionsPanel from "./components/SessionsPanel";
@@ -720,6 +720,10 @@ export default function App() {
         onClose={() => setShowSettings(false)}
         settings={personality}
         onSave={handleSavePersonality}
+        onOpenPrivacy={() => {
+          setShowSettings(false);
+          setShowPrivacyDashboard(true);
+        }}
       />
       <EvalPanel
         engine={engine}
@@ -787,16 +791,6 @@ export default function App() {
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">Settings</span>
             </button>
-            {/* Privacy Dashboard Button */}
-            <button
-              onClick={() => setShowPrivacyDashboard(true)}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
-              title="Privacy dashboard"
-              aria-label="Privacy dashboard"
-            >
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Privacy</span>
-            </button>
           </div>
         </div>
       </header>
@@ -856,8 +850,9 @@ export default function App() {
         }
       />
 
-      <footer className="text-center text-[11px] text-slate-500 py-4">
-        Quietnote • Your journal entries stay on this device
+      <footer className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 py-4">
+        <Lock className="h-3 w-3 text-slate-400" />
+        <span>Quietnote — your journal entries stay on this device</span>
       </footer>
     </div>
   );
