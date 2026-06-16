@@ -687,6 +687,7 @@ export default function App() {
         sessionId={currentId ?? undefined}
         initialEmotion={moodPreFill?.emotion}
         initialIntensity={moodPreFill?.intensity}
+        initialTab={allMoods.length > 0 ? "history" : "log"}
         onViewSession={(id) => {
           loadExisting(id);
           setShowMoodTracker(false);
@@ -775,8 +776,8 @@ export default function App() {
             <button
               onClick={() => setShowMoodTracker(true)}
               className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
-              title="Track your mood"
-              aria-label="Track your mood"
+              title="Mood history & details"
+              aria-label="Mood history & details"
             >
               <Heart className="h-4 w-4" />
               <span className="hidden sm:inline">Mood</span>

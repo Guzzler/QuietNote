@@ -12,6 +12,7 @@ const read = (rel: string) =>
 const WRITING_PATH_COMPONENTS = [
   "../ChatPanel.tsx",
   "../WelcomeEmptyState.tsx",
+  "../InlineMoodCheck.tsx",
   "../ThoughtRecordGuide.tsx",
   "../GratitudeGuide.tsx",
   "../PromptSuggestionCard.tsx",
