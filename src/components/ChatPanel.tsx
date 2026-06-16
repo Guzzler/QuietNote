@@ -15,6 +15,7 @@ import { getPromptByCategory } from "../data/journalPrompts";
 import { analyzeMoodTrend, findTopEmotions } from "../utils/moodPatterns";
 import { buildContinuityPrompt } from "../utils/continuityPrompt";
 import WelcomeEmptyState from "./WelcomeEmptyState";
+import { makeQuickMoodEntry } from "../utils/quickMood";
 import type { ChatMessage, MoodEmotion, MoodEntry, PromptCategory, Session, Thread } from "../types";
 
 // Guardrail constants for mood suggestions
@@ -387,6 +388,10 @@ export default function ChatPanel({
               }}
               onSuggestMode={onJournalingModeChange}
               onOpenPrompts={() => setPromptSelectorOpen(true)}
+              onPickMood={(emotion) =>
+                onSaveMood?.(makeQuickMoodEntry(emotion, sessionId))
+              }
+              onAddMoodDetail={(emotion) => onOpenMoodTracker?.(emotion, 5)}
             />
           )}
         </div>

@@ -30,6 +30,10 @@ interface MoodTrackerProps {
   sessionId?: string;
   initialEmotion?: MoodEmotion;
   initialIntensity?: number;
+  // Which tab to open on. Capture now lives inline (Track A4), so the header
+  // entry opens History when mood data already exists. A pre-fill emotion
+  // always wins and opens the log tab. Defaults to "log".
+  initialTab?: "log" | "history";
   onViewSession?: (sessionId: string) => void;
   onUsePromptFromMood?: (promptText: string) => void;
   hasActiveSession?: boolean;
@@ -61,7 +65,7 @@ const CONTEXTS: { value: MoodContext; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, initialEmotion, initialIntensity, onViewSession, onUsePromptFromMood, hasActiveSession, onStartReflection, sessions }: MoodTrackerProps) {
+export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, initialEmotion, initialIntensity, initialTab, onViewSession, onUsePromptFromMood, hasActiveSession, onStartReflection, sessions }: MoodTrackerProps) {
   const titleId = useId();
   const focusTrapRef = useFocusTrap(isOpen);
   const [activeTab, setActiveTab] = useState<"log" | "history">("log");
@@ -89,6 +93,15 @@ export default function MoodTracker({ isOpen, onClose, onSaveMood, sessionId, in
       setIntensity(initialIntensity ?? 5);
     }
   }, [isOpen, initialEmotion, initialIntensity]);
+
+  // Choose which tab to open on. A pre-fill emotion ("add detail" path) always
+  // opens the log tab; otherwise honour initialTab (header opens History when
+  // mood data exists, since capture is now inline — Track A4).
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialEmotion ? "log" : initialTab ?? "log");
+    }
+  }, [isOpen, initialEmotion, initialTab]);
 
   // Reset state when closed without saving
   useEffect(() => {

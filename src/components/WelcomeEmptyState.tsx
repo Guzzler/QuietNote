@@ -1,8 +1,10 @@
 import { MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import ContinuityCard from "./ContinuityCard";
+import InlineMoodCheck from "./InlineMoodCheck";
 import type { ContinuityPrompt } from "../utils/continuityPrompt";
 import type { JournalingMode } from "./JournalingModeSelector";
+import type { MoodEmotion } from "../types";
 import {
   INVITATION_TEXT,
   pickAuxiliaryElement,
@@ -16,6 +18,8 @@ interface Props {
   onUseContinuity: (text: string) => void;
   onSuggestMode: (mode: JournalingMode) => void;
   onOpenPrompts: () => void;
+  onPickMood: (emotion: MoodEmotion) => void;
+  onAddMoodDetail: (emotion?: MoodEmotion) => void;
 }
 
 // The freewrite empty state: one warm invitation to write, at most one
@@ -27,6 +31,8 @@ export default function WelcomeEmptyState({
   onUseContinuity,
   onSuggestMode,
   onOpenPrompts,
+  onPickMood,
+  onAddMoodDetail,
 }: Props) {
   const auxiliary = pickAuxiliaryElement(continuityPrompt, suggestion);
 
@@ -56,6 +62,8 @@ export default function WelcomeEmptyState({
           </button>
         </p>
       )}
+
+      <InlineMoodCheck onPick={onPickMood} onAddDetail={onAddMoodDetail} />
 
       <p className="text-xs text-slate-400">
         or try a{" "}
