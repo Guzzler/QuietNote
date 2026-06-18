@@ -2,18 +2,23 @@ import { useState, useMemo } from "react";
 import { BookOpen, Trash2, Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { computeStreak, getStreakBadgeText } from "../utils/streakTracker";
-import type { Session } from "../types";
+import { formatRelative } from "../utils/relativeTime";
+import { EMOTION_DOT, EMOTION_LABEL } from "../utils/emotionMeta";
+import { firstUserMessage, pickSessionMood } from "../utils/sessionPreview";
+import type { Session, MoodEntry, MoodEmotion } from "../types";
 
 export default function SessionsPanel({
   sessions,
   currentId,
   loadExisting,
   onDeleteSession,
+  moods = [],
 }: {
   sessions: Session[];
   currentId: string | null;
   loadExisting: (id: string) => void;
   onDeleteSession?: (id: string) => void;
+  moods?: MoodEntry[];
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,6 +27,13 @@ export default function SessionsPanel({
     () => getStreakBadgeText(computeStreak(sessions)),
     [sessions]
   );
+
+  // Build the session -> mood index once, not per-row, to stay O(sessions + moods).
+  const moodBySession = useMemo(() => {
+    const map = new Map<string, MoodEmotion | null>();
+    for (const s of sessions) map.set(s.id, pickSessionMood(s, moods));
+    return map;
+  }, [sessions, moods]);
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return sessions;
@@ -81,6 +93,8 @@ export default function SessionsPanel({
           filtered.map((s) => {
             const isActive = currentId === s.id;
             const isConfirming = confirmingId === s.id;
+            const preview = s.reflection?.trim() || firstUserMessage(s);
+            const mood = moodBySession.get(s.id) ?? null;
             return (
               <motion.div
                 key={s.id}
@@ -136,13 +150,24 @@ export default function SessionsPanel({
                       >
                         {s.title}
                       </div>
-                      {s.reflection && (
+                      {preview && (
                         <div className="text-xs text-slate-500 line-clamp-2 leading-snug mt-0.5">
-                          {s.reflection}
+                          {preview}
                         </div>
                       )}
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        {new Date(s.updatedAt).toLocaleString()}
+                      <div
+                        className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5"
+                        title={new Date(s.updatedAt).toLocaleString()}
+                      >
+                        {mood && (
+                          <span
+                            className={`inline-block h-2 w-2 rounded-full ${EMOTION_DOT[mood]}`}
+                            role="img"
+                            aria-label={`Mood: ${EMOTION_LABEL[mood]}`}
+                            title={`Mood: ${EMOTION_LABEL[mood]}`}
+                          />
+                        )}
+                        <span>{formatRelative(s.updatedAt)}</span>
                       </div>
                     </div>
                     {onDeleteSession && (

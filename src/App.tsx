@@ -846,6 +846,7 @@ export default function App() {
                 setShowMobileSessions(false);
               }}
               onDeleteSession={handleDeleteSession}
+              moods={allMoods}
             />
           </div>
         }
