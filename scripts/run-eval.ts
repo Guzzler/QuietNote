@@ -34,6 +34,12 @@ import { runEvalSuite, reportToMarkdown, type EvalRunReport } from "../src/utils
 import { EVAL_CASES, type EvalDimension } from "../src/utils/evalRunner.ts";
 import { getBaseSystemInstruction } from "../src/prompts/systemPrompts.ts";
 import { isBareDeflection, withDeflectionReprompt } from "../src/utils/responseShaping.ts";
+import { CONVERSATION_SCRIPTS } from "../src/utils/conversationScripts.ts";
+import {
+  runConversationScript,
+  scriptReportToMarkdown,
+  type ScriptResult,
+} from "../src/utils/conversationDriver.ts";
 import type { JournalingMode } from "../src/components/JournalingModeSelector.tsx";
 
 const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX"; // mirrors transformersjs-engine.ts:16
@@ -61,6 +67,12 @@ const onlyMode = args.find((a) => a.startsWith("--mode="));
 const RUN_MODES: JournalingMode[] = onlyMode
   ? [onlyMode.split("=")[1] as JournalingMode]
   : MODES;
+// Track C1: when --scripts is passed, also run CONVERSATION_SCRIPTS (multi-turn
+// scripted conversations with REAL accumulated context). C2 will run this live:
+//   npm run eval -- --scripts
+// This session wires it but does NOT execute live (all C1 verification is via
+// the deterministic mock-driven tests in conversationDriver.test.ts).
+const RUN_SCRIPTS = args.includes("--scripts");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -171,14 +183,48 @@ async function main() {
     }
   }
 
+  // Track C1: scripted multi-turn conversations (only when --scripts is passed).
+  const scriptResults: ScriptResult[] = [];
+  if (RUN_SCRIPTS) {
+    console.log(`\n[run-eval] Running ${CONVERSATION_SCRIPTS.length} conversation scripts…`);
+    for (const script of CONVERSATION_SCRIPTS) {
+      const systemInstruction = getBaseSystemInstruction(script.mode, { morning: false });
+      console.log(`[run-eval] script: ${script.id} (${script.mode}, ${script.turns.length} turns)`);
+      const result = await runConversationScript(script, { systemInstruction, generate });
+      scriptResults.push(result);
+      const s = result.summary;
+      console.log(
+        `[run-eval]   → turns ${s.passedTurns}/${s.scoredTurns}, probes ${s.probesPassed}/${s.probes}, ` +
+          `step-coherent ${s.stepCoherent === null ? "n/a" : s.stepCoherent}`
+      );
+    }
+    const scriptsPath = join(OUT_DIR, "conversation-scripts.md");
+    writeFileSync(scriptsPath, scriptReportToMarkdown(scriptResults), "utf8");
+    console.log(`[run-eval] Wrote ${scriptsPath}`);
+  }
+
   // Write a combined machine summary (JSON) the critic step can read.
-  const summary = allReports.map(({ mode, report }) => ({
+  // Default shape is the historical ARRAY of per-mode reports — kept
+  // byte-identical so the existing critic loop is undisturbed. Only when
+  // --scripts is passed (C2's live run) do we wrap it to attach a `scripts`
+  // block alongside the modes.
+  const modeSummaries = allReports.map(({ mode, report }) => ({
     mode,
     modelLabel: report.modelLabel,
     startedAt: report.startedAt,
     finishedAt: report.finishedAt,
     summary: report.summary,
   }));
+  const summary: unknown = RUN_SCRIPTS
+    ? {
+        modes: modeSummaries,
+        scripts: scriptResults.map((r) => ({
+          scriptId: r.scriptId,
+          mode: r.mode,
+          summary: r.summary,
+        })),
+      }
+    : modeSummaries;
   writeFileSync(join(OUT_DIR, "summary.json"), JSON.stringify(summary, null, 2), "utf8");
   console.log(`\n[run-eval] Wrote summary.json — done.`);
 }

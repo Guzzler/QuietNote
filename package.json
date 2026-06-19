@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "eval": "tsx scripts/run-eval.ts",
-    "eval:smoke": "tsx scripts/run-eval.ts --limit=5"
+    "eval:smoke": "tsx scripts/run-eval.ts --limit=5",
+    "eval:scripts": "tsx scripts/run-eval.ts --scripts"
   },
   "dependencies": {
     "@fontsource-variable/lora": "^5.2.8",
