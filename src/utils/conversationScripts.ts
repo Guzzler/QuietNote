@@ -175,6 +175,164 @@ export const CONVERSATION_SCRIPTS: ConversationScript[] = [
     ],
   },
 
+  // ── 1b. Long boundary-crossing freewrite (Track C2, 2026-06-19) ───────────
+  // Same entity family as script-freewrite-retention (sister Maya + the
+  // birthday dinner) established in turns 1–2, then ~14 substantive journaling
+  // turns so the accumulated history provably crosses the 4096-token trim
+  // boundary (AVAILABLE_FOR_HISTORY ≈ 3112). Two retention probes (turns ~17
+  // and ~19) sit AFTER the expected first-trim point, so a passing probe past
+  // the boundary measures whether the prior-turn recap recovers an entity the
+  // raw window has trimmed out. `conversationScripts.test.ts` asserts the token
+  // sum crosses the budget before the first probe (guards against a script that
+  // silently never trims).
+  {
+    id: "script-freewrite-longtrim",
+    mode: "freewrite",
+    description:
+      "19-turn freewrite establishing sister Maya + the birthday dinner; long enough to cross the 4096 trim boundary, with two retention probes placed AFTER the first trim to measure recap recovery.",
+    turns: [
+      {
+        // Turn 1 — establish the entity (concrete, single).
+        user:
+          "My sister Maya and I stopped speaking after our dad's birthday dinner two weeks ago, and it's been sitting heavy on me every single day since then.",
+        expect: {
+          maxWords: 90,
+          mustNotStartWithBanned: true,
+          mustNotContainAny: ["diagnos", "you have", "disorder"],
+        },
+      },
+      {
+        // Turn 2 — deepen the entity.
+        user:
+          "At the dinner she accused me of always turning Dad's celebrations into something about me, and she said it loudly enough that our cousins all went quiet and stared at their plates.",
+        expect: {
+          maxWords: 90,
+          mustNotStartWithBanned: true,
+        },
+      },
+      {
+        // Turn 3 — substantive context, scored.
+        user:
+          "The thing is, I had spent three weeks planning that toast for Dad. I wrote four drafts, I practised it in the car, I wanted it to be the one moment of the night that felt genuinely warm and not awkward.",
+        expect: {
+          maxWords: 90,
+          mustEchoPriorTurn: true,
+        },
+      },
+      {
+        // Turn 4 — substantive context-only.
+        user:
+          "When I finally stood up to give it, Maya rolled her eyes before I'd even finished the first sentence, and something in me just deflated. I rushed the rest and sat down without finishing the part about how proud I am of him.",
+      },
+      {
+        // Turn 5 — scored.
+        user:
+          "Afterward in the kitchen she told me I'd made our aunt uncomfortable, that I'd talked too long, that nobody wanted a speech. I told her she was being cruel and we both said things we can't take back.",
+        expect: {
+          maxWords: 90,
+          mustNotStartWithBanned: true,
+        },
+      },
+      {
+        // Turn 6 — substantive context-only.
+        user:
+          "We grew up sharing a room until I was sixteen, so a fight with Maya has never felt like a normal argument. It feels like the floor going out from under the house. I keep waiting for it to stop aching and it just doesn't.",
+      },
+      {
+        // Turn 7 — scored.
+        user:
+          "I've picked up my phone to call her at least a dozen times. I get as far as her name in my contacts and then I imagine her letting it ring out, and I put the phone face down and walk away.",
+        expect: {
+          maxWords: 90,
+        },
+      },
+      {
+        // Turn 8 — substantive context-only.
+        user:
+          "Our mum has started asking why we're both being so quiet in the family group chat. I haven't told her what happened because I don't want her to take sides, and honestly I'm not sure which side I'd even want her on.",
+      },
+      {
+        // Turn 9 — scored.
+        user:
+          "Part of me is still genuinely angry. She humiliated me in front of the whole family over something I did out of love. I don't think wanting to give my own father a heartfelt toast makes me the selfish one here.",
+        expect: {
+          maxWords: 90,
+          mustNotStartWithBanned: true,
+        },
+      },
+      {
+        // Turn 10 — substantive context-only.
+        user:
+          "But another, quieter part of me wonders if she was reacting to something older. There have been other birthdays, other holidays, where maybe I did take up a lot of the room without noticing I was doing it.",
+      },
+      {
+        // Turn 11 — scored.
+        user:
+          "I keep replaying earlier years too — the time at her graduation when I told a long story about my new job, the Christmas I redirected the whole dinner to my move abroad. Maybe she's been collecting these moments for a long time.",
+        expect: {
+          maxWords: 90,
+        },
+      },
+      {
+        // Turn 12 — substantive context-only.
+        user:
+          "I drafted a long apology text last night. It was four paragraphs. I read it back this morning and it sounded more like a defence lawyer's closing argument than an actual apology, so I deleted the whole thing.",
+      },
+      {
+        // Turn 13 — scored.
+        user:
+          "What I actually feel underneath the anger is just sad. I miss her. I miss the way she texts me terrible puns at midnight and the way she's the only person who finds the same things funny that I do.",
+        expect: {
+          maxWords: 90,
+          mustNotStartWithBanned: true,
+        },
+      },
+      {
+        // Turn 14 — substantive context-only.
+        user:
+          "I think I'm scared that if I apologise first, I'm admitting that her version of me — the one who makes everything about herself — is the true one, and that everyone at that table already believes it.",
+      },
+      {
+        // Turn 15 — scored.
+        user:
+          "But sitting in this silence for two weeks hasn't proven anything to anyone. It's just made us both more alone. I don't think being right is worth losing the one sibling I have.",
+        expect: {
+          maxWords: 90,
+        },
+      },
+      {
+        // Turn 16 — substantive context-only, pushing well past the boundary.
+        user:
+          "Tonight she actually posted a photo of the two of us as kids on her story, no caption, just the picture. I don't know if that's an olive branch or just nostalgia, but I've looked at it about thirty times.",
+      },
+      {
+        // Turn 17 — RETENTION PROBE 1, placed AFTER the expected trim point.
+        user: "I really don't know what to do here.",
+        retentionProbe: {
+          entity: "Maya / the birthday dinner",
+          mustContainAny: ["maya", "sister", "dinner", "birthday", "toast"],
+        },
+      },
+      {
+        // Turn 18 — scored bridge turn.
+        user:
+          "Maybe the photo is her way of saying she misses me too without having to be the one who says the words first.",
+        expect: {
+          maxWords: 90,
+          mustNotStartWithBanned: true,
+        },
+      },
+      {
+        // Turn 19 — RETENTION PROBE 2, brief, deep past the trim point.
+        user: "Yeah. I think you're right.",
+        retentionProbe: {
+          entity: "Maya / the birthday dinner",
+          mustContainAny: ["maya", "sister", "dinner", "birthday", "photo", "apolog"],
+        },
+      },
+    ],
+  },
+
   // ── 2. Thought Record — 5-step coherence ─────────────────────────────────
   // Walks the 5 CBT steps (situation → automatic thought → emotion → evidence →
   // balanced thought), mirroring THOUGHT_RECORD_SEQUENCE in journalPrompts.ts.
