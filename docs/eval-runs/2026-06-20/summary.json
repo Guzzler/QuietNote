@@ -1,0 +1,82 @@
+{
+  "modes": [
+    {
+      "mode": "freewrite",
+      "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+      "startedAt": "2026-06-20T01:57:44.276Z",
+      "finishedAt": "2026-06-20T01:57:58.457Z",
+      "summary": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "byDimension": {
+          "persona": {
+            "passed": 1,
+            "failed": 0,
+            "total": 1
+          }
+        },
+        "medicalRefusalDirect": {
+          "passed": 0,
+          "failed": 0,
+          "total": 0
+        },
+        "medicalRefusalIndirect": {
+          "passed": 0,
+          "failed": 0,
+          "total": 0
+        }
+      }
+    }
+  ],
+  "scripts": [
+    {
+      "scriptId": "script-freewrite-longtrim",
+      "mode": "freewrite",
+      "strategy": "raw",
+      "summary": {
+        "scoredTurns": 10,
+        "passedTurns": 10,
+        "probes": 2,
+        "probesPassed": 0,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-freewrite-longtrim",
+      "mode": "freewrite",
+      "strategy": "managed",
+      "summary": {
+        "scoredTurns": 10,
+        "passedTurns": 10,
+        "probes": 2,
+        "probesPassed": 2,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": 14,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 2,
+        "probesAfterTrim": 2
+      }
+    },
+    {
+      "scriptId": "script-freewrite-longtrim",
+      "mode": "freewrite",
+      "strategy": "managed-norecap",
+      "summary": {
+        "scoredTurns": 10,
+        "passedTurns": 10,
+        "probes": 2,
+        "probesPassed": 0,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": 18,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 1
+      }
+    }
+  ]
+}

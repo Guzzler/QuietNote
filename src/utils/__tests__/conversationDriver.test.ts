@@ -13,6 +13,8 @@
 import { describe, it, expect } from "vitest";
 import { runConversationScript, scriptReportToMarkdown } from "../conversationDriver";
 import type { ConversationScript } from "../conversationScripts";
+import { buildManagedMessages } from "../tokenEstimator";
+import { buildPriorTurnRecap } from "../conversationContext";
 
 const SYS = "You are a journaling companion.";
 
@@ -279,6 +281,208 @@ describe("runConversationScript — abort + error handling", () => {
     const result = await runConversationScript(script, { systemInstruction: SYS, generate });
     expect(result.turns[0].passed).toBe(false);
     expect(result.turns[0].failures.join(" ")).toMatch(/inference error/i);
+  });
+});
+
+// ── Track C2: context strategies + trim telemetry ──────────────────────────
+
+/** A reply of approximately `chars` characters (forces history growth). */
+function longReply(chars: number, marker = "x"): string {
+  return marker.repeat(Math.max(1, chars));
+}
+
+describe("runConversationScript — context strategies", () => {
+  it("raw is unchanged: first turn sees [system, user], no recap, no trim", async () => {
+    const script: ConversationScript = {
+      id: "raw-regress",
+      mode: "freewrite",
+      description: "raw regression",
+      turns: [{ user: "My sister Maya and I argued at dinner." }, { user: "Again." }],
+    };
+    const { generate, seen } = sequenceMock(["a", "b"]);
+    const result = await runConversationScript(script, {
+      systemInstruction: SYS,
+      generate,
+      strategy: "raw",
+    });
+    // Default (no strategy) and explicit raw both produce the bare path.
+    expect(seen[0]).toEqual([
+      { role: "system", content: SYS },
+      { role: "user", content: "My sister Maya and I argued at dinner." },
+    ]);
+    // Turn 2 raw context: system + full history + user, no recap prefix.
+    expect(seen[1]).toEqual([
+      { role: "system", content: SYS },
+      { role: "user", content: "My sister Maya and I argued at dinner." },
+      { role: "assistant", content: "a" },
+      { role: "user", content: "Again." },
+    ]);
+    for (const t of result.turns) {
+      expect(t.context.strategy).toBe("raw");
+      expect(t.context.trimmed).toBe(false);
+      expect(t.context.recapPresent).toBe(false);
+    }
+    expect(result.summary.firstTrimTurnIndex).toBeNull();
+  });
+
+  it("managed equals buildManagedMessages exactly when no trim occurs", async () => {
+    const script: ConversationScript = {
+      id: "managed-eq",
+      mode: "freewrite",
+      description: "managed = app path",
+      turns: [
+        { user: "My sister Maya and I argued at our dad's birthday dinner." },
+        { user: "I keep replaying it." },
+      ],
+    };
+    const { generate, seen } = sequenceMock(["That sounds painful.", "ok"]);
+    const result = await runConversationScript(script, {
+      systemInstruction: SYS,
+      generate,
+      strategy: "managed",
+    });
+    // Reconstruct the history the driver had at turn 2 and assert the messages
+    // it sent equal buildManagedMessages's output byte-for-byte.
+    const historyAtTurn2 = [
+      { role: "user", content: "My sister Maya and I argued at our dad's birthday dinner." },
+      { role: "assistant", content: "That sounds painful." },
+    ];
+    const expected = buildManagedMessages(SYS, "I keep replaying it.", historyAtTurn2);
+    expect(seen[1]).toEqual(expected.messages);
+    // Recap is present at turn 2 (entity established at turn 1).
+    expect(result.turns[1].context.recapPresent).toBe(
+      buildPriorTurnRecap(historyAtTurn2) !== null
+    );
+  });
+
+  it("managed and managed-norecap differ only by the recap prefix when no trim", async () => {
+    const script: ConversationScript = {
+      id: "recap-ablation",
+      mode: "freewrite",
+      description: "managed vs norecap",
+      turns: [
+        { user: "My sister Maya and I argued at our dad's birthday dinner." },
+        { user: "I keep replaying it." },
+      ],
+    };
+    const replies = ["That sounds painful.", "ok"];
+    const managed = sequenceMock([...replies]);
+    const norecap = sequenceMock([...replies]);
+    await runConversationScript(script, {
+      systemInstruction: SYS,
+      generate: managed.generate,
+      strategy: "managed",
+    });
+    await runConversationScript(script, {
+      systemInstruction: SYS,
+      generate: norecap.generate,
+      strategy: "managed-norecap",
+    });
+
+    const historyAtTurn2 = [
+      { role: "user", content: "My sister Maya and I argued at our dad's birthday dinner." },
+      { role: "assistant", content: "That sounds painful." },
+    ];
+    const recap = buildPriorTurnRecap(historyAtTurn2);
+    expect(recap).not.toBeNull();
+
+    const mManaged = managed.seen[1];
+    const mNorecap = norecap.seen[1];
+    // System + history identical; only the final user turn differs by the recap.
+    expect(mManaged.slice(0, -1)).toEqual(mNorecap.slice(0, -1));
+    const lastManaged = mManaged[mManaged.length - 1];
+    const lastNorecap = mNorecap[mNorecap.length - 1];
+    expect(lastNorecap.content).toBe("I keep replaying it.");
+    expect(lastManaged.content).toBe(`${recap}\n\n${"I keep replaying it."}`);
+  });
+});
+
+describe("runConversationScript — trim telemetry", () => {
+  /** Build a padding-heavy script that forces history past the trim budget. */
+  function longScript(probeAt?: number): ConversationScript {
+    const turns = [];
+    // Turn 0 establishes the entity "Maya".
+    turns.push({
+      user: "My sister Maya and I stopped speaking after our dad's birthday dinner.",
+    });
+    for (let i = 1; i < 10; i++) {
+      if (probeAt !== undefined && i === probeAt) {
+        turns.push({
+          user: "I don't know.",
+          retentionProbe: { entity: "Maya", mustContainAny: ["maya", "sister"] },
+        });
+      } else {
+        turns.push({ user: `Padding turn ${i} with some ordinary journaling content here.` });
+      }
+    }
+    return { id: "longtrim-unit", mode: "freewrite", description: "force a trim", turns };
+  }
+
+  it("a long history under managed trims: trimmed:true, droppedTurns>0, firstTrimTurnIndex set", async () => {
+    const script = longScript();
+    // Each reply ~2500 chars so history crosses the ~3500-token budget fast.
+    const { generate } = sequenceMock(
+      script.turns.map((_, i) => longReply(2500, String.fromCharCode(97 + i)))
+    );
+    const result = await runConversationScript(script, {
+      systemInstruction: SYS,
+      generate,
+      strategy: "managed",
+    });
+    const anyTrim = result.turns.some((t) => t.context.trimmed);
+    expect(anyTrim).toBe(true);
+    const firstTrim = result.turns.find((t) => t.context.trimmed);
+    expect(firstTrim!.context.droppedTurns).toBeGreaterThan(0);
+    expect(result.summary.firstTrimTurnIndex).toBe(firstTrim!.turnIndex);
+  });
+
+  it("probeEntityInWindow is false once the entity turn is trimmed out (norecap), true under raw", async () => {
+    const probeAt = 9;
+    const script = longScript(probeAt);
+    const replies = script.turns.map((_, i) =>
+      longReply(2500, String.fromCharCode(97 + i))
+    );
+    const norecap = sequenceMock([...replies]);
+    const raw = sequenceMock([...replies]);
+
+    const rNorecap = await runConversationScript(script, {
+      systemInstruction: SYS,
+      generate: norecap.generate,
+      strategy: "managed-norecap",
+    });
+    const rRaw = await runConversationScript(script, {
+      systemInstruction: SYS,
+      generate: raw.generate,
+      strategy: "raw",
+    });
+
+    const probeNorecap = rNorecap.turns[probeAt];
+    const probeRaw = rRaw.turns[probeAt];
+    // Under raw (full history) the entity turn is always in the window.
+    expect(probeRaw.context.probeEntityInWindow).toBe(true);
+    // Under norecap with heavy trimming, the turn-0 entity is dropped.
+    expect(probeNorecap.context.probeEntityInWindow).toBe(false);
+  });
+
+  it("before/after-trim probe counts partition around firstTrimTurnIndex", async () => {
+    const probeAt = 9;
+    const script = longScript(probeAt);
+    // Reply embeds "Maya" so the probe PASSES; placed after the trim point.
+    const replies = script.turns.map((_, i) =>
+      i === probeAt ? "What feels unresolved with Maya?" : longReply(2500, String.fromCharCode(97 + i))
+    );
+    const { generate } = sequenceMock(replies);
+    const result = await runConversationScript(script, {
+      systemInstruction: SYS,
+      generate,
+      strategy: "managed-norecap",
+    });
+    expect(result.summary.firstTrimTurnIndex).not.toBeNull();
+    expect(probeAt).toBeGreaterThan(result.summary.firstTrimTurnIndex!);
+    // The single probe is after the trim point and passed.
+    expect(result.summary.probesAfterTrim).toBe(1);
+    expect(result.summary.probesPassedAfterTrim).toBe(1);
+    expect(result.summary.probesPassedBeforeTrim).toBe(0);
   });
 });
 

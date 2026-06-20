@@ -38,7 +38,9 @@ import { CONVERSATION_SCRIPTS } from "../src/utils/conversationScripts.ts";
 import {
   runConversationScript,
   scriptReportToMarkdown,
+  CONTEXT_STRATEGIES,
   type ScriptResult,
+  type ContextStrategy,
 } from "../src/utils/conversationDriver.ts";
 import type { JournalingMode } from "../src/components/JournalingModeSelector.tsx";
 
@@ -67,12 +69,36 @@ const onlyMode = args.find((a) => a.startsWith("--mode="));
 const RUN_MODES: JournalingMode[] = onlyMode
   ? [onlyMode.split("=")[1] as JournalingMode]
   : MODES;
-// Track C1: when --scripts is passed, also run CONVERSATION_SCRIPTS (multi-turn
-// scripted conversations with REAL accumulated context). C2 will run this live:
-//   npm run eval -- --scripts
-// This session wires it but does NOT execute live (all C1 verification is via
-// the deterministic mock-driven tests in conversationDriver.test.ts).
+// Track C1/C2: when --scripts is passed, also run CONVERSATION_SCRIPTS
+// (multi-turn scripted conversations with REAL accumulated context):
+//   npm run eval -- --scripts                      # default strategy: managed
+//   npm run eval -- --scripts --strategy=all       # the C2 A/B (all 3 strategies)
+//   npm run eval -- --scripts --strategy=raw       # single strategy
+// Default is `managed` because that is the real app send path (recap + trim).
 const RUN_SCRIPTS = args.includes("--scripts");
+// Optional: restrict the scripted run to a single script id (CPU is slow, so a
+// bounded live run — e.g. just the boundary-crossing script under all three
+// strategies — is often the practical C2 invocation). Comma-separated ids ok.
+const scriptIdArg = args.find((a) => a.startsWith("--script="));
+const ONLY_SCRIPT_IDS = scriptIdArg
+  ? new Set(scriptIdArg.split("=")[1].split(","))
+  : null;
+const strategyArg = args.find((a) => a.startsWith("--strategy="));
+const STRATEGY_SELECTION = strategyArg ? strategyArg.split("=")[1] : "managed";
+const RUN_STRATEGIES: ContextStrategy[] =
+  STRATEGY_SELECTION === "all"
+    ? CONTEXT_STRATEGIES
+    : ([STRATEGY_SELECTION] as ContextStrategy[]);
+// Validate the selection early so a typo fails loudly rather than silently
+// running nothing.
+for (const s of RUN_STRATEGIES) {
+  if (!CONTEXT_STRATEGIES.includes(s)) {
+    console.error(
+      `[run-eval] Unknown --strategy=${s}. Valid: ${CONTEXT_STRATEGIES.join(", ")}, all`
+    );
+    process.exit(1);
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -183,20 +209,38 @@ async function main() {
     }
   }
 
-  // Track C1: scripted multi-turn conversations (only when --scripts is passed).
+  // Track C1/C2: scripted multi-turn conversations (only when --scripts is
+  // passed). C2 runs each script under one or more context strategies (raw,
+  // managed [= real app path], managed-norecap) and records trim telemetry.
   const scriptResults: ScriptResult[] = [];
   if (RUN_SCRIPTS) {
-    console.log(`\n[run-eval] Running ${CONVERSATION_SCRIPTS.length} conversation scripts…`);
-    for (const script of CONVERSATION_SCRIPTS) {
-      const systemInstruction = getBaseSystemInstruction(script.mode, { morning: false });
-      console.log(`[run-eval] script: ${script.id} (${script.mode}, ${script.turns.length} turns)`);
-      const result = await runConversationScript(script, { systemInstruction, generate });
-      scriptResults.push(result);
-      const s = result.summary;
-      console.log(
-        `[run-eval]   → turns ${s.passedTurns}/${s.scoredTurns}, probes ${s.probesPassed}/${s.probes}, ` +
-          `step-coherent ${s.stepCoherent === null ? "n/a" : s.stepCoherent}`
-      );
+    const scriptsToRun = ONLY_SCRIPT_IDS
+      ? CONVERSATION_SCRIPTS.filter((s) => ONLY_SCRIPT_IDS.has(s.id))
+      : CONVERSATION_SCRIPTS;
+    console.log(
+      `\n[run-eval] Running ${scriptsToRun.length} conversation script(s) ` +
+        `× ${RUN_STRATEGIES.length} strategy(ies) [${RUN_STRATEGIES.join(", ")}]…`
+    );
+    for (const strategy of RUN_STRATEGIES) {
+      for (const script of scriptsToRun) {
+        const systemInstruction = getBaseSystemInstruction(script.mode, { morning: false });
+        console.log(
+          `[run-eval] [${strategy}] script: ${script.id} (${script.mode}, ${script.turns.length} turns)`
+        );
+        const result = await runConversationScript(script, {
+          systemInstruction,
+          generate,
+          strategy,
+        });
+        scriptResults.push(result);
+        const s = result.summary;
+        console.log(
+          `[run-eval]   → turns ${s.passedTurns}/${s.scoredTurns}, probes ${s.probesPassed}/${s.probes}, ` +
+            `step-coherent ${s.stepCoherent === null ? "n/a" : s.stepCoherent}, ` +
+            `first-trim ${s.firstTrimTurnIndex === null ? "none" : `t${s.firstTrimTurnIndex}`}, ` +
+            `after-trim probes ${s.probesPassedAfterTrim}/${s.probesAfterTrim}`
+        );
+      }
     }
     const scriptsPath = join(OUT_DIR, "conversation-scripts.md");
     writeFileSync(scriptsPath, scriptReportToMarkdown(scriptResults), "utf8");
@@ -221,6 +265,7 @@ async function main() {
         scripts: scriptResults.map((r) => ({
           scriptId: r.scriptId,
           mode: r.mode,
+          strategy: r.strategy,
           summary: r.summary,
         })),
       }

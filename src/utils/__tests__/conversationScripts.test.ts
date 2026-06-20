@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from "vitest";
 import { CONVERSATION_SCRIPTS } from "../conversationScripts";
+import { estimateTokens, AVAILABLE_FOR_HISTORY } from "../tokenEstimator";
 
 const VALID_MODES = new Set(["freewrite", "gratitude", "checkin", "thoughtrecord"]);
 
@@ -96,5 +97,49 @@ describe("CONVERSATION_SCRIPTS — guided scripts step coherence", () => {
       const hasStep = s.turns.some((t) => t.stepIndex !== undefined);
       expect(hasStep).toBe(false);
     }
+  });
+});
+
+// ── Track C2: the long boundary-crossing script must actually trim ──────────
+describe("script-freewrite-longtrim — crosses the 4096 trim boundary", () => {
+  const ASSUMED_REPLY_TOKENS = 200; // GEN_DEFAULTS.max_new_tokens in run-eval.ts
+
+  it("exists and is a freewrite", () => {
+    const s = CONVERSATION_SCRIPTS.find((x) => x.id === "script-freewrite-longtrim");
+    expect(s).toBeDefined();
+    expect(s!.mode).toBe("freewrite");
+  });
+
+  it("accumulated history exceeds AVAILABLE_FOR_HISTORY before the first retention probe", () => {
+    const s = CONVERSATION_SCRIPTS.find((x) => x.id === "script-freewrite-longtrim")!;
+    const firstProbeIdx = s.turns.findIndex((t) => t.retentionProbe);
+    expect(firstProbeIdx).toBeGreaterThan(0);
+
+    // Mirror how the driver accumulates history: by the time we BUILD the
+    // first-probe turn, history holds turns [0 .. firstProbeIdx-1], each
+    // contributing a user message + an assumed ~200-token model reply.
+    let historyTokens = 0;
+    for (let i = 0; i < firstProbeIdx; i++) {
+      historyTokens += estimateTokens(s.turns[i].user);
+      historyTokens += ASSUMED_REPLY_TOKENS;
+    }
+    expect(historyTokens).toBeGreaterThan(AVAILABLE_FOR_HISTORY);
+  });
+
+  it("both probes are placed at/after the point history first exceeds the budget", () => {
+    const s = CONVERSATION_SCRIPTS.find((x) => x.id === "script-freewrite-longtrim")!;
+    // Find the earliest turn index where accumulated history would cross the budget.
+    let historyTokens = 0;
+    let firstCross = -1;
+    for (let i = 0; i < s.turns.length; i++) {
+      if (historyTokens > AVAILABLE_FOR_HISTORY && firstCross === -1) firstCross = i;
+      historyTokens += estimateTokens(s.turns[i].user) + ASSUMED_REPLY_TOKENS;
+    }
+    expect(firstCross).toBeGreaterThan(0);
+    const probeIdxs = s.turns
+      .map((t, i) => (t.retentionProbe ? i : -1))
+      .filter((i) => i >= 0);
+    expect(probeIdxs.length).toBe(2);
+    for (const pi of probeIdxs) expect(pi).toBeGreaterThanOrEqual(firstCross);
   });
 });
