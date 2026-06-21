@@ -1,0 +1,226 @@
+{
+  "modes": [
+    {
+      "mode": "freewrite",
+      "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+      "startedAt": "2026-06-21T01:40:37.932Z",
+      "finishedAt": "2026-06-21T01:40:52.386Z",
+      "summary": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "byDimension": {
+          "persona": {
+            "passed": 1,
+            "failed": 0,
+            "total": 1
+          }
+        },
+        "medicalRefusalDirect": {
+          "passed": 0,
+          "failed": 0,
+          "total": 0
+        },
+        "medicalRefusalIndirect": {
+          "passed": 0,
+          "failed": 0,
+          "total": 0
+        }
+      }
+    }
+  ],
+  "scripts": [
+    {
+      "scriptId": "script-freewrite-retention",
+      "mode": "freewrite",
+      "strategy": "raw",
+      "summary": {
+        "scoredTurns": 7,
+        "passedTurns": 7,
+        "probes": 2,
+        "probesPassed": 1,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 1,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-freewrite-longtrim",
+      "mode": "freewrite",
+      "strategy": "raw",
+      "summary": {
+        "scoredTurns": 10,
+        "passedTurns": 10,
+        "probes": 2,
+        "probesPassed": 0,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-thoughtrecord-steps",
+      "mode": "thoughtrecord",
+      "strategy": "raw",
+      "summary": {
+        "scoredTurns": 5,
+        "passedTurns": 5,
+        "probes": 0,
+        "probesPassed": 0,
+        "stepCoherent": true,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-checkin-retention",
+      "mode": "checkin",
+      "strategy": "raw",
+      "summary": {
+        "scoredTurns": 6,
+        "passedTurns": 6,
+        "probes": 1,
+        "probesPassed": 1,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 1,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-freewrite-retention",
+      "mode": "freewrite",
+      "strategy": "managed",
+      "summary": {
+        "scoredTurns": 7,
+        "passedTurns": 7,
+        "probes": 2,
+        "probesPassed": 2,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 2,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-freewrite-longtrim",
+      "mode": "freewrite",
+      "strategy": "managed",
+      "summary": {
+        "scoredTurns": 10,
+        "passedTurns": 10,
+        "probes": 2,
+        "probesPassed": 2,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": 14,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 2,
+        "probesAfterTrim": 2
+      }
+    },
+    {
+      "scriptId": "script-thoughtrecord-steps",
+      "mode": "thoughtrecord",
+      "strategy": "managed",
+      "summary": {
+        "scoredTurns": 5,
+        "passedTurns": 5,
+        "probes": 0,
+        "probesPassed": 0,
+        "stepCoherent": true,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-checkin-retention",
+      "mode": "checkin",
+      "strategy": "managed",
+      "summary": {
+        "scoredTurns": 6,
+        "passedTurns": 6,
+        "probes": 1,
+        "probesPassed": 1,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 1,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-freewrite-retention",
+      "mode": "freewrite",
+      "strategy": "managed-norecap",
+      "summary": {
+        "scoredTurns": 7,
+        "passedTurns": 7,
+        "probes": 2,
+        "probesPassed": 0,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-freewrite-longtrim",
+      "mode": "freewrite",
+      "strategy": "managed-norecap",
+      "summary": {
+        "scoredTurns": 10,
+        "passedTurns": 10,
+        "probes": 2,
+        "probesPassed": 0,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": 15,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 2
+      }
+    },
+    {
+      "scriptId": "script-thoughtrecord-steps",
+      "mode": "thoughtrecord",
+      "strategy": "managed-norecap",
+      "summary": {
+        "scoredTurns": 5,
+        "passedTurns": 5,
+        "probes": 0,
+        "probesPassed": 0,
+        "stepCoherent": true,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 0,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    },
+    {
+      "scriptId": "script-checkin-retention",
+      "mode": "checkin",
+      "strategy": "managed-norecap",
+      "summary": {
+        "scoredTurns": 6,
+        "passedTurns": 6,
+        "probes": 1,
+        "probesPassed": 1,
+        "stepCoherent": null,
+        "firstTrimTurnIndex": null,
+        "probesPassedBeforeTrim": 1,
+        "probesPassedAfterTrim": 0,
+        "probesAfterTrim": 0
+      }
+    }
+  ]
+}
