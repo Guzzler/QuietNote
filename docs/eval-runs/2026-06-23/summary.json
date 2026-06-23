@@ -1,0 +1,14 @@
+{
+  "modes": [],
+  "tools": {
+    "warrantedTotal": 8,
+    "validCalls": 1,
+    "validCallRate": 0.125,
+    "argAccurate": 1,
+    "argAccuracyRate": 1,
+    "ordinaryTotal": 12,
+    "falseCalls": 0,
+    "falseCallRate": 0,
+    "retriesUsed": 0
+  }
+}

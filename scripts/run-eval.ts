@@ -42,6 +42,16 @@ import {
   type ScriptResult,
   type ContextStrategy,
 } from "../src/utils/conversationDriver.ts";
+import {
+  TOOL_GRAMMAR_INSTRUCTION,
+  TOOL_REPROMPT_INSTRUCTION,
+  parseToolCalls,
+} from "../src/utils/toolCalls.ts";
+import {
+  TOOL_EVAL_CASES,
+  scoreToolCase,
+  type ToolCaseScore,
+} from "../src/utils/toolCallEval.ts";
 import type { JournalingMode } from "../src/components/JournalingModeSelector.tsx";
 
 const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX"; // mirrors transformersjs-engine.ts:16
@@ -76,6 +86,17 @@ const RUN_MODES: JournalingMode[] = onlyMode
 //   npm run eval -- --scripts --strategy=raw       # single strategy
 // Default is `managed` because that is the real app send path (recap + trim).
 const RUN_SCRIPTS = args.includes("--scripts");
+// Track D1: when --tools is passed, run the tool-call capability spike
+// (TOOL_EVAL_CASES) — single-turn cases measuring valid-call rate, argument
+// accuracy, and false-call rate on ordinary journaling turns:
+//   npm run eval:tools
+// Augmentation is string concatenation at runtime here in the runner; the
+// freeze-gated systemPrompts.ts stays byte-identical (the C1 precedent).
+const RUN_TOOLS = args.includes("--tools");
+// When running the tool spike on its own, skip the (expensive) per-mode base
+// suite — the spike is its own measurement. `--scripts --tools` or an explicit
+// `--base` still runs the base loop.
+const RUN_BASE = !RUN_TOOLS || RUN_SCRIPTS || args.includes("--base");
 // Optional: restrict the scripted run to a single script id (CPU is slow, so a
 // bounded live run — e.g. just the boundary-crossing script under all three
 // strategies — is often the practical C2 invocation). Comma-separated ids ok.
@@ -161,7 +182,7 @@ async function main() {
 
   const allReports: { mode: JournalingMode; report: EvalRunReport }[] = [];
 
-  for (const mode of RUN_MODES) {
+  for (const mode of RUN_BASE ? RUN_MODES : []) {
     const systemInstruction = getBaseSystemInstruction(mode, { morning: false });
 
     console.log(`\n[run-eval] Mode: ${mode} (${EVAL_CASES.length} cases available)`);
@@ -247,11 +268,66 @@ async function main() {
     console.log(`[run-eval] Wrote ${scriptsPath}`);
   }
 
+  // Track D1: tool-call capability spike (only when --tools is passed).
+  // For each case: build messages = base system instruction + the grammar
+  // beat (runtime string concat), generate, parse, score. On expectCall cases
+  // that produced an invalid-but-no-valid call, append TOOL_REPROMPT_INSTRUCTION
+  // and regenerate ONCE (mirrors the responseShaping retry shape).
+  const toolRecords: ToolCaseRecord[] = [];
+  if (RUN_TOOLS) {
+    console.log(`\n[run-eval] Running ${TOOL_EVAL_CASES.length} tool-call spike case(s)…`);
+    for (const c of TOOL_EVAL_CASES) {
+      const systemContent =
+        getBaseSystemInstruction(c.mode, { morning: false }) + "\n\n" + TOOL_GRAMMAR_INSTRUCTION;
+      const messages = [
+        { role: "system", content: systemContent },
+        { role: "user", content: c.userMessage },
+      ];
+      let response = await generateOnce(messages);
+      let parse = parseToolCalls(response);
+      let retryUsed = false;
+      // Retry rule (the gate counts this): only for tool-warranted cases that
+      // produced a malformed call (invalid present, no valid).
+      if (c.expectCall && parse.invalidCalls.length > 0 && parse.validCalls.length === 0) {
+        retryUsed = true;
+        const retryMessages = [
+          ...messages,
+          { role: "assistant", content: response },
+          { role: "user", content: TOOL_REPROMPT_INSTRUCTION },
+        ];
+        response = await generateOnce(retryMessages);
+        parse = parseToolCalls(response);
+      }
+      const score = scoreToolCase(c, parse);
+      const toolEmitted = parse.calls.length > 0 ? parse.calls[0].name : null;
+      toolRecords.push({
+        id: c.id,
+        mode: c.mode,
+        expectCall: c.expectCall,
+        expectedTool: c.expectedTool ?? null,
+        toolEmitted,
+        score,
+        retryUsed,
+        strippedText: parse.strippedText,
+        rawResponse: response,
+      });
+      console.log(
+        `[run-eval]   ${c.id} (${c.mode}) expect=${c.expectCall ? "CALL" : "silent"} ` +
+          `→ emitted=${toolEmitted ?? "none"} valid=${score.validCallMade} ` +
+          `arg=${score.argAccurate === null ? "n/a" : score.argAccurate} ` +
+          `false=${score.falseCall}${retryUsed ? " [retry]" : ""}`
+      );
+    }
+    const toolsPath = join(OUT_DIR, "D1-tool-spike.md");
+    writeFileSync(toolsPath, toolRecordsToMarkdown(toolRecords), "utf8");
+    console.log(`[run-eval] Wrote ${toolsPath}`);
+  }
+
   // Write a combined machine summary (JSON) the critic step can read.
   // Default shape is the historical ARRAY of per-mode reports — kept
   // byte-identical so the existing critic loop is undisturbed. Only when
-  // --scripts is passed (C2's live run) do we wrap it to attach a `scripts`
-  // block alongside the modes.
+  // --scripts and/or --tools is passed do we wrap it to attach extra blocks
+  // alongside the modes.
   const modeSummaries = allReports.map(({ mode, report }) => ({
     mode,
     modelLabel: report.modelLabel,
@@ -259,19 +335,120 @@ async function main() {
     finishedAt: report.finishedAt,
     summary: report.summary,
   }));
-  const summary: unknown = RUN_SCRIPTS
-    ? {
-        modes: modeSummaries,
-        scripts: scriptResults.map((r) => ({
-          scriptId: r.scriptId,
-          mode: r.mode,
-          strategy: r.strategy,
-          summary: r.summary,
-        })),
-      }
-    : modeSummaries;
+  let summary: unknown = modeSummaries;
+  if (RUN_SCRIPTS || RUN_TOOLS) {
+    const wrapped: Record<string, unknown> = { modes: modeSummaries };
+    if (RUN_SCRIPTS) {
+      wrapped.scripts = scriptResults.map((r) => ({
+        scriptId: r.scriptId,
+        mode: r.mode,
+        strategy: r.strategy,
+        summary: r.summary,
+      }));
+    }
+    if (RUN_TOOLS) {
+      wrapped.tools = toolSummary(toolRecords);
+    }
+    summary = wrapped;
+  }
   writeFileSync(join(OUT_DIR, "summary.json"), JSON.stringify(summary, null, 2), "utf8");
   console.log(`\n[run-eval] Wrote summary.json — done.`);
+}
+
+// Track D1: per-case record + report writers.
+interface ToolCaseRecord {
+  id: string;
+  mode: JournalingMode;
+  expectCall: boolean;
+  expectedTool: string | null;
+  toolEmitted: string | null;
+  score: ToolCaseScore;
+  retryUsed: boolean;
+  strippedText: string;
+  rawResponse: string;
+}
+
+function toolSummary(records: ToolCaseRecord[]) {
+  const warranted = records.filter((r) => r.expectCall);
+  const ordinary = records.filter((r) => !r.expectCall);
+  const validCalls = warranted.filter((r) => r.score.validCallMade);
+  const argAccurate = validCalls.filter((r) => r.score.argAccurate === true);
+  const falseCalls = ordinary.filter((r) => r.score.falseCall);
+  const retriesUsed = warranted.filter((r) => r.retryUsed);
+  return {
+    warrantedTotal: warranted.length,
+    validCalls: validCalls.length,
+    validCallRate: warranted.length ? validCalls.length / warranted.length : 0,
+    argAccurate: argAccurate.length,
+    argAccuracyRate: validCalls.length ? argAccurate.length / validCalls.length : null,
+    ordinaryTotal: ordinary.length,
+    falseCalls: falseCalls.length,
+    falseCallRate: ordinary.length ? falseCalls.length / ordinary.length : 0,
+    retriesUsed: retriesUsed.length,
+  };
+}
+
+function toolRecordsToMarkdown(records: ToolCaseRecord[]): string {
+  const s = toolSummary(records);
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const lines: string[] = [];
+  lines.push(`# D1 Tool-Call Spike — per-case results`);
+  lines.push("");
+  lines.push(`Model: Gemma 4 E2B (Node onnxruntime-node, q4f16). Generated ${new Date().toISOString()}.`);
+  lines.push("");
+  lines.push(`## Headline rates`);
+  lines.push("");
+  lines.push(`- **Valid-call rate (incl. retry):** ${s.validCalls}/${s.warrantedTotal} = ${pct(s.validCallRate)}`);
+  lines.push(
+    `- **Argument accuracy:** ${s.argAccurate}/${s.validCalls} = ${
+      s.argAccuracyRate === null ? "n/a" : pct(s.argAccuracyRate)
+    }`
+  );
+  lines.push(`- **False-call rate:** ${s.falseCalls}/${s.ordinaryTotal} = ${pct(s.falseCallRate)}`);
+  lines.push(`- Retries used: ${s.retriesUsed}/${s.warrantedTotal} warranted cases`);
+  lines.push("");
+  lines.push(`## Per-case table`);
+  lines.push("");
+  lines.push(`| id | mode | expect | tool emitted | valid? | arg-acc? | false? | retry? |`);
+  lines.push(`|---|---|---|---|---|---|---|---|`);
+  for (const r of records) {
+    lines.push(
+      `| ${r.id} | ${r.mode} | ${r.expectCall ? "CALL" : "silent"} | ${r.toolEmitted ?? "—"} | ` +
+        `${r.expectCall ? (r.score.validCallMade ? "✓" : "✗") : "—"} | ` +
+        `${r.score.argAccurate === null ? "—" : r.score.argAccurate ? "✓" : "✗"} | ` +
+        `${r.expectCall ? "—" : r.score.falseCall ? "✗ FALSE" : "✓"} | ` +
+        `${r.retryUsed ? "yes" : "—"} |`
+    );
+  }
+  lines.push("");
+  // Quote every false call in full — these are the most important bodies.
+  const falseCalls = records.filter((r) => !r.expectCall && r.score.falseCall);
+  lines.push(`## False calls (${falseCalls.length})`);
+  lines.push("");
+  if (falseCalls.length === 0) {
+    lines.push(`_None — the model stayed silent on every ordinary journaling turn._`);
+  } else {
+    for (const r of falseCalls) {
+      lines.push(`### ${r.id} (${r.mode})`);
+      lines.push("");
+      lines.push("```");
+      lines.push(r.rawResponse);
+      lines.push("```");
+      lines.push("");
+    }
+  }
+  // Full raw bodies for the warranted cases (so arg accuracy is auditable).
+  lines.push(`## Warranted-case raw responses`);
+  lines.push("");
+  for (const r of records.filter((x) => x.expectCall)) {
+    lines.push(`### ${r.id} (${r.mode}) — expected ${r.expectedTool}`);
+    lines.push("");
+    lines.push("```");
+    lines.push(r.rawResponse);
+    lines.push("```");
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
 function progress(mode: JournalingMode) {
