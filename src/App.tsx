@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Loader2, Heart, Lock, Plus, BookOpen, Settings } from "lucide-react";
 import Layout from "./components/Layout";
 import ChatPanel from "./components/ChatPanel";
@@ -22,6 +22,7 @@ import EvalPanel from "./components/EvalPanel";
 import type { JournalingMode } from "./components/JournalingModeSelector";
 import type { Session, ChatMessage, MoodEntry, MoodEmotion, ThoughtRecord } from "./types";
 import { getSystemInstruction } from "./prompts/systemPrompts";
+import { resolveShortcut } from "./utils/keyboardShortcuts";
 
 // System prompts and getSystemInstruction live in src/prompts/systemPrompts.ts
 // (hoisted 2026-06-01 so the Node eval runner can import the same strings).
@@ -167,12 +168,53 @@ export default function App() {
   const [personality, setPersonality] = useState<PersonalitySettings>(DEFAULT_PERSONALITY);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Track A6 — distraction-free focus mode (Esc toggles; chrome recedes)
+  const [focusMode, setFocusMode] = useState(false);
+
   // Listen for crisis resources open event from ChatPanel disclaimer link
   useEffect(() => {
     const handleOpenCrisis = () => setShowCrisisResources(true);
     window.addEventListener("open-crisis-resources", handleOpenCrisis);
     return () => window.removeEventListener("open-crisis-resources", handleOpenCrisis);
   }, []);
+
+  // Track A6 — shared "new entry" reset, used by the header New button and Cmd/Ctrl+N
+  const handleNewSession = useCallback(() => {
+    setCurrent(null);
+    setCurrentId(null);
+    setSelectedThread(null);
+    setUserInput("");
+    setContextTrimmed(false);
+  }, []);
+
+  // Keep a fresh modal-open snapshot for the global key handler without
+  // re-binding the listener on every modal toggle (ref, not dep).
+  const modalOpenRef = useRef(false);
+  modalOpenRef.current =
+    showCrisisResources || showMoodTracker || showPrivacyDashboard || showSettings;
+
+  // Track A6 — single global keydown handler owning all three shortcuts.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const action = resolveShortcut(e, {
+        modalOpen: modalOpenRef.current,
+        target: e.target,
+      });
+      if (action === "new-session") {
+        // Cmd/Ctrl+N is browser-reserved ("new window"); preventDefault
+        // intercepts it in-page on most browsers — best-effort for A6.
+        e.preventDefault();
+        handleNewSession();
+      } else if (action === "toggle-focus") {
+        setFocusMode((v) => !v);
+      } else if (action === "open-prompt-picker") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("open-prompt-picker"));
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [handleNewSession]);
 
   // Handle saving mood
   const handleSaveMood = async (mood: MoodEntry) => {
@@ -732,7 +774,11 @@ export default function App() {
         modelLabel={modelRef.modelId}
       />
 
-      <header className="sticky top-0 z-10 backdrop-blur bg-white/60 border-b border-slate-200/70">
+      <header
+        className={`sticky top-0 z-10 backdrop-blur bg-white/60 border-b border-slate-200/70 transition-all duration-500 ${
+          focusMode ? "opacity-0 pointer-events-none -translate-y-2 h-0 overflow-hidden" : "opacity-100"
+        }`}
+      >
         <div className="w-full px-6 py-3 flex items-center gap-3">
           <div className="p-2 rounded-xl bg-indigo-50">
             <img src="/logo.svg" alt="Quietnote logo" className="h-5 w-5" />
@@ -747,13 +793,7 @@ export default function App() {
             {/* New Session Button — only visible when in a conversation */}
             {current && (
               <button
-                onClick={() => {
-                  setCurrent(null);
-                  setCurrentId(null);
-                  setSelectedThread(null);
-                  setUserInput("");
-                  setContextTrimmed(false);
-                }}
+                onClick={handleNewSession}
                 className="flex items-center gap-2 px-3 py-2.5 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/70 rounded-lg transition-colors min-h-[44px]"
                 title="New session"
                 aria-label="Start new session"
@@ -837,7 +877,11 @@ export default function App() {
           />
         }
         right={
-          <div className={`${showMobileSessions ? "" : "hidden"} lg:block`}>
+          <div
+            className={`${showMobileSessions ? "" : "hidden"} ${
+              focusMode ? "lg:hidden" : "lg:block"
+            } transition-all duration-500`}
+          >
             <SessionsPanel
               sessions={sessions}
               currentId={currentId}
@@ -852,10 +896,21 @@ export default function App() {
         }
       />
 
-      <footer className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 py-4">
+      <footer
+        className={`flex items-center justify-center gap-1.5 text-[11px] text-slate-500 py-4 transition-all duration-500 ${
+          focusMode ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+      >
         <Lock className="h-3 w-3 text-slate-400" />
         <span>Quietnote — your journal entries stay on this device</span>
       </footer>
+
+      {/* Track A6 — affordance back out of focus mode (the one bit of chrome that stays) */}
+      {focusMode && (
+        <div className="fixed bottom-4 right-4 z-20 select-none text-[11px] text-slate-400 pointer-events-none transition-opacity duration-500">
+          Press Esc to exit focus
+        </div>
+      )}
     </div>
   );
 }

@@ -122,8 +122,17 @@ export default function ChatPanel({
   const [suggestedCategories, setSuggestedCategories] = useState<Set<PromptCategory>>(new Set());
   const [promptAcceptedMessageIds, setPromptAcceptedMessageIds] = useState<Set<string>>(new Set());
 
-  // External trigger for PromptSelector (from welcome card link)
+  // External trigger for PromptSelector (from welcome card link + Track A6 "/" shortcut)
   const [promptSelectorOpen, setPromptSelectorOpen] = useState(false);
+
+  // Track A6 — global "/" shortcut opens the prompt picker via a window event
+  // (mirrors the open-crisis-resources bridge so a global App-level key handler
+  // can reach this ChatPanel-local state).
+  useEffect(() => {
+    const open = () => setPromptSelectorOpen(true);
+    window.addEventListener("open-prompt-picker", open);
+    return () => window.removeEventListener("open-prompt-picker", open);
+  }, []);
 
   // Keyboard shortcut hints visibility
   const [inputFocused, setInputFocused] = useState(false);
