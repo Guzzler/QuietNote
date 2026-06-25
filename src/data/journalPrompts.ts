@@ -6,6 +6,15 @@ export interface PromptData {
   text: string;
   category: PromptCategory;
   timeOfDay?: "morning" | "afternoon" | "evening" | "night";
+  /**
+   * Marks prompts seeded from the launched-app data's proven high-pull
+   * themes (anxiety, gratitude, "favorite things", "what makes you smile",
+   * low-friction "just start"). See docs/field-notes/2026-06-09-real-user-data-plan.md
+   * Part 1 (prompt-pull measurements) and Phase 3. Provenance only — surfaced
+   * the same as any other prompt today; the flag is the hook for future
+   * prominence/usage work.
+   */
+  validated?: boolean;
 }
 
 /**
@@ -340,7 +349,66 @@ export const JOURNAL_PROMPTS: PromptData[] = [
     text: "Stream of consciousness: Write continuously for 5 minutes without stopping.",
     category: "creativity",
   },
+
+  // --- Validated high-pull prompts (seeded from launched-app data) ---
+  // These echo the themes that drove the most entries in the old app:
+  // anxiety ("What are you anxious about?", #2 prompt, 345 entries),
+  // gratitude (#3, 296), low-friction "just start" writing (#1, 491),
+  // plus the "favorite things" / "makes you smile" prompts that pulled well.
+  // See docs/field-notes/2026-06-09-real-user-data-plan.md (Part 1, Phase 3).
+  {
+    id: "challenges-9",
+    text: "What are you anxious about right now? Naming it can take some of its power away.",
+    category: "challenges",
+    validated: true,
+  },
+  {
+    id: "challenges-10",
+    text: "What's worrying you today — and how much of it is within your control?",
+    category: "challenges",
+    validated: true,
+  },
+  {
+    id: "gratitude-9",
+    text: "What are you grateful for right now, in this moment?",
+    category: "gratitude",
+    validated: true,
+  },
+  {
+    id: "gratitude-10",
+    text: "What made you smile today, even for a second?",
+    category: "gratitude",
+    timeOfDay: "evening",
+    validated: true,
+  },
+  {
+    id: "gratitude-11",
+    text: "Write about something that makes you smile no matter what.",
+    category: "gratitude",
+    validated: true,
+  },
+  {
+    id: "creativity-11",
+    text: "List ten of your favorite things, big or small.",
+    category: "creativity",
+    validated: true,
+  },
+  {
+    id: "reflection-11",
+    text: "What's on your mind right now? Start anywhere — there's no wrong way in.",
+    category: "self-reflection",
+    validated: true,
+  },
 ];
+
+/**
+ * Get all prompts seeded from the launched-app data's validated high-pull
+ * themes (see PromptData.validated). Provenance accessor for tests and any
+ * future "show me a proven prompt" surface.
+ */
+export function getValidatedPrompts(): PromptData[] {
+  return JOURNAL_PROMPTS.filter((p) => p.validated === true);
+}
 
 /**
  * Structured 3-step gratitude journaling sequence.
