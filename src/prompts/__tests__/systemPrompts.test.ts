@@ -173,6 +173,24 @@ describe("UNINTELLIGIBLE INPUT RULE contract (all 5 prompts)", () => {
   });
 });
 
+// ── MEDICAL PRECEDENCE contract (Day-23, 2026-06-25) ──
+// Thought Record mode's 5-step "always advance" scaffolding was out-competing
+// the MEDICAL RULE, so a health/medication turn could be pulled into a CBT step
+// with no referral (omission). The MEDICAL PRECEDENCE clause makes the referral
+// out-rank the steps, with an explicit carve so ordinary emotions don't
+// over-trigger a referral. Pin both halves so a future edit can't silently drop
+// the precedence or its non-medical exclusion.
+describe("Thought Record MEDICAL PRECEDENCE contract", () => {
+  it("makes the medical referral out-rank the CBT steps", () => {
+    expect(THOUGHT_RECORD_INSTRUCTION).toContain("MEDICAL PRECEDENCE");
+    expect(THOUGHT_RECORD_INSTRUCTION).toContain("overrides the CBT steps");
+  });
+
+  it("carves out ordinary emotions so it does not over-trigger", () => {
+    expect(THOUGHT_RECORD_INSTRUCTION).toContain("are NOT health topics and must NOT trigger a referral");
+  });
+});
+
 describe("EVAL_CASES freeze — harness-expansion guard (Day-9 re-assert)", () => {
   it("EVAL_CASES.length matches the frozen count (75 after 2026-06-13 input_robustness freeze-lift)", () => {
     expect(EVAL_CASES.length).toBe(75);
