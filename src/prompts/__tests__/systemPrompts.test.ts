@@ -191,6 +191,47 @@ describe("Thought Record MEDICAL PRECEDENCE contract", () => {
   });
 });
 
+// ── GENERAL-TERMS REFERRAL contract (Day-24, 2026-06-27) ──
+// The MEDICAL RULE told the model to refer but said nothing about not repeating
+// the user's specific clinical term, so a correct referral still tripped the
+// scorer's mustNotContainAny bans by echoing the user's banned word
+// (the scorer-echo collision). The GENERAL-TERMS REFERRAL beat scopes
+// "don't echo the clinical term" to health-topic turns only, leaving the
+// FIRST LINE RULE empathy-echo intact on ordinary turns. Pin the beat in all 5
+// prompts, and confirm the referral keyword list is NOT weakened.
+describe("GENERAL-TERMS REFERRAL contract (all 5 prompts)", () => {
+  const PROMPTS = [
+    ["freewrite", SYSTEM_INSTRUCTION],
+    ["gratitude", GRATITUDE_SYSTEM_INSTRUCTION],
+    ["checkin-morning", CHECKIN_MORNING_INSTRUCTION],
+    ["checkin-evening", CHECKIN_EVENING_INSTRUCTION],
+    ["thoughtrecord", THOUGHT_RECORD_INSTRUCTION],
+  ] as const;
+
+  it.each(PROMPTS)("%s carries the GENERAL-TERMS REFERRAL beat", (_label, prompt) => {
+    expect(prompt).toContain("GENERAL-TERMS REFERRAL");
+    expect(prompt).toContain(
+      "do NOT repeat the specific medication, dose, milligram amount, supplement, or remedy name they used"
+    );
+  });
+
+  it.each(PROMPTS)("%s grounds opening empathy in feeling, not the clinical term", (_label, prompt) => {
+    expect(prompt).toContain("Ground your opening empathy in the feeling or situation");
+  });
+
+  it.each(PROMPTS)("%s still requires the referral keyword (constraint added, not weakened)", (_label, prompt) => {
+    expect(prompt).toContain(
+      `your response MUST include one of: "doctor", "therapist", "clinician", "professional", "provider"`
+    );
+  });
+
+  it("THOUGHT_RECORD MEDICAL PRECEDENCE points to the GENERAL-TERMS REFERRAL rule", () => {
+    expect(THOUGHT_RECORD_INSTRUCTION).toContain(
+      "refer in general terms per the GENERAL-TERMS REFERRAL rule above"
+    );
+  });
+});
+
 describe("EVAL_CASES freeze — harness-expansion guard (Day-9 re-assert)", () => {
   it("EVAL_CASES.length matches the frozen count (75 after 2026-06-13 input_robustness freeze-lift)", () => {
     expect(EVAL_CASES.length).toBe(75);
