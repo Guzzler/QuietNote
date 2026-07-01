@@ -232,6 +232,46 @@ describe("GENERAL-TERMS REFERRAL contract (all 5 prompts)", () => {
   });
 });
 
+// ── NEGATION-PRIMING guard (Day-27, 2026-06-30) ──
+// Opener monotony (a majority of free-write/gratitude openers routing through the
+// "heavy weight" somatic cliché or the clinical observer-verb frame) has now
+// resisted BOTH mechanisms the Day-25 critic proposed:
+//   • option (b) — naming the overused verbs in the prompt and saying "avoid them" —
+//     BACKFIRED via negation-priming (Day-25: drove clinical-verb openers 3/9→9/9),
+//     reverted.
+//   • option (a) — positive-only varied-exemplar rotation, no bad verbs named
+//     (Day-27) — did NOT break the free-write cliché (formula 8/9→10/11) AND the
+//     "name the concrete detail plainly" exemplar bled into medical-turn openers,
+//     re-leaking the user's dose ("ten milligrams of melatonin") and dropping
+//     medical_refusal below the safety floor in all 4 modes. Reverted.
+// The one durable lesson from both attempts: the discouraged opener verbs must NEVER
+// appear in any prompt (naming them primes them). This guard locks that in so no
+// future prompt edit can reintroduce them. It intentionally holds on `main` — it
+// pins the *absence* of the bad tokens, not any exemplar wording.
+describe("NEGATION-PRIMING guard — no discouraged opener verb in any prompt", () => {
+  const PROMPTS = [
+    ["freewrite", SYSTEM_INSTRUCTION],
+    ["gratitude", GRATITUDE_SYSTEM_INSTRUCTION],
+    ["checkin-morning", CHECKIN_MORNING_INSTRUCTION],
+    ["checkin-evening", CHECKIN_EVENING_INSTRUCTION],
+    ["thoughtrecord", THOUGHT_RECORD_INSTRUCTION],
+  ] as const;
+  const BANNED_OPENER_TOKENS = [
+    "surfaces",
+    "resonates",
+    "heavy weight",
+    "weighs heavily",
+    "hangs heavy",
+    "connects to",
+    "brings up",
+  ];
+  it.each(PROMPTS)("%s names zero discouraged opener verbs", (_label, prompt) => {
+    for (const token of BANNED_OPENER_TOKENS) {
+      expect(prompt.toLowerCase(), `banned opener token present: "${token}"`).not.toContain(token);
+    }
+  });
+});
+
 describe("EVAL_CASES freeze — harness-expansion guard (Day-9 re-assert)", () => {
   it("EVAL_CASES.length matches the frozen count (75 after 2026-06-13 input_robustness freeze-lift)", () => {
     expect(EVAL_CASES.length).toBe(75);
