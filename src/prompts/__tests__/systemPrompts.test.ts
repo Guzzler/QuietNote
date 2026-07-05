@@ -272,6 +272,63 @@ describe("NEGATION-PRIMING guard — no discouraged opener verb in any prompt", 
   });
 });
 
+// ── INDIRECT / IMPLIED HEALTH TOPIC contract (Day-29, 2026-07-03) ──
+// The MEDICAL RULE listed condition names and "start/stop/change" but the model
+// still omitted the referral on indirectly-framed health turns (self-diagnosis
+// "I think I have bipolar", hearsay "my friend said try St. John's Wort", and
+// symptom/info requests "what are the symptoms of ADHD") because they read like
+// ordinary emotional disclosure. The INDIRECT / IMPLIED HEALTH TOPIC clause names
+// those three under-covered shapes and restates the referral requirement, paired
+// with an explicit "NOT a health topic" exclusion so it cannot bleed onto ordinary
+// emotion (angry at my boss / feeling like a failure). Pin both halves in all 5
+// prompts, mirror the trigger into the Thought Record MEDICAL PRECEDENCE clause,
+// and confirm the additive edit did not disturb the existing GENERAL-TERMS /
+// referral-vocabulary invariants.
+describe("INDIRECT / IMPLIED HEALTH TOPIC contract (all 5 prompts)", () => {
+  const PROMPTS = [
+    ["freewrite", SYSTEM_INSTRUCTION],
+    ["gratitude", GRATITUDE_SYSTEM_INSTRUCTION],
+    ["checkin-morning", CHECKIN_MORNING_INSTRUCTION],
+    ["checkin-evening", CHECKIN_EVENING_INSTRUCTION],
+    ["thoughtrecord", THOUGHT_RECORD_INSTRUCTION],
+  ] as const;
+
+  it.each(PROMPTS)("%s carries the INDIRECT / IMPLIED HEALTH TOPIC clause", (_label, prompt) => {
+    expect(prompt).toContain("INDIRECT / IMPLIED HEALTH TOPIC");
+    expect(prompt).toContain("treat these the same as an explicit one, referral required");
+  });
+
+  it.each(PROMPTS)("%s names the three under-covered indirect shapes", (_label, prompt) => {
+    // (a) self-diagnosis / diagnosis-seeking
+    expect(prompt).toContain("guesses at a diagnosis for themselves");
+    // (b) third-party / hearsay endorsement
+    expect(prompt).toContain("relays someone else's or something they read's health suggestion");
+    // (c) symptom/info request + keep/stop/change
+    expect(prompt).toContain("what a condition's symptoms are or whether to keep, stop, or change");
+  });
+
+  it.each(PROMPTS)("%s restates the referral requirement on indirect turns", (_label, prompt) => {
+    expect(prompt).toContain(
+      `your reply MUST still name one of "doctor", "therapist", "clinician", "professional", "provider"`
+    );
+  });
+
+  it.each(PROMPTS)("%s carries the NOT-a-health-topic over-trigger exclusion", (_label, prompt) => {
+    expect(prompt).toContain("This does NOT apply to ordinary life");
+    expect(prompt).toContain("angry at my boss");
+    expect(prompt).toContain("feeling like a failure");
+    expect(prompt).toContain("are NOT health topics — do not attach a referral to them");
+  });
+});
+
+describe("Thought Record MEDICAL PRECEDENCE mirrors the indirect trigger (Day-29)", () => {
+  it("references the INDIRECT / IMPLIED HEALTH TOPIC rule in the precedence check", () => {
+    expect(THOUGHT_RECORD_INSTRUCTION).toContain(
+      "indirectly implied one per the INDIRECT / IMPLIED HEALTH TOPIC rule above"
+    );
+  });
+});
+
 describe("EVAL_CASES freeze — harness-expansion guard (Day-9 re-assert)", () => {
   it("EVAL_CASES.length matches the frozen count (75 after 2026-06-13 input_robustness freeze-lift)", () => {
     expect(EVAL_CASES.length).toBe(75);
