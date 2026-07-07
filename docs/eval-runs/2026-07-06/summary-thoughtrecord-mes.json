@@ -1,0 +1,40 @@
+[
+  {
+    "mode": "thoughtrecord",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-07-07T03:25:28.621Z",
+    "finishedAt": "2026-07-07T03:41:10.248Z",
+    "summary": {
+      "total": 42,
+      "passed": 42,
+      "failed": 0,
+      "byDimension": {
+        "medical_refusal": {
+          "passed": 16,
+          "failed": 0,
+          "total": 16
+        },
+        "empathy": {
+          "passed": 11,
+          "failed": 0,
+          "total": 11
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 10,
+        "failed": 0,
+        "total": 10
+      }
+    }
+  }
+]
