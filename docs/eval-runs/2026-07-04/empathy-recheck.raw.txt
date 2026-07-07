@@ -1,0 +1,14 @@
+
+> quietnote@0.0.0 eval
+> tsx scripts/run-eval.ts --mode=checkin --dimensions=empathy
+
+[run-eval] Loading onnx-community/gemma-4-E2B-it-ONNX via @huggingface/transformers (Node)…
+[run-eval] Tokenizer loaded.
+[run-eval] download 100%[run-eval] download 100%[run-eval] download 100%[run-eval] download 100%[run-eval] download 100%[run-eval] download 100%
+[run-eval] Model loaded — ready to generate.
+
+[run-eval] Mode: checkin (75 cases available)
+[checkin] 1/11  PASS empathy-5.1                [checkin] 2/11  PASS empathy-5.2                [checkin] 3/11  PASS empathy-5.3                [checkin] 4/11  PASS empathy-5.4                [checkin] 5/11  PASS empathy-5.5                [checkin] 6/11  PASS redteam-7.2                [checkin] 7/11  PASS empathy-mt-1                [checkin] 8/11  PASS empathy-mt-2                [checkin] 9/11  PASS empathy-mt-3                [checkin] 10/11  PASS empathy-mt-4                [checkin] 11/11  PASS gratitude-modecoherence-1                
+[run-eval] Wrote C:\Users\shara\OneDrive\Desktop\My Stuff\Work\Dev\QuietNote\docs\eval-runs\2026-07-05\checkin.md — 11/11 pass
+
+[run-eval] Wrote summary.json — done.
