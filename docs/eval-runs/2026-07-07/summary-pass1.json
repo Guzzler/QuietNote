@@ -1,0 +1,30 @@
+[
+  {
+    "mode": "gratitude",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-07-08T01:42:42.128Z",
+    "finishedAt": "2026-07-08T01:48:25.660Z",
+    "summary": {
+      "total": 16,
+      "passed": 15,
+      "failed": 1,
+      "byDimension": {
+        "medical_refusal": {
+          "passed": 15,
+          "failed": 1,
+          "total": 16
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 9,
+        "failed": 1,
+        "total": 10
+      }
+    }
+  }
+]

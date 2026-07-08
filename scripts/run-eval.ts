@@ -53,6 +53,12 @@ import {
   type ToolCaseScore,
 } from "../src/utils/toolCallEval.ts";
 import type { JournalingMode } from "../src/components/JournalingModeSelector.tsx";
+import {
+  resolveOutDirName,
+  withOutfileSuffix,
+  modeReportFilename,
+  summaryFilename,
+} from "../src/utils/evalOutputPaths.ts";
 
 const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX"; // mirrors transformersjs-engine.ts:16
 // Mirrors generation defaults in transformersjs-engine.ts:123-126
@@ -121,11 +127,22 @@ for (const s of RUN_STRATEGIES) {
   }
 }
 
+// Output hygiene (Day 32): the UTC-date default dir plus fixed per-mode
+// filenames clobbered raw data on runs that crossed UTC midnight and on
+// multi-pass same-mode runs (Day-29, Day-31 NOTEs). `--outdir=<name>` pins
+// the directory under docs/eval-runs/; `--outfile-suffix=<suffix>` makes
+// each pass's files unique (gratitude-pass1.md, summary-pass1.json). Both
+// default to the historical behavior when absent.
+const outdirArg = args.find((a) => a.startsWith("--outdir="));
+const OUTDIR_NAME = outdirArg ? outdirArg.split("=")[1] : undefined;
+const suffixArg = args.find((a) => a.startsWith("--outfile-suffix="));
+const OUTFILE_SUFFIX = suffixArg ? suffixArg.split("=")[1] : undefined;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = join(__dirname, "..");
 const TODAY = new Date().toISOString().slice(0, 10);
-const OUT_DIR = join(REPO_ROOT, "docs", "eval-runs", TODAY);
+const OUT_DIR = join(REPO_ROOT, "docs", "eval-runs", resolveOutDirName(OUTDIR_NAME, TODAY));
 
 async function main() {
   console.log(`[run-eval] Loading ${MODEL_ID} via @huggingface/transformers (Node)…`);
@@ -263,7 +280,7 @@ async function main() {
         );
       }
     }
-    const scriptsPath = join(OUT_DIR, "conversation-scripts.md");
+    const scriptsPath = join(OUT_DIR, withOutfileSuffix("conversation-scripts.md", OUTFILE_SUFFIX));
     writeFileSync(scriptsPath, scriptReportToMarkdown(scriptResults), "utf8");
     console.log(`[run-eval] Wrote ${scriptsPath}`);
   }
@@ -318,7 +335,7 @@ async function main() {
           `false=${score.falseCall}${retryUsed ? " [retry]" : ""}`
       );
     }
-    const toolsPath = join(OUT_DIR, "D1-tool-spike.md");
+    const toolsPath = join(OUT_DIR, withOutfileSuffix("D1-tool-spike.md", OUTFILE_SUFFIX));
     writeFileSync(toolsPath, toolRecordsToMarkdown(toolRecords), "utf8");
     console.log(`[run-eval] Wrote ${toolsPath}`);
   }
@@ -351,8 +368,9 @@ async function main() {
     }
     summary = wrapped;
   }
-  writeFileSync(join(OUT_DIR, "summary.json"), JSON.stringify(summary, null, 2), "utf8");
-  console.log(`\n[run-eval] Wrote summary.json — done.`);
+  const summaryPath = join(OUT_DIR, summaryFilename(OUTFILE_SUFFIX));
+  writeFileSync(summaryPath, JSON.stringify(summary, null, 2), "utf8");
+  console.log(`\n[run-eval] Wrote ${summaryPath} — done.`);
 }
 
 // Track D1: per-case record + report writers.
@@ -460,8 +478,7 @@ function progress(mode: JournalingMode) {
 }
 
 function writeMarkdown(mode: JournalingMode, report: EvalRunReport) {
-  const fname = mode === "freewrite" ? "freewrite-fullsuite.md" : `${mode}.md`;
-  const path = join(OUT_DIR, fname);
+  const path = join(OUT_DIR, modeReportFilename(mode, OUTFILE_SUFFIX));
   writeFileSync(path, reportToMarkdown(report), "utf8");
   console.log(`\n[run-eval] Wrote ${path} — ${report.summary.passed}/${report.summary.total} pass`);
 }
