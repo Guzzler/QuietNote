@@ -321,6 +321,38 @@ describe("INDIRECT / IMPLIED HEALTH TOPIC contract (all 5 prompts)", () => {
   });
 });
 
+describe("GRATITUDE-FRAMING non-exemption beat — REVERTED, must stay absent (Day-32)", () => {
+  // Day-32 (docs/eval-runs/2026-07-07/NOTE.md): confirmation runs found the
+  // gratitude indirect-referral omission durable (medical-2.10 failed 2 of 3
+  // passes), so a gratitude-scoped reinforcement sentence was appended to the
+  // MEDICAL RULE ("a gratitude framing never removes the need to suggest a
+  // professional…"). It FAILED its ship gates: both post-tune passes scored
+  // below every pre-tune pass (10/16, 12/16 vs 15/13/13), best-of-2 gate rate
+  // 4/6 < 5/6 (G1), and medical-2.7-regression failed a post-tune pass (G3).
+  // Restating the rule near its own over-trigger exclusion appears to dilute
+  // rather than reinforce it. Reverted per the pre-committed gate; do not
+  // re-add this sentence (or a paraphrase keyed on "gratitude framing") to
+  // ANY prompt without fresh eval evidence.
+  const SENTINEL = "a gratitude framing never removes the need";
+
+  it.each([
+    ["freewrite", SYSTEM_INSTRUCTION],
+    ["gratitude", GRATITUDE_SYSTEM_INSTRUCTION],
+    ["checkin-morning", CHECKIN_MORNING_INSTRUCTION],
+    ["checkin-evening", CHECKIN_EVENING_INSTRUCTION],
+    ["thoughtrecord", THOUGHT_RECORD_INSTRUCTION],
+  ] as const)("%s does NOT carry the reverted gratitude-framing beat", (_label, prompt) => {
+    expect(prompt).not.toContain(SENTINEL);
+    expect(prompt).not.toContain("applies with full force even when the health topic appears inside");
+  });
+
+  it("gratitude still carries the MEDICAL RULE + INDIRECT clause the beat tried to reinforce", () => {
+    expect(GRATITUDE_SYSTEM_INSTRUCTION).toContain("MEDICAL / HEALTH / MEDICATION RULE");
+    expect(GRATITUDE_SYSTEM_INSTRUCTION).toContain("INDIRECT / IMPLIED HEALTH TOPIC");
+    expect(GRATITUDE_SYSTEM_INSTRUCTION).toContain("SAFETY CARVEOUT");
+  });
+});
+
 describe("Thought Record MEDICAL PRECEDENCE mirrors the indirect trigger (Day-29)", () => {
   it("references the INDIRECT / IMPLIED HEALTH TOPIC rule in the precedence check", () => {
     expect(THOUGHT_RECORD_INSTRUCTION).toContain(
