@@ -9,9 +9,10 @@ prefilled or attached to anything. Rules of engagement:
 
 ## Grounding (verified 2026-07-10 — planner: re-verify before editing)
 
-- Repo public as of 2026-07-10 → GitHub issue templates and `issues/new`
-  links now work for outsiders (issue reporters need a GitHub account; the
-  `mailto:` fallback covers everyone else). Owner email:
+- **Repo is PRIVATE until release day** (go-public deferred 2026-07-10;
+  Sharang's trigger — see public-release R4). Issue templates and the in-app
+  `issues/new` link are built now but stay **dormant for outsiders** until
+  the flip; the `mailto:` link works regardless. Owner email:
   sharangpaiusa@gmail.com.
 - The app footer already carries the single privacy indicator (lock + "stay
   on this device", Track A3); Settings has row-style entries (A3's
@@ -26,7 +27,7 @@ prefilled or attached to anything. Rules of engagement:
 | id | what | status |
 |---|---|---|
 | F1 | Feedback channel: issue templates + in-app "Share feedback" link-out | queued |
-| F2 | Soft-launch kit: tester one-pager + share message for Sharang | gated on R1b (needs the live URL + measured download size) |
+| F2 | Soft-launch kit: tester one-pager + share message for Sharang | gated on public-release R4 (needs the live URL; download sizes come from R1b) |
 | F3 | Field-notes intake convention + weekly issue→field-note triage | after first feedback exists |
 | F4 | Feedback-driven iteration: human reports outrank queue items | activates with F3 |
 
@@ -43,12 +44,13 @@ prefilled or attached to anything. Rules of engagement:
   only: no fetch, no prefill of any user data. Calm styling to match the
   footer. → Verify: links resolve in the browser (screenshot), unit test
   asserts hrefs + that the affordance renders, full suite green.
-- [ ] gated on R1b · **F2 — Soft-launch kit**: write `docs/beta/WELCOME.md`
-  (what QuietNote is, requirements + measured model-download size from R1b,
-  what to try in each of the 4 modes, known limits from the browser matrix,
-  how to send feedback) linked from README; include a short copy-paste share
-  message for Sharang in the PR body and the ntfy notification ("ready to
-  share"). Sharing with testers is **Sharang's action, not the loop's**.
+- [ ] gated on public-release R4 · **F2 — Soft-launch kit**: write
+  `docs/beta/WELCOME.md` (what QuietNote is, requirements + measured
+  model-download size from R1b, what to try in each of the 4 modes, known
+  limits from the browser matrix, how to send feedback) linked from README;
+  include a short copy-paste share message for Sharang in the PR body and
+  the ntfy notification ("ready to share"). Sharing with testers is
+  **Sharang's action, not the loop's**.
 
 ## Ledger
 

@@ -31,8 +31,14 @@ queued items once they exist; safety-relevant reports outrank everything.
 
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
 
-1. **Hosting:** public repo + GitHub Pages via Actions (repo made public
-   2026-07-10; open source is a trust lever for a privacy app).
+1. **Hosting:** GitHub Pages via Actions. **The repo stays PRIVATE until
+   Sharang triggers the proper release** (flip deferred 2026-07-10 — it is
+   his release-day action; the loop must never change repo visibility).
+   GitHub Free does not serve Pages from private repos, so the live URL
+   activates on release day; until then the loop builds everything
+   release-ready (workflow gated to skip while private, production behavior
+   verified via local `vite preview`). Open-sourcing at release remains the
+   intent — it is a trust lever for a privacy app.
 2. **Feedback:** user-initiated only — GitHub issue templates + `mailto:`
    link-outs. **No telemetry, no automatic collection, never attach or
    prefill journal content.** The local-only rule is unchanged.
