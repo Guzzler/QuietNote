@@ -47,9 +47,9 @@ All file ops use absolute paths under that directory.
 
 ## Notifications (ntfy)
 On success:
-  curl -s -H "Title: QuietNote Critic Done" -H "Tags: bar_chart" -d "<overall score + weakest dimension>. Report: docs/critic-reports/YYYY-MM-DD.md" https://ntfy.sh/quietnote-shara-builds
+  curl -s -H "Title: QuietNote Critic Done" -H "Tags: bar_chart" -d "<overall score + weakest dimension>. Report: docs/critic-reports/YYYY-MM-DD.md" https://ntfy.sh/<ntfy-topic>
 On failure:
-  curl -s -H "Title: QuietNote Critic FAILED" -H "Tags: x" -H "Priority: high" -d "<what failed>" https://ntfy.sh/quietnote-shara-builds
+  curl -s -H "Title: QuietNote Critic FAILED" -H "Tags: x" -H "Priority: high" -d "<what failed>" https://ntfy.sh/<ntfy-topic>
 
 ## Hard rules
 - NEVER edit source code. Docs-only commits.

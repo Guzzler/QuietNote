@@ -1,0 +1,61 @@
+# Initiative: human-feedback
+
+**Mission:** 5–10 real people use QuietNote and what they experience reaches
+the loop as GitHub issues and `docs/field-notes/` entries — **user-initiated
+only**. The standing local-only rule is unchanged: no telemetry, no automatic
+collection, no network calls for feedback, and journal content is never
+prefilled or attached to anything. Rules of engagement:
+[`README.md`](README.md).
+
+## Grounding (verified 2026-07-10 — planner: re-verify before editing)
+
+- Repo public as of 2026-07-10 → GitHub issue templates and `issues/new`
+  links now work for outsiders (issue reporters need a GitHub account; the
+  `mailto:` fallback covers everyone else). Owner email:
+  sharangpaiusa@gmail.com.
+- The app footer already carries the single privacy indicator (lock + "stay
+  on this device", Track A3); Settings has row-style entries (A3's
+  "Privacy & your data" row is the pattern to copy for a feedback row).
+- Visual rules: calm palette, quiet chrome (`VisualCalmGuards` tests guard
+  the writing path) — a feedback affordance must whisper, not shout.
+- `docs/field-notes/` exists and the planner already reads it; there is no
+  intake convention doc yet.
+
+## Increments
+
+| id | what | status |
+|---|---|---|
+| F1 | Feedback channel: issue templates + in-app "Share feedback" link-out | queued |
+| F2 | Soft-launch kit: tester one-pager + share message for Sharang | gated on R1b (needs the live URL + measured download size) |
+| F3 | Field-notes intake convention + weekly issue→field-note triage | after first feedback exists |
+| F4 | Feedback-driven iteration: human reports outrank queue items | activates with F3 |
+
+## Task queue
+
+- [ ] 2026-07-10 · **F1 — Feedback channel**: add
+  `.github/ISSUE_TEMPLATE/feedback.yml` (fields: what were you doing / what
+  did you expect / what happened / browser + OS; description text must tell
+  reporters NOT to paste journal entries) and `bug.yml` (same fields +
+  console error); add an in-app "Share feedback" affordance in the footer
+  beside the privacy lock and/or as a Settings row — a plain link-out opening
+  `https://github.com/Guzzler/QuietNote/issues/new/choose` in a new tab, with
+  a `mailto:sharangpaiusa@gmail.com` alternative beside it. Static links
+  only: no fetch, no prefill of any user data. Calm styling to match the
+  footer. → Verify: links resolve in the browser (screenshot), unit test
+  asserts hrefs + that the affordance renders, full suite green.
+- [ ] gated on R1b · **F2 — Soft-launch kit**: write `docs/beta/WELCOME.md`
+  (what QuietNote is, requirements + measured model-download size from R1b,
+  what to try in each of the 4 modes, known limits from the browser matrix,
+  how to send feedback) linked from README; include a short copy-paste share
+  message for Sharang in the PR body and the ntfy notification ("ready to
+  share"). Sharing with testers is **Sharang's action, not the loop's**.
+
+## Ledger
+
+| date | item | PR | outcome |
+|---|---|---|---|
+
+## Blocked on Sharang
+
+- **Sharing the link with testers** (after F2 + the release gate pass) — the
+  loop prepares; Sharang sends.
