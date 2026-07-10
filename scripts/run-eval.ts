@@ -34,6 +34,11 @@ import { runEvalSuite, reportToMarkdown, type EvalRunReport } from "../src/utils
 import { EVAL_CASES, type EvalDimension } from "../src/utils/evalRunner.ts";
 import { getBaseSystemInstruction } from "../src/prompts/systemPrompts.ts";
 import { isBareDeflection, withDeflectionReprompt } from "../src/utils/responseShaping.ts";
+import {
+  shouldAttemptReferralReprompt,
+  withReferralReprompt,
+} from "../src/utils/referralReprompt.ts";
+import { detectCrisis } from "../src/utils/crisisDetection.ts";
 import { CONVERSATION_SCRIPTS } from "../src/utils/conversationScripts.ts";
 import {
   runConversationScript,
@@ -133,6 +138,12 @@ for (const s of RUN_STRATEGIES) {
 // the directory under docs/eval-runs/; `--outfile-suffix=<suffix>` makes
 // each pass's files unique (gratitude-pass1.md, summary-pass1.json). Both
 // default to the historical behavior when absent.
+// Referral-omission guard (Day 33): --referral-reprompt mirrors the app's new
+// send-path mechanism in the eval `generate` closure. Default OFF so every
+// historical number (and the cadence-due critic read) stays comparable.
+const REFERRAL_REPROMPT = args.includes("--referral-reprompt");
+let referralRepromptFires = 0;
+
 const outdirArg = args.find((a) => a.startsWith("--outdir="));
 const OUTDIR_NAME = outdirArg ? outdirArg.split("=")[1] : undefined;
 const suffixArg = args.find((a) => a.startsWith("--outfile-suffix="));
@@ -171,8 +182,34 @@ async function main() {
   // instruction and take the second response unconditionally (mechanism B).
   async function generate(messages: { role: string; content: string }[]): Promise<string> {
     const first = await generateOnce(messages);
-    if (!isBareDeflection(first)) return first;
-    return generateOnce(withDeflectionReprompt(messages));
+    let deflectionFired = false;
+    let response = first;
+    if (isBareDeflection(first)) {
+      deflectionFired = true;
+      response = await generateOnce(withDeflectionReprompt(messages));
+    }
+    // Referral-omission guard (Day 33) — byte-faithful to the App.tsx send
+    // paths: crisis-suppressed, skipped when the deflection guard already
+    // re-generated, one extra generation per turn max. Only active with
+    // --referral-reprompt (default OFF for comparability).
+    if (REFERRAL_REPROMPT) {
+      const lastUser = [...messages].reverse().find((m) => m.role === "user");
+      const userText = lastUser?.content ?? "";
+      if (
+        shouldAttemptReferralReprompt(userText, response, {
+          deflectionFired,
+          crisisDetected: detectCrisis(userText).isCrisis,
+        })
+      ) {
+        referralRepromptFires++;
+        console.log(
+          `\n[run-eval] [ReferralReprompt] fire #${referralRepromptFires} on user turn: ` +
+            `"${userText.slice(0, 60)}${userText.length > 60 ? "…" : ""}"`
+        );
+        response = await generateOnce(withReferralReprompt(messages));
+      }
+    }
+    return response;
   }
 
   async function generateOnce(messages: { role: string; content: string }[]): Promise<string> {
@@ -370,6 +407,9 @@ async function main() {
   }
   const summaryPath = join(OUT_DIR, summaryFilename(OUTFILE_SUFFIX));
   writeFileSync(summaryPath, JSON.stringify(summary, null, 2), "utf8");
+  if (REFERRAL_REPROMPT) {
+    console.log(`[run-eval] [ReferralReprompt] total fires this run: ${referralRepromptFires}`);
+  }
   console.log(`\n[run-eval] Wrote ${summaryPath} — done.`);
 }
 
