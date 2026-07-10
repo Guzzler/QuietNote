@@ -13,6 +13,7 @@ import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection"
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
 import { isBareDeflection, withDeflectionReprompt } from "./utils/responseShaping";
+import { shouldAttemptReferralReprompt, withReferralReprompt } from "./utils/referralReprompt";
 import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
 import { generateReflection, shouldRegenerate } from "./utils/sessionReflection";
 import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personalityPrompt";
@@ -406,9 +407,26 @@ export default function App() {
       // Deflection-shape guard (mechanism B): a bare crisis-resource
       // deflection gets ONE re-generation with the shaping instruction; the
       // second response is taken unconditionally. Guardrails still run below.
+      let deflectionFired = false;
       if (isBareDeflection(truncateToLastSentence(acc))) {
         console.warn("[ResponseShaping] Bare deflection detected — re-generating once");
+        deflectionFired = true;
         await streamTo(withDeflectionReprompt(messages));
+      }
+
+      // Referral-omission guard (Day 33): deterministic mechanism-ladder step
+      // for the prompt-resistant gratitude indirect-medical omission (Day-32
+      // lesson). Fires at most once, never on crisis turns, never after a
+      // deflection re-generation (one extra generation per turn, total).
+      // Guardrails still run below on whichever response is final.
+      if (
+        shouldAttemptReferralReprompt(firstMessage, truncateToLastSentence(acc), {
+          deflectionFired,
+          crisisDetected: detectCrisis(firstMessage).isCrisis,
+        })
+      ) {
+        console.warn("[ReferralReprompt] medical topic + no referral — re-generating once");
+        await streamTo(withReferralReprompt(messages));
       }
 
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamp
@@ -584,9 +602,26 @@ export default function App() {
       // Deflection-shape guard (mechanism B): a bare crisis-resource
       // deflection gets ONE re-generation with the shaping instruction; the
       // second response is taken unconditionally. Guardrails still run below.
+      let deflectionFired = false;
       if (isBareDeflection(truncateToLastSentence(acc))) {
         console.warn("[ResponseShaping] Bare deflection detected — re-generating once");
+        deflectionFired = true;
         await streamTo(withDeflectionReprompt(messages));
+      }
+
+      // Referral-omission guard (Day 33): deterministic mechanism-ladder step
+      // for the prompt-resistant gratitude indirect-medical omission (Day-32
+      // lesson). Fires at most once, never on crisis turns, never after a
+      // deflection re-generation (one extra generation per turn, total).
+      // Guardrails still run below on whichever response is final.
+      if (
+        shouldAttemptReferralReprompt(text, truncateToLastSentence(acc), {
+          deflectionFired,
+          crisisDetected: crisisResult.isCrisis,
+        })
+      ) {
+        console.warn("[ReferralReprompt] medical topic + no referral — re-generating once");
+        await streamTo(withReferralReprompt(messages));
       }
 
       // Finalize: truncate to last complete sentence, remove temp flag and update timestamps
