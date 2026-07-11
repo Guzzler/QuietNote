@@ -28,6 +28,8 @@ decisions, release gate, queue format).
   release day (see R4). Production behavior is verified locally via
   `npm run build` + `npx vite preview` (serves `dist/` at the configured
   `base`).
+- `README.md` today is the **stock Vite template** (React+TS+Vite boilerplate,
+  ESLint config advice) — R3a is a from-scratch write, not an edit.
 - No LICENSE file (see Blocked).
 - 1300+ Vitest tests; `npm run build` is TS-strict and must stay green.
 
@@ -50,11 +52,15 @@ decisions, release gate, queue format).
   `actions/upload-pages-artifact` on `dist/`) and a deploy job
   (`actions/deploy-pages`) with permissions `contents: read`, `pages: write`,
   `id-token: write` and a `pages` concurrency group; **gate the deploy job
-  with `if: !github.event.repository.private`** so runs skip cleanly while
+  with `if: ${{ !github.event.repository.private }}`** (the `${{ }}` wrapper
+  is required — bare `if: !...` is invalid YAML, `!` starts a tag) so runs
+  skip cleanly while
   the repo is private and light up automatically at release day (the build
   job doubles as CI meanwhile). Do NOT enable Pages and do NOT touch repo
   visibility — both are R4/release-day. Set Vite `base: "/QuietNote/"`
-  (confirm `npm run dev` still serves at `/`). → Verify: PR, merge, `gh run
+  (note: Vite applies `base` in dev too, so `npm run dev` will serve at
+  `http://127.0.0.1:5173/QuietNote/` from then on — expected, don't "fix"
+  it). → Verify: PR, merge, `gh run
   watch` shows build job green + deploy job skipped; `npx vite preview`
   serves the app shell at `http://localhost:4173/QuietNote/` with zero 404s;
   screenshot to `docs/screenshots/2026-07-10/`.
@@ -67,15 +73,25 @@ decisions, release gate, queue format).
   them); if a backend fails under the production build, record the exact
   console error here and queue the follow-up — do not block this task's PR
   on fixing it. (Live-URL re-run happens at R4.)
-- [ ] 2026-07-10 · **R3a — README rewrite for strangers**: read the current
-  `README.md` first; rewrite top-down for a visitor: what QuietNote is (2–3
-  sentences), a "live app" line with the future URL noted as *activating at
-  release* (`https://guzzler.github.io/QuietNote/`), the privacy story (all
-  inference in-browser, IndexedDB-only storage, open source so the claim is
-  verifiable), browser requirements (WebGPU reality), model-download
-  expectations (size + one-time, from R1b), 2–3 screenshots; move dev setup
-  below the fold. Do NOT add a LICENSE file (Sharang's call). → Verify:
-  renders correctly on the repo front page; screenshots committed.
+- [ ] 2026-07-10 · **R3a — README rewrite for strangers**: the current
+  `README.md` is the stock Vite template — replace it entirely. Use the
+  decided hero copy verbatim (below), then: a "live app" line with the
+  future URL noted as *activating at release*
+  (`https://guzzler.github.io/QuietNote/`), the privacy story (all inference
+  in-browser, IndexedDB-only storage, open source so the claim is
+  verifiable), the four modes in one line each (freewrite, check-in, thought
+  record, gratitude), an honest safety note (AI journaling companion, not
+  therapy or crisis support), browser requirements (WebGPU reality),
+  model-download expectations (size + one-time, from R1b — use "roughly a
+  couple of GB" placeholder if R1b hasn't landed), 2–3 screenshots; dev
+  setup below the fold. Do NOT add a LICENSE file (Sharang's call).
+  **Decided hero copy (2026-07-10):**
+  > **QuietNote** is a private AI journal that runs entirely in your
+  > browser. The language model downloads to your device and every word you
+  > write stays in local browser storage — nothing you type is ever sent to
+  > a server. It's open source so you don't have to take that claim on
+  > faith.
+  → Verify: renders correctly on the repo front page; screenshots committed.
 
 ## Ledger
 
