@@ -46,7 +46,7 @@ decisions, release gate, queue format).
 
 ## Task queue
 
-- [ ] 2026-07-10 · **R1a — Pages deploy workflow (dormant until public)**:
+- [x] 2026-07-10 · **R1a — Pages deploy workflow (dormant until public)** (PR #79):
   add `.github/workflows/deploy.yml` — on push to `main`: build job (`npm
   ci`, `npm run build`, `actions/configure-pages` +
   `actions/upload-pages-artifact` on `dist/`) and a deploy job
@@ -97,6 +97,7 @@ decisions, release gate, queue format).
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-10 | R1a — Pages deploy workflow (dormant) + Vite base | #79 | Shipped. Build job = CI; deploy job gated on `!private`, skips until R4. Found+fixed `/logo.svg` absolute-path 404 under base (App.tsx → `import.meta.env.BASE_URL`). `vite preview` at `/QuietNote/` zero 404s; 1318 tests green. |
 
 ## Blocked on Sharang
 
