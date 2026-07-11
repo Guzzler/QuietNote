@@ -64,7 +64,10 @@ decisions, release gate, queue format).
   watch` shows build job green + deploy job skipped; `npx vite preview`
   serves the app shell at `http://localhost:4173/QuietNote/` with zero 404s;
   screenshot to `docs/screenshots/2026-07-10/`.
-- [ ] 2026-07-10 · **R1b — Production-build backend smoke (local)**: against
+- [x] 2026-07-10 · **R1b — Production-build backend smoke (local)** (PR #80 —
+  see "R1b smoke results" below; WebLLM ✅, Transformers.js ✅, MediaPipe ❌
+  inference error recorded, Lora-font production bug found; follow-ups
+  queued): against
   `npx vite preview` (the built `dist/`, not the dev server) in a real
   browser session: default backend downloads its model (progress visible),
   one full journal exchange streams, reload → session persists (IndexedDB).
@@ -73,6 +76,30 @@ decisions, release gate, queue format).
   them); if a backend fails under the production build, record the exact
   console error here and queue the follow-up — do not block this task's PR
   on fixing it. (Live-URL re-run happens at R4.)
+- [ ] 2026-07-10 · **R1c — Fix Lora serif font missing from production build**:
+  `npm run build` (rolldown-vite) does not emit the
+  `@fontsource-variable/lora` woff2 files — `dist/assets/index-*.css`
+  references `files/lora-*-wght-normal.woff2` but no woff2 exists anywhere in
+  `dist/` (build log warns "didn't resolve at build time"). At runtime the
+  SPA fallback serves index.html for the font URL → console `OTS parsing
+  error: invalid sfntVersion: 1008821359` (that value is ASCII `<!DO`) and
+  the writing surface silently falls back to a non-Lora serif. Fix so the
+  woff2 files are emitted and load (e.g. import the font files explicitly or
+  copy them via `public/`), keeping `VisualCalmGuards` green. → Verify:
+  `npx vite preview`, network shows woff2 200 with font content-type, no OTS
+  console error, screenshot of writing surface in Lora.
+- [ ] 2026-07-10 · **R1d — MediaPipe backend fails at inference under the
+  production build**: model (~3 GB `gemma-4-E2B-it-web.task` from HF
+  `litert-community`) downloads and the engine initializes ("Graph
+  successfully started running"), but the first send fails with console
+  `INVALID_ARGUMENT: CalculatorGraph::Run() failed` + `[newSession] Inference
+  failed`, and the entry produces no reply. Also observed: MediaPipe leaves
+  no Cache Storage entry (unlike webllm/* and transformers-cache), so the
+  ~3 GB model likely re-downloads every load. Reproduce (also check dev
+  server to see if it's production-specific), then either fix or apply the
+  grounding's fix ladder (honest per-backend UI note — never silently ship a
+  broken backend picker). → Verify: full exchange on MediaPipe on `vite
+  preview`, or the UI note shipped; screenshots either way.
 - [ ] 2026-07-10 · **R3a — README rewrite for strangers**: the current
   `README.md` is the stock Vite template — replace it entirely. Use the
   decided hero copy verbatim (below), then: a "live app" line with the
@@ -93,11 +120,23 @@ decisions, release gate, queue format).
   > faith.
   → Verify: renders correctly on the repo front page; screenshots committed.
 
+## R1b smoke results (2026-07-10, `npx vite preview` on built `dist/`, real Chrome, Windows 11 + WebGPU)
+
+| backend | model | download (measured) | result |
+|---|---|---|---|
+| WebLLM (default) | Gemma 2 2B q4f16 | **1.49 GB** model + 5.3 MB wasm (Cache Storage `webllm/*`) | ✅ progress UI visible → full exchange streamed → reload → session persisted (IndexedDB) |
+| Transformers.js | Gemma 4 E2B ONNX q4f16 | **3.15 GB** (Cache Storage `transformers-cache`; ~7 min on test connection) | ✅ full exchange streamed (engine switch persists via `quietnote-runtime` localStorage; model loads on next boot, not immediately at switch) |
+| MediaPipe | Gemma 4 E2B LiteRT (`gemma-4-E2B-it-web.task`, ~3 GB) | downloads + engine initializes; **no Cache Storage entry → likely re-downloads every load** | ❌ first send fails: `INVALID_ARGUMENT: CalculatorGraph::Run() failed` / `[newSession] Inference failed`; no reply rendered → queued R1d |
+
+Cross-cutting: Lora serif font broken in production build (missing woff2 in
+`dist/`) → queued R1c. Total storage with two model caches: ~4.65 GB.
+
 ## Ledger
 
 | date | item | PR | outcome |
 |---|---|---|---|
 | 2026-07-10 | R1a — Pages deploy workflow (dormant) + Vite base | #79 | Shipped. Build job = CI; deploy job gated on `!private`, skips until R4. Found+fixed `/logo.svg` absolute-path 404 under base (App.tsx → `import.meta.env.BASE_URL`). `vite preview` at `/QuietNote/` zero 404s; 1318 tests green. |
+| 2026-07-10 | R1b — Production-build backend smoke (local) | #80 | WebLLM ✅ (1.49 GB, exchange + persistence), Transformers.js ✅ (3.15 GB, exchange), MediaPipe ❌ (`CalculatorGraph::Run() failed` at inference; no model cache) → queued R1d. Found Lora font missing from `dist/` → queued R1c. Screenshots in `docs/screenshots/2026-07-10/`. |
 
 ## Blocked on Sharang
 
