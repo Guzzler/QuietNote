@@ -1,73 +1,52 @@
-# React + TypeScript + Vite
+# QuietNote
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**QuietNote** is a private AI journal that runs entirely in your browser. The language model downloads to your device and every word you write stays in local browser storage — nothing you type is ever sent to a server. It's open source so you don't have to take that claim on faith.
 
-Currently, two official plugins are available:
+**Live app:** `https://guzzler.github.io/QuietNote/` *(activating at release)*
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![QuietNote writing surface](docs/screenshots/2026-07-10/r1a-preview-app-shell.png)
 
-## React Compiler
+## How privacy actually works here
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **All AI inference happens in your browser.** The model runs on your own hardware via WebGPU — there is no API, no backend, no account.
+- **Your journal lives in your browser's local storage (IndexedDB) only.** Entries, moods, and sessions never leave your device. You can export or erase everything from the privacy dashboard at any time.
+- **The only network traffic is the one-time model download** from public model CDNs (Hugging Face / WebLLM). After that, journaling works offline.
+- **No telemetry, no analytics, no tracking.** None.
+- **The code is open source**, so you can verify every one of these claims yourself instead of trusting a privacy policy.
 
-## Expanding the ESLint configuration
+## Four ways to write
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Free Write** — start typing whatever's on your mind; the companion reflects and asks gentle follow-ups.
+- **Gratitude** — capture what you're thankful for and sit with it a little longer.
+- **Check-in** — a short guided pulse on how you're doing right now.
+- **Thought Record** — walk a difficult thought through a structured CBT-style reframe.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+![A journal exchange](docs/screenshots/2026-07-10/r1b-webllm-exchange.png)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## An honest note on what this is
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+QuietNote is an **AI journaling companion — not therapy, not a therapist, and not crisis support**. It's built with guardrails (crisis detection, response limits, a persistent disclaimer), but it is software, not care. If you're in crisis, please reach out to a professional or a crisis line; the app will point you to resources, and means it.
+
+## What you need to run it
+
+- **A WebGPU-capable browser**: recent Chrome or Edge on desktop are the reliable choices today. Firefox and Safari support is still uneven; unsupported browsers get an honest message rather than a broken app.
+- **A one-time model download**: the default model (Gemma 2 2B via WebLLM) is about **1.5 GB**, downloaded once and cached by your browser. Optional alternative engines (Gemma 4 E2B via Transformers.js or MediaPipe) run larger — roughly **3 GB**.
+- **A reasonably capable device**: local inference is real work; a laptop or desktop with a decent GPU gives the best experience. Mobile is not the target right now.
+- Sessions persist across reloads — close the tab, come back, pick up where you left off.
+
+---
+
+## Development
+
+React 19 + TypeScript (strict) + Vite, Tailwind CSS 4, Framer Motion. Inference backends: [WebLLM](https://github.com/mlc-ai/web-llm) (WebGPU), [Transformers.js](https://github.com/huggingface/transformers.js) (ONNX), and [MediaPipe LLM Inference](https://ai.google.dev/edge/mediapipe/solutions/genai/llm_inference) (LiteRT). Storage is IndexedDB via the browser — there is no server component at all.
+
+```bash
+npm install
+npm run dev      # dev server at http://127.0.0.1:5173/QuietNote/
+npm run test     # 1300+ Vitest tests
+npm run build    # production build (TypeScript strict)
+npm run lint
+npx vite preview # serve the production build locally
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The safety-relevant modules (`src/prompts/`, `src/utils/crisisDetection.ts`, `src/utils/responseGuardrails.ts`, `src/utils/responseShaping.ts`, `src/utils/referralReprompt.ts`) are load-bearing and gate releases; changes there run a full eval read before merging.
