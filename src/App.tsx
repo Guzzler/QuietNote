@@ -713,7 +713,7 @@ export default function App() {
           {/* App identity */}
           <div className="flex items-center justify-center gap-2 mb-1">
             <div className="p-1.5 rounded-xl bg-indigo-100">
-              <img src="/logo.svg" alt="" className="h-5 w-5" />
+              <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="h-5 w-5" />
             </div>
             <h2 className="text-lg font-semibold text-slate-800">Quietnote</h2>
           </div>
@@ -816,7 +816,7 @@ export default function App() {
       >
         <div className="w-full px-6 py-3 flex items-center gap-3">
           <div className="p-2 rounded-xl bg-indigo-50">
-            <img src="/logo.svg" alt="Quietnote logo" className="h-5 w-5" />
+            <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Quietnote logo" className="h-5 w-5" />
           </div>
           <div>
             <h1 className="text-xl font-semibold">Quietnote</h1>
