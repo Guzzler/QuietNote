@@ -6,12 +6,20 @@ reload) at a stable public URL, and the README tells them honestly what they
 are getting. Rules of engagement: [`README.md`](README.md) (standing
 decisions, release gate, queue format).
 
-## Grounding (verified 2026-07-10 — planner: re-verify before editing)
+## Grounding (verified 2026-07-11 — planner: re-verify before editing)
 
-- Client-only Vite app; `vite.config.ts` sets **no `base`** today — GitHub
-  Pages project URL (`https://guzzler.github.io/QuietNote/`) needs
-  `base: "/QuietNote/"` or assets 404.
+- Client-only Vite app; `vite.config.ts` sets `base: "/QuietNote/"` (R1a) for
+  the GitHub Pages project URL (`https://guzzler.github.io/QuietNote/`).
 - Single page, no client router → no SPA-404 fallback expected (verify).
+- **Unsupported-browser state (verified 2026-07-11):**
+  `src/components/WebGPUFallback.tsx` exists and App.tsx returns it *instead
+  of the app* (`fixed inset-0 z-50` full-screen card) when the active
+  runtime's support check fails. Its copy says "You can still use QuietNote
+  for writing" — **contradicted by the behavior: the screen blocks all
+  writing.** Also, `transformersjs-engine.ts` reports itself always-supported
+  (WASM fallback), so a WebGPU-less browser is only blocked because the
+  *default* runtime (WebLLM) is WebGPU-only — the block screen offers no way
+  to switch. R2 must verify this in a real Firefox/Safari session.
 - 3 backends: WebLLM (Gemma 2 2B, WebGPU), Transformers.js v4 (Gemma 4 E2B
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
@@ -37,57 +45,32 @@ decisions, release gate, queue format).
 
 | id | what | status |
 |---|---|---|
-| R1a | Pages deploy workflow, gated to skip while private (+ Vite `base`) | queued |
-| R1b | Production-build smoke test of all 3 backends + persistence on local `vite preview` | queued |
-| R2 | Cold-start audit (fresh profile: download UX, failure states, browser matrix doc, graceful unsupported-browser state, mobile honesty) — on `vite preview` now, re-run on the live URL at release day | after R1b |
-| R3a | README rewrite for strangers | queued |
+| R1a | Pages deploy workflow, gated to skip while private (+ Vite `base`) | DONE (PR #79) |
+| R1b | Production-build smoke test of all 3 backends + persistence on local `vite preview` | DONE (PR #80) |
+| R1c | Lora font missing from production build | queued |
+| R1d | MediaPipe backend fails at inference under production build | queued |
+| R2 | Cold-start audit (fresh profile: download UX, failure states, browser matrix doc, graceful unsupported-browser state, mobile honesty) — on `vite preview` now, re-run on the live URL at release day | queued |
+| R3a | README rewrite for strangers | DONE (PR #81) |
 | R3b | In-app about/footer link to the repo ("open source — verify it yourself") | after R3a |
 | R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | blocked on Sharang |
 
 ## Task queue
 
-- [x] 2026-07-10 · **R1a — Pages deploy workflow (dormant until public)** (PR #79):
-  add `.github/workflows/deploy.yml` — on push to `main`: build job (`npm
-  ci`, `npm run build`, `actions/configure-pages` +
-  `actions/upload-pages-artifact` on `dist/`) and a deploy job
-  (`actions/deploy-pages`) with permissions `contents: read`, `pages: write`,
-  `id-token: write` and a `pages` concurrency group; **gate the deploy job
-  with `if: ${{ !github.event.repository.private }}`** (the `${{ }}` wrapper
-  is required — bare `if: !...` is invalid YAML, `!` starts a tag) so runs
-  skip cleanly while
-  the repo is private and light up automatically at release day (the build
-  job doubles as CI meanwhile). Do NOT enable Pages and do NOT touch repo
-  visibility — both are R4/release-day. Set Vite `base: "/QuietNote/"`
-  (note: Vite applies `base` in dev too, so `npm run dev` will serve at
-  `http://127.0.0.1:5173/QuietNote/` from then on — expected, don't "fix"
-  it). → Verify: PR, merge, `gh run
-  watch` shows build job green + deploy job skipped; `npx vite preview`
-  serves the app shell at `http://localhost:4173/QuietNote/` with zero 404s;
-  screenshot to `docs/screenshots/2026-07-10/`.
-- [x] 2026-07-10 · **R1b — Production-build backend smoke (local)** (PR #80 —
-  see "R1b smoke results" below; WebLLM ✅, Transformers.js ✅, MediaPipe ❌
-  inference error recorded, Lora-font production bug found; follow-ups
-  queued): against
-  `npx vite preview` (the built `dist/`, not the dev server) in a real
-  browser session: default backend downloads its model (progress visible),
-  one full journal exchange streams, reload → session persists (IndexedDB).
-  Then try the other two backends. → Verify: screenshots of the exchange;
-  record measured model-download sizes in this doc (human-feedback F2 needs
-  them); if a backend fails under the production build, record the exact
-  console error here and queue the follow-up — do not block this task's PR
-  on fixing it. (Live-URL re-run happens at R4.)
-- [ ] 2026-07-10 · **R1c — Fix Lora serif font missing from production build**:
-  `npm run build` (rolldown-vite) does not emit the
-  `@fontsource-variable/lora` woff2 files — `dist/assets/index-*.css`
-  references `files/lora-*-wght-normal.woff2` but no woff2 exists anywhere in
-  `dist/` (build log warns "didn't resolve at build time"). At runtime the
-  SPA fallback serves index.html for the font URL → console `OTS parsing
-  error: invalid sfntVersion: 1008821359` (that value is ASCII `<!DO`) and
-  the writing surface silently falls back to a non-Lora serif. Fix so the
-  woff2 files are emitted and load (e.g. import the font files explicitly or
-  copy them via `public/`), keeping `VisualCalmGuards` green. → Verify:
-  `npx vite preview`, network shows woff2 200 with font content-type, no OTS
-  console error, screenshot of writing surface in Lora.
+- [ ] 2026-07-10 · **R1c — Fix Lora serif font missing from production build**
+  (root cause confirmed 2026-07-11): the font enters via CSS
+  `@import "@fontsource-variable/lora"` in `src/index.css:3`; the built
+  `dist/assets/index-*.css` still contains the package's relative
+  `url(./files/lora-*-wght-normal.woff2)` **verbatim** (unrewritten) and no
+  woff2 is emitted anywhere in `dist/`. At runtime the font URL 404s/serves
+  index.html → console `OTS parsing error: invalid sfntVersion: 1008821359`
+  (ASCII `<!DO`) and the writing surface silently falls back to a non-Lora
+  serif. **First fix to try:** move the import to JS —
+  `import "@fontsource-variable/lora";` in `src/main.tsx` (Vite rebases
+  asset URLs in JS-imported CSS) and drop the CSS `@import`; fallback: copy
+  the woff2 files via `public/` with an explicit `@font-face`. Keep
+  `VisualCalmGuards` green. → Verify: `npx vite preview`, network shows
+  woff2 200 with font content-type, no OTS console error, screenshot of
+  writing surface in Lora.
 - [ ] 2026-07-10 · **R1d — MediaPipe backend fails at inference under the
   production build**: model (~3 GB `gemma-4-E2B-it-web.task` from HF
   `litert-community`) downloads and the engine initializes ("Graph
@@ -100,25 +83,33 @@ decisions, release gate, queue format).
   grounding's fix ladder (honest per-backend UI note — never silently ship a
   broken backend picker). → Verify: full exchange on MediaPipe on `vite
   preview`, or the UI note shipped; screenshots either way.
-- [x] 2026-07-10 · **R3a — README rewrite for strangers** (PR #81): the current
-  `README.md` is the stock Vite template — replace it entirely. Use the
-  decided hero copy verbatim (below), then: a "live app" line with the
-  future URL noted as *activating at release*
-  (`https://guzzler.github.io/QuietNote/`), the privacy story (all inference
-  in-browser, IndexedDB-only storage, open source so the claim is
-  verifiable), the four modes in one line each (freewrite, check-in, thought
-  record, gratitude), an honest safety note (AI journaling companion, not
-  therapy or crisis support), browser requirements (WebGPU reality),
-  model-download expectations (size + one-time, from R1b — use "roughly a
-  couple of GB" placeholder if R1b hasn't landed), 2–3 screenshots; dev
-  setup below the fold. Do NOT add a LICENSE file (Sharang's call).
-  **Decided hero copy (2026-07-10):**
-  > **QuietNote** is a private AI journal that runs entirely in your
-  > browser. The language model downloads to your device and every word you
-  > write stays in local browser storage — nothing you type is ever sent to
-  > a server. It's open source so you don't have to take that claim on
-  > faith.
-  → Verify: renders correctly on the repo front page; screenshots committed.
+- [ ] 2026-07-11 · **R2 — Cold-start audit on `vite preview`** (do after R1c +
+  R1d so findings aren't polluted by known bugs): with a fresh browser
+  profile (or fully cleared site data), walk the stranger's path against
+  `npm run build` + `npx vite preview`: first paint → what tells you a
+  model is downloading → progress honesty on a slow connection → first
+  exchange → reload persistence. Then the failure states: (a) Firefox and
+  (b) Safari if available — confirm the grounding's finding that
+  `WebGPUFallback` full-screen-blocks the app while its copy claims "You can
+  still use QuietNote for writing", and whether switching to Transformers.js
+  (WASM, always-supported) is possible from that state; (c) narrow/mobile
+  viewport honesty. Write the results as a browser-matrix section in this
+  doc; file each defect found as a proposed queue item — **do not fix in the
+  audit PR**. For the unsupported-browser contradiction, the decided
+  direction (2026-07-11) is below — apply it as a queue item only after the
+  audit confirms the behavior. → Verify: matrix in this doc, screenshots per
+  browser to `docs/screenshots/2026-07-11/`.
+
+**Decided (2026-07-11) — unsupported-browser state, pending R2 confirmation:**
+the screen must never promise what it blocks. Preferred end state: when only
+the default runtime is unsupported, offer "Try Transformers.js instead — it
+runs without WebGPU (slower)" as an action on the fallback card. If that's
+more than a small change, the cheap honest fix is copy-only — replace the
+"You can still use QuietNote for writing" paragraph with:
+> QuietNote's AI companion needs WebGPU, which this browser doesn't offer
+> yet. Your data never left this device — nothing was sent or lost. To use
+> QuietNote, open it in Chrome or Edge 113+ (or Chrome for Android 121+).
+Either way, no copy/behavior contradiction ships to strangers.
 
 ## R1b smoke results (2026-07-10, `npx vite preview` on built `dist/`, real Chrome, Windows 11 + WebGPU)
 
