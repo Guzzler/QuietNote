@@ -48,7 +48,7 @@ decisions, release gate, queue format).
 | R1a | Pages deploy workflow, gated to skip while private (+ Vite `base`) | DONE (PR #79) |
 | R1b | Production-build smoke test of all 3 backends + persistence on local `vite preview` | DONE (PR #80) |
 | R1c | Lora font missing from production build | DONE (PR #82) |
-| R1d | MediaPipe backend fails at inference under production build | queued |
+| R1d | MediaPipe backend fails at inference under production build | DONE (PR #83) |
 | R2 | Cold-start audit (fresh profile: download UX, failure states, browser matrix doc, graceful unsupported-browser state, mobile honesty) — on `vite preview` now, re-run on the live URL at release day | queued |
 | R3a | README rewrite for strangers | DONE (PR #81) |
 | R3b | In-app about/footer link to the repo ("open source — verify it yourself") | after R3a |
@@ -71,7 +71,7 @@ decisions, release gate, queue format).
   `VisualCalmGuards` green. → Verify: `npx vite preview`, network shows
   woff2 200 with font content-type, no OTS console error, screenshot of
   writing surface in Lora.
-- [ ] 2026-07-10 · **R1d — MediaPipe backend fails at inference under the
+- [x] 2026-07-10 · **R1d — MediaPipe backend fails at inference under the
   production build**: model (~3 GB `gemma-4-E2B-it-web.task` from HF
   `litert-community`) downloads and the engine initializes ("Graph
   successfully started running"), but the first send fails with console
@@ -83,6 +83,14 @@ decisions, release gate, queue format).
   grounding's fix ladder (honest per-backend UI note — never silently ship a
   broken backend picker). → Verify: full exchange on MediaPipe on `vite
   preview`, or the UI note shipped; screenshots either way.
+- [ ] 2026-07-11 · **R1e — MediaPipe model has no Cache Storage entry** (split
+  from R1d, observed in R1b): unlike `webllm/*` and `transformers-cache`, the
+  ~3 GB `.task` download is not persisted in Cache Storage, so it re-downloads
+  whenever the browser HTTP cache evicts it. Investigate caching the fetch
+  ourselves (Cache Storage + `modelAssetBuffer` ReadableStream) vs. accepting
+  HTTP-cache behavior with an honest size note in the backend picker. → Verify:
+  second load after clearing HTTP cache (DevTools "Disable cache" off,
+  Cache Storage intact) does not re-download 3 GB, or the honest note ships.
 - [ ] 2026-07-11 · **R2 — Cold-start audit on `vite preview`** (do after R1c +
   R1d so findings aren't polluted by known bugs): with a fresh browser
   profile (or fully cleared site data), walk the stranger's path against
@@ -126,6 +134,7 @@ Cross-cutting: Lora serif font broken in production build (missing woff2 in
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-11 | R1d — MediaPipe first-send inference failure | #83 | Not production-specific: MediaPipe's `maxTokens` is a TOTAL (input+output) budget and was 1024 while the app builds prompts to `MODEL_CONTEXT_LIMIT` 4096 (system prompt alone ~1.6–1.9k tokens) → first send always overflowed → `INVALID_ARGUMENT: CalculatorGraph::Run() failed`. Fix: `maxTokens: MODEL_CONTEXT_LIMIT` + pinned the CDN wasm fileset to the installed `@mediapipe/tasks-genai@0.10.27` (was unpinned → JS/WASM drift risk). Verified full exchange on `vite preview` (reply streamed, no console errors); 2 regression tests; 1320 green. Cache Storage gap (re-download) → queued R1e. |
 | 2026-07-11 | R1c — Lora font missing from production build | #82 | Root cause as diagnosed: CSS `@import "@fontsource-variable/lora"` shipped the package's relative `url(./files/...)` verbatim; no woff2 in `dist/`. Fix: JS import `@fontsource-variable/lora/index.css` in `main.tsx` (bare specifier fails TS strict — package ships no types). Built CSS now has `url(/QuietNote/assets/lora-*.woff2)`, 8 woff2 emitted, preview: woff2 200, no OTS error, `document.fonts.check("16px Lora Variable")` true, textarea computed font Lora. 1318 tests green. |
 | 2026-07-10 | R1a — Pages deploy workflow (dormant) + Vite base | #79 | Shipped. Build job = CI; deploy job gated on `!private`, skips until R4. Found+fixed `/logo.svg` absolute-path 404 under base (App.tsx → `import.meta.env.BASE_URL`). `vite preview` at `/QuietNote/` zero 404s; 1318 tests green. |
 | 2026-07-10 | R3a — README rewrite for strangers | #81 | Stock Vite template replaced. Decided hero copy verbatim; live-URL line marked "activating at release"; privacy story, 4 modes, honest safety note, WebGPU requirements, measured download sizes from R1b (1.5 GB default / ~3 GB alternates); 2 screenshots; dev setup below the fold. No LICENSE added (Sharang's call). |

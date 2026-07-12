@@ -15,6 +15,12 @@ import type {
   LoadProgress,
   GenerateOptions,
 } from "./types";
+import { MODEL_CONTEXT_LIMIT } from "../utils/tokenEstimator";
+
+/** Must match the @mediapipe/tasks-genai version in package.json — the WASM
+ * fileset is fetched from the CDN and an unpinned URL drifts to `latest`,
+ * mismatching the bundled JS API. */
+const TASKS_GENAI_VERSION = "0.10.27";
 
 const MODEL_URL =
   "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.task";
@@ -76,7 +82,7 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
 
       // Resolve WASM fileset for GenAI tasks
       const genaiFileset = await FilesetResolver.forGenAiTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-genai/wasm",
+        `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-genai@${TASKS_GENAI_VERSION}/wasm`,
       );
 
       onProgress?.({
@@ -89,7 +95,11 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
           modelAssetPath: MODEL_URL,
           delegate: "GPU",
         },
-        maxTokens: 1024,
+        // MediaPipe's maxTokens is the TOTAL budget (input + output). The app
+        // builds prompts up to MODEL_CONTEXT_LIMIT (system alone is ~1.6-1.9k
+        // tokens); 1024 here made the first send overflow the graph with
+        // INVALID_ARGUMENT: CalculatorGraph::Run() failed.
+        maxTokens: MODEL_CONTEXT_LIMIT,
         topK: 40,
         temperature: 0.8,
         randomSeed: Date.now(),
