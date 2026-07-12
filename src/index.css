@@ -1,6 +1,8 @@
 @import "tailwindcss";
-/* Bundled serif for the writing surface — packaged woff2, no CDN fetch */
-@import "@fontsource-variable/lora";
+/* Lora (bundled serif, no CDN fetch) is imported in src/main.tsx as a JS
+   import — Vite only rebases the package's relative woff2 url()s for
+   JS-imported CSS; a CSS @import here ships the urls unrewritten and the
+   fonts 404 in the production build. */
 
 @theme {
   --font-serif: "Lora Variable", Georgia, "Iowan Old Style", "Times New Roman", serif;

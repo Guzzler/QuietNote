@@ -47,7 +47,7 @@ decisions, release gate, queue format).
 |---|---|---|
 | R1a | Pages deploy workflow, gated to skip while private (+ Vite `base`) | DONE (PR #79) |
 | R1b | Production-build smoke test of all 3 backends + persistence on local `vite preview` | DONE (PR #80) |
-| R1c | Lora font missing from production build | queued |
+| R1c | Lora font missing from production build | DONE (PR #82) |
 | R1d | MediaPipe backend fails at inference under production build | queued |
 | R2 | Cold-start audit (fresh profile: download UX, failure states, browser matrix doc, graceful unsupported-browser state, mobile honesty) — on `vite preview` now, re-run on the live URL at release day | queued |
 | R3a | README rewrite for strangers | DONE (PR #81) |
@@ -56,7 +56,7 @@ decisions, release gate, queue format).
 
 ## Task queue
 
-- [ ] 2026-07-10 · **R1c — Fix Lora serif font missing from production build**
+- [x] 2026-07-10 · **R1c — Fix Lora serif font missing from production build**
   (root cause confirmed 2026-07-11): the font enters via CSS
   `@import "@fontsource-variable/lora"` in `src/index.css:3`; the built
   `dist/assets/index-*.css` still contains the package's relative
@@ -126,6 +126,7 @@ Cross-cutting: Lora serif font broken in production build (missing woff2 in
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-11 | R1c — Lora font missing from production build | #82 | Root cause as diagnosed: CSS `@import "@fontsource-variable/lora"` shipped the package's relative `url(./files/...)` verbatim; no woff2 in `dist/`. Fix: JS import `@fontsource-variable/lora/index.css` in `main.tsx` (bare specifier fails TS strict — package ships no types). Built CSS now has `url(/QuietNote/assets/lora-*.woff2)`, 8 woff2 emitted, preview: woff2 200, no OTS error, `document.fonts.check("16px Lora Variable")` true, textarea computed font Lora. 1318 tests green. |
 | 2026-07-10 | R1a — Pages deploy workflow (dormant) + Vite base | #79 | Shipped. Build job = CI; deploy job gated on `!private`, skips until R4. Found+fixed `/logo.svg` absolute-path 404 under base (App.tsx → `import.meta.env.BASE_URL`). `vite preview` at `/QuietNote/` zero 404s; 1318 tests green. |
 | 2026-07-10 | R3a — README rewrite for strangers | #81 | Stock Vite template replaced. Decided hero copy verbatim; live-URL line marked "activating at release"; privacy story, 4 modes, honest safety note, WebGPU requirements, measured download sizes from R1b (1.5 GB default / ~3 GB alternates); 2 screenshots; dev setup below the fold. No LICENSE added (Sharang's call). |
 | 2026-07-10 | R1b — Production-build backend smoke (local) | #80 | WebLLM ✅ (1.49 GB, exchange + persistence), Transformers.js ✅ (3.15 GB, exchange), MediaPipe ❌ (`CalculatorGraph::Run() failed` at inference; no model cache) → queued R1d. Found Lora font missing from `dist/` → queued R1c. Screenshots in `docs/screenshots/2026-07-10/`. |
