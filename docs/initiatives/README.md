@@ -24,9 +24,16 @@ the planner no longer writes daily plan files).
    browser reaches one successful journal exchange at a stable public URL.
 2. [`human-feedback.md`](human-feedback.md) — 5–10 real people use QuietNote
    and their feedback reaches the loop (user-initiated only, zero telemetry).
+3. [`model-quality.md`](model-quality.md) — QLoRA fine-tune + conversational
+   eval so replies stop parroting the entry (added 2026-07-11 by Sharang,
+   interactive). Parallel track: does NOT block the soft launch unless
+   Sharang says so; its M0/M1 items are workable now, training (M3+) is
+   gated on his GPU/hosting go-ahead. Within this initiative's scope, new
+   conversational-quality eval dimensions are allowed (supersedes the parked
+   line below — Sharang 2026-07-11).
 
 Work `public-release` first; `human-feedback` items unblock as noted in that
-doc. Human-reported issues (GitHub issues / `docs/field-notes/`) outrank
+doc; `model-quality` items may fill remaining per-run capacity. Human-reported issues (GitHub issues / `docs/field-notes/`) outrank
 queued items once they exist; safety-relevant reports outrank everything.
 
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
