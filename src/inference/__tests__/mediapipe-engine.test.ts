@@ -21,7 +21,10 @@ vi.mock("@mediapipe/tasks-genai", () => ({
   },
 }));
 
+import { FilesetResolver, LlmInference } from "@mediapipe/tasks-genai";
 import { MediaPipeEngine, MEDIAPIPE_MODEL_REF } from "../mediapipe-engine";
+import { MODEL_CONTEXT_LIMIT } from "../../utils/tokenEstimator";
+import pkg from "../../../package.json";
 
 describe("MediaPipeEngine", () => {
   let engine: MediaPipeEngine;
@@ -66,6 +69,25 @@ describe("MediaPipeEngine", () => {
           // Should throw before yielding
         }
       }).rejects.toThrow("Engine not loaded");
+    });
+  });
+
+  describe("load options (R1d regression — first send overflowed the graph)", () => {
+    it("budgets maxTokens for the app's full prompt (input + output), not 1024", async () => {
+      await engine.load();
+      const options = vi.mocked(LlmInference.createFromOptions).mock
+        .calls[0][1] as { maxTokens?: number };
+      expect(options.maxTokens).toBeGreaterThanOrEqual(MODEL_CONTEXT_LIMIT);
+    });
+
+    it("pins the CDN wasm fileset to the installed @mediapipe/tasks-genai version", async () => {
+      await engine.load();
+      const filesetUrl = vi.mocked(FilesetResolver.forGenAiTasks).mock
+        .calls[0][0] as string;
+      const installed = (
+        pkg.dependencies["@mediapipe/tasks-genai"] as string
+      ).replace(/^[\^~]/, "");
+      expect(filesetUrl).toContain(`@mediapipe/tasks-genai@${installed}/`);
     });
   });
 
