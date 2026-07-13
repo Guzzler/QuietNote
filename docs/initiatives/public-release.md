@@ -17,9 +17,10 @@ decisions, release gate, queue format).
   runtime's support check fails. Its copy says "You can still use QuietNote
   for writing" — **contradicted by the behavior: the screen blocks all
   writing.** Also, `transformersjs-engine.ts` reports itself always-supported
-  (WASM fallback), so a WebGPU-less browser is only blocked because the
-  *default* runtime (WebLLM) is WebGPU-only — the block screen offers no way
-  to switch. R2 must verify this in a real Firefox/Safari session.
+  (WASM fallback), **but R2 (2026-07-12) proved that claim false**: the
+  current ONNX q4f16 model cannot load on WASM/CPU (`GatherBlockQuantized`
+  kernel not found) — see the R2 matrix. The copy-only fallback fix is the
+  viable direction (R2a).
 - 3 backends: WebLLM (Gemma 2 2B, WebGPU), Transformers.js v4 (Gemma 4 E2B
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
@@ -86,7 +87,13 @@ decisions, release gate, queue format).
   cache checked once, or clear browser cache, Cache Storage left intact)
   reaches ready WITHOUT re-downloading 3 GB (network tab shows no model
   fetch); full exchange still works; screenshots.
-- [ ] 2026-07-11 · **R2 — Cold-start audit on `vite preview`** (do after R1c +
+- [x] 2026-07-11 · **R2 — Cold-start audit on `vite preview`** (DONE
+  2026-07-12 with one scope caveat, PR #86 — matrix below. Real
+  Firefox/Safari sessions were not available in the loop environment; the
+  WebGPU-less state was exercised by removing `navigator.gpu` before boot,
+  which is the exact check every engine's `checkSupport` uses. Re-verify in
+  real Firefox/Safari on the live URL at release day, as the task already
+  planned.) (do after R1c +
   R1d so findings aren't polluted by known bugs): with a fresh browser
   profile (or fully cleared site data), walk the stranger's path against
   `npm run build` + `npx vite preview`: first paint → what tells you a
@@ -102,6 +109,37 @@ decisions, release gate, queue format).
   direction (2026-07-11) is below — apply it as a queue item only after the
   audit confirms the behavior. → Verify: matrix in this doc, screenshots per
   browser to `docs/screenshots/2026-07-11/`.
+
+**Proposed queue items from the R2 audit (2026-07-12 — planner: firm up):**
+
+- [ ] proposed · **R2a — Honest unsupported-browser fallback (copy-only
+  variant)**: R2 confirmed the contradiction (full-screen block + "You can
+  still use QuietNote for writing") AND invalidated the preferred variant —
+  "Try Transformers.js instead" does not work, see matrix: the ONNX q4f16
+  model fails on WASM/CPU (`GatherBlockQuantized` kernel not found). Apply
+  the decided copy-only fix below to `src/components/WebGPUFallback.tsx`,
+  and fix `transformersjs-engine.ts#checkSupport` to stop reporting
+  always-supported (its WASM claim is false with the current model — require
+  WebGPU like the others until a WASM-loadable model exists).
+- [ ] proposed · **R2b — Download-size honesty on the loading card**: a
+  cold start auto-downloads 1.49 GB (WebLLM default; 2.00–3.15 GB alternates)
+  with no size disclosure — "First time takes a few minutes" is the only
+  hint, and on mobile/cellular that's a real cost. Add the measured size to
+  the loading card copy (calm, one line, e.g. "downloads ~1.5 GB once, then
+  cached"). Keep it copy-only; no consent-gate UI unless Sharang asks.
+
+**R2 cold-start audit matrix (2026-07-12, `npm run build` + `npx vite
+preview`, Chromium via Playwright; screenshots in
+`docs/screenshots/2026-07-12/`):**
+
+| scenario | result |
+|---|---|
+| Cold start, fresh profile, desktop | ✅ First paint <2 s: calm loading card, spinner, % progress, "First time takes a few minutes. After that, it loads instantly." ⚠️ No size disclosure before a 1.49 GB download auto-starts → R2b |
+| Download progress honesty | ✅ WebLLM shows real %; MediaPipe shows real bytes-based % since R1e (PR #84). |
+| First exchange → reload persistence | ✅ Verified twice on 07-12 (R1e PR #84): exchange streams, sessions + model survive reload. |
+| WebGPU-less browser (`navigator.gpu` removed; proxy for Firefox/Safari) | ❌ Confirmed grounding: full-screen "WebGPU Not Available" card blocks ALL writing while its copy promises "You can still use QuietNote for writing"; no engine-switch affordance → R2a (`r2-webgpu-fallback-block.png`) |
+| Transformers.js without WebGPU | ❌ **Not actually WASM-capable with the current model**: ONNX q4f16 requires `com.microsoft.GatherBlockQuantized`, which has no CPU kernel → "Can't create a session … Kernel not found"; app at least fails visibly ("Something went wrong"). Invalidates the preferred "switch to Transformers.js" fix and the model-quality assumption that Transformers.js is the WASM-capable default candidate (`r2-transformersjs-wasm-failure.png`) |
+| Mobile 375×812 cold start | ✅ Loading card lays out cleanly at phone width (`r2-mobile-cold-start.png`); ⚠️ same missing size disclosure, worse on cellular → R2b |
 
 **Decided (2026-07-11) — unsupported-browser state, pending R2 confirmation:**
 the screen must never promise what it blocks. Preferred end state: when only
@@ -129,6 +167,7 @@ Cross-cutting: Lora serif font broken in production build (missing woff2 in
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-12 | R2 — Cold-start audit on `vite preview` | #86 | Audit-only PR (no fixes, per task). Matrix committed above; 2 defects filed as proposed queue items: R2a (fallback-card contradiction confirmed + preferred Transformers.js-switch variant invalidated — ONNX q4f16 has no WASM/CPU kernel path) and R2b (no download-size disclosure before a 1.49 GB auto-download). Scope caveat: WebGPU-less state simulated by removing `navigator.gpu` (the exact check `checkSupport` uses); real Firefox/Safari re-run stays tied to the release-day live-URL pass. Cross-initiative flag: model-quality's "Transformers.js (WASM-capable) as default after WebLLM removal" assumption is contradicted — noted in model-quality.md. |
 | 2026-07-12 | R1e — MediaPipe model persisted in Cache Storage | #84 | App now owns the fetch: miss → byte-counted stream into `mediapipe-cache` (real progress from Content-Length, e.g. "48% of 2.0 GB"), hit → stream from disk into `modelAssetBuffer` (dropped `modelAssetPath`). **Measured: the .task is 2.00 GB, not ~3 GB as previously documented.** Verified on `vite preview` (real Chromium profile): first load populated the cache entry + progress tracked the download; reload reached ready in <30 s with ZERO huggingface requests; full exchange before and after reload; sessions persisted. Two fallbacks, both tested: quota-precheck skips the put when the origin can't hold the model (avoids a doomed put + double download — hit for real in a 7.2 GB-quota browser profile, where load still succeeded by streaming direct with real progress), and put-failure refetches direct. 6 new tests; 1326 green. Total storage all 3 model caches ≈ 6.65 GB. |
 | 2026-07-11 | R1d — MediaPipe first-send inference failure | #83 | Not production-specific: MediaPipe's `maxTokens` is a TOTAL (input+output) budget and was 1024 while the app builds prompts to `MODEL_CONTEXT_LIMIT` 4096 (system prompt alone ~1.6–1.9k tokens) → first send always overflowed → `INVALID_ARGUMENT: CalculatorGraph::Run() failed`. Fix: `maxTokens: MODEL_CONTEXT_LIMIT` + pinned the CDN wasm fileset to the installed `@mediapipe/tasks-genai@0.10.27` (was unpinned → JS/WASM drift risk). Verified full exchange on `vite preview` (reply streamed, no console errors); 2 regression tests; 1320 green. Cache Storage gap (re-download) → queued R1e. |
 | 2026-07-11 | R1c — Lora font missing from production build | #82 | Root cause as diagnosed: CSS `@import "@fontsource-variable/lora"` shipped the package's relative `url(./files/...)` verbatim; no woff2 in `dist/`. Fix: JS import `@fontsource-variable/lora/index.css` in `main.tsx` (bare specifier fails TS strict — package ships no types). Built CSS now has `url(/QuietNote/assets/lora-*.woff2)`, 8 woff2 emitted, preview: woff2 200, no OTS error, `document.fonts.check("16px Lora Variable")` true, textarea computed font Lora. 1318 tests green. |

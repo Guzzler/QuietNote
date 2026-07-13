@@ -30,7 +30,12 @@ prompt) — verify truncation behavior doesn't break coherence.
   queue removing the WebLLM backend, making Transformers.js (WASM-capable →
   works without WebGPU) the default. That would also dissolve most of
   public-release's unsupported-browser problem. Do not remove before the
-  baseline exists.
+  baseline exists. **Caveat from the R2 audit (2026-07-12, PR #86): the
+  WASM-capable premise is currently false** — the ONNX q4f16 export fails on
+  WASM/CPU (`GatherBlockQuantized` has no CPU kernel), so Transformers.js
+  today requires WebGPU too. If WebLLM removal proceeds, the M5 conversion
+  step must pick a WASM-loadable quantization (or the unsupported-browser
+  problem does NOT dissolve).
 
 This initiative supersedes the README parked-list line about eval work *for
 this initiative's scope only* (new conversational-quality eval dimensions are
