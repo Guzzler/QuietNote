@@ -96,7 +96,7 @@ parked list stays parked.
 | M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | queued |
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | queued |
 | M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | after M1 spec |
-| M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab Pro), merge adapter → fp16 checkpoint on HF | base model + GPU decided 2026-07-12; needs HF account/token setup (see Blocked) |
+| M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12 (compute + HF token verified); waits on M2 dataset + notebook |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | after M3 |
 | M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4 |
 
@@ -143,11 +143,17 @@ parked list stays parked.
 
 ## Blocked on Sharang
 
-- **M3 setup** (base model = Gemma 4 E2B and Colab Pro decided 2026-07-12;
-  HF account = **Sharangp**, write token stored locally in git-ignored
-  `.env.local` as `HF_TOKEN` 2026-07-12 — never commit it, never expose it
-  via a `VITE_`-prefixed name, Sharang pastes it into Colab at train time):
-  1. Activate a **Colab Pro** subscription on his Google account.
-  2. Base repo `google/gemma-4-E2B-it` is Apache 2.0 and appears ungated;
-     if the notebook's first pull hits a terms gate anyway, Sharang accepts
-     it on the Sharangp account.
+- ~~**M3 setup**~~ **COMPLETE 2026-07-12 — M3 is fully unblocked** (waits
+  only on M2 dataset + the training notebook). State for future runs:
+  - **Compute:** Colab compute purchased and active on Sharang's Google
+    account (2026-07-12). Budget rule: stay within the already-purchased
+    units; never queue anything that requires buying more without asking
+    Sharang. Sharang runs the notebook himself — the loop only writes it.
+  - **HF hosting:** account **Sharangp**. Write token lives in git-ignored
+    `.env.local` (repo root) as `HF_TOKEN` — verified 2026-07-12 via
+    `whoami-v2`: fine-grained, `repo.write` scoped to Sharangp only. Never
+    commit it, never print it, never expose it via a `VITE_`-prefixed name;
+    Sharang pastes it into Colab at train time.
+  - Base repo `google/gemma-4-E2B-it` is Apache 2.0 and appears ungated; if
+    the notebook's first pull hits a terms gate anyway, Sharang accepts it
+    on the Sharangp account.
