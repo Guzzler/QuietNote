@@ -1,0 +1,54 @@
+name: Report a bug
+description: Something broke or errored
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Please don't paste your journal entries here.** QuietNote never sends
+        > your writing anywhere, and this issue is public — describe what happened
+        > in your own words instead of quoting what you wrote.
+  - type: textarea
+    id: doing
+    attributes:
+      label: What were you doing?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened instead — or what would make it better?
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Browser + OS
+      placeholder: e.g. Chrome 126 on Windows 11
+    validations:
+      required: false
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Which AI engine were you using (Settings → engine)?
+      options:
+        - WebLLM (default)
+        - Transformers.js
+        - MediaPipe
+        - Not sure
+    validations:
+      required: false
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors, if any
+      description: Press F12 → Console tab, copy any red text. Check it for personal text before pasting.
+      render: shell
+    validations:
+      required: false

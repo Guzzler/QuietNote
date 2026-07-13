@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Prefer email?
+    url: mailto:sharangpaiusa@gmail.com
+    about: Send feedback privately by email instead.
