@@ -24,6 +24,12 @@ decisions, release gate, queue format).
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
   the Pages origin). `src/utils/webgpuCheck.ts` exists (capability detection).
+- **MediaPipe model caching (verified 2026-07-12):** the engine hands
+  MediaPipe a URL (`modelAssetPath`) so the download bypasses Cache Storage
+  entirely, and its `onProgress` is synthetic (0.05 → 0.1 → 1, no real
+  download progress). The installed `@mediapipe/tasks-genai@0.10.27` supports
+  `modelAssetBuffer` as a `ReadableStreamDefaultReader` → app-owned
+  fetch-through-cache is viable (see R1e).
 - **Known risk:** GitHub Pages cannot set COOP/COEP headers. WebGPU paths
   should not need cross-origin isolation; WASM *threading* might. If a
   backend breaks on the live origin, the fix ladder is: `coi-serviceworker`
@@ -56,41 +62,29 @@ decisions, release gate, queue format).
 
 ## Task queue
 
-- [x] 2026-07-10 · **R1c — Fix Lora serif font missing from production build**
-  (root cause confirmed 2026-07-11): the font enters via CSS
-  `@import "@fontsource-variable/lora"` in `src/index.css:3`; the built
-  `dist/assets/index-*.css` still contains the package's relative
-  `url(./files/lora-*-wght-normal.woff2)` **verbatim** (unrewritten) and no
-  woff2 is emitted anywhere in `dist/`. At runtime the font URL 404s/serves
-  index.html → console `OTS parsing error: invalid sfntVersion: 1008821359`
-  (ASCII `<!DO`) and the writing surface silently falls back to a non-Lora
-  serif. **First fix to try:** move the import to JS —
-  `import "@fontsource-variable/lora";` in `src/main.tsx` (Vite rebases
-  asset URLs in JS-imported CSS) and drop the CSS `@import`; fallback: copy
-  the woff2 files via `public/` with an explicit `@font-face`. Keep
-  `VisualCalmGuards` green. → Verify: `npx vite preview`, network shows
-  woff2 200 with font content-type, no OTS console error, screenshot of
-  writing surface in Lora.
-- [x] 2026-07-10 · **R1d — MediaPipe backend fails at inference under the
-  production build**: model (~3 GB `gemma-4-E2B-it-web.task` from HF
-  `litert-community`) downloads and the engine initializes ("Graph
-  successfully started running"), but the first send fails with console
-  `INVALID_ARGUMENT: CalculatorGraph::Run() failed` + `[newSession] Inference
-  failed`, and the entry produces no reply. Also observed: MediaPipe leaves
-  no Cache Storage entry (unlike webllm/* and transformers-cache), so the
-  ~3 GB model likely re-downloads every load. Reproduce (also check dev
-  server to see if it's production-specific), then either fix or apply the
-  grounding's fix ladder (honest per-backend UI note — never silently ship a
-  broken backend picker). → Verify: full exchange on MediaPipe on `vite
-  preview`, or the UI note shipped; screenshots either way.
-- [ ] 2026-07-11 · **R1e — MediaPipe model has no Cache Storage entry** (split
-  from R1d, observed in R1b): unlike `webllm/*` and `transformers-cache`, the
-  ~3 GB `.task` download is not persisted in Cache Storage, so it re-downloads
-  whenever the browser HTTP cache evicts it. Investigate caching the fetch
-  ourselves (Cache Storage + `modelAssetBuffer` ReadableStream) vs. accepting
-  HTTP-cache behavior with an honest size note in the backend picker. → Verify:
-  second load after clearing HTTP cache (DevTools "Disable cache" off,
-  Cache Storage intact) does not re-download 3 GB, or the honest note ships.
+- [ ] 2026-07-11 · **R1e — Cache the MediaPipe model in Cache Storage**
+  (grounded 2026-07-12 against code + installed typings): the cause is
+  structural — `src/inference/mediapipe-engine.ts` passes
+  `modelAssetPath: MODEL_URL` and lets MediaPipe fetch the ~3 GB `.task`
+  itself, so nothing ever writes it to Cache Storage (unlike `webllm/*` and
+  `transformers-cache`) and it re-downloads whenever the HTTP cache evicts.
+  The fix path is **confirmed supported**: `@mediapipe/tasks-genai@0.10.27`'s
+  `BaseOptions` accepts `modelAssetBuffer?: Uint8Array |
+  ReadableStreamDefaultReader` (`node_modules/@mediapipe/tasks-genai/genai.d.ts:46`).
+  Implement in `load()`: open a cache (e.g. `mediapipe-cache`), on miss
+  `fetch(MODEL_URL)` → `cache.put`, then `cache.match` →
+  `response.body.getReader()` → pass as `modelAssetBuffer` (drop
+  `modelAssetPath`). Owning the fetch also unlocks **real download progress**
+  (Content-Length + bytes read) — today the MediaPipe path fakes progress
+  (jumps 0.1 → 1), which R2's download-UX audit would flag anyway; wire
+  `onProgress` to actual bytes. Fallback if streaming into the graph
+  misbehaves: honest size note in the backend picker ("~3 GB, may re-download
+  each visit"). → Verify on `vite preview`: first load populates a
+  `mediapipe-cache` Cache Storage entry + progress bar moves with the
+  download; reload with HTTP cache cleared (DevTools → Network → Disable
+  cache checked once, or clear browser cache, Cache Storage left intact)
+  reaches ready WITHOUT re-downloading 3 GB (network tab shows no model
+  fetch); full exchange still works; screenshots.
 - [ ] 2026-07-11 · **R2 — Cold-start audit on `vite preview`** (do after R1c +
   R1d so findings aren't polluted by known bugs): with a fresh browser
   profile (or fully cleared site data), walk the stranger's path against
