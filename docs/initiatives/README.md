@@ -26,14 +26,18 @@ the planner no longer writes daily plan files).
    and their feedback reaches the loop (user-initiated only, zero telemetry).
 3. [`model-quality.md`](model-quality.md) — QLoRA fine-tune + conversational
    eval so replies stop parroting the entry (added 2026-07-11 by Sharang,
-   interactive). Parallel track: does NOT block the soft launch unless
-   Sharang says so; its M0/M1 items are workable now, training (M3+) is
-   gated on his GPU/hosting go-ahead. Within this initiative's scope, new
-   conversational-quality eval dimensions are allowed (supersedes the parked
-   line below — Sharang 2026-07-11).
+   interactive). **BLOCKS the soft launch** (Sharang 2026-07-12, interactive
+   — supersedes the earlier "parallel track" default): the quality bar is a
+   ≥10-turn conversation that makes logical sense, gives proper support, and
+   feels like a journal with a therapy aspect to it. Base model decided:
+   **Gemma 4 E2B**; training on **Colab Pro**. Within this initiative's
+   scope, new conversational-quality eval dimensions are allowed (supersedes
+   the parked line below — Sharang 2026-07-11).
 
-Work `public-release` first; `human-feedback` items unblock as noted in that
-doc; `model-quality` items may fill remaining per-run capacity. Human-reported issues (GitHub issues / `docs/field-notes/`) outrank
+`model-quality` is now the pacing initiative for the soft launch;
+`public-release` items (R1e, R2) stay workable in parallel since the release
+machinery is needed either way; `human-feedback` unblocks as noted in that
+doc. Human-reported issues (GitHub issues / `docs/field-notes/`) outrank
 queued items once they exist; safety-relevant reports outrank everything.
 
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)

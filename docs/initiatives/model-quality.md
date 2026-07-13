@@ -13,6 +13,25 @@ companion — no parroting the entry back, no template smell — proven by a
 conversational-quality eval, achieved by QLoRA fine-tuning the base model,
 **without regressing a single safety floor** from the release gate.
 
+**Quality bar (Sharang 2026-07-12, interactive — this initiative BLOCKS the
+soft launch until it's met):** at least a **10-turn conversation** that
+(a) makes logical sense across turns, (b) gives proper support, and
+(c) feels akin to a journal with a therapy aspect to it. M1's eval must
+encode this as a scored multi-turn scenario, and note: 10 turns must fit the
+context budget (`MODEL_CONTEXT_LIMIT` 4096 with a ~1.6–1.9k-token system
+prompt) — verify truncation behavior doesn't break coherence.
+
+**Decisions (Sharang 2026-07-12, interactive):**
+- **Base model: Gemma 4 E2B** (covers Transformers.js + MediaPipe with one
+  fine-tune).
+- **Training: Colab Pro** (Sharang subscribes; loop prepares the notebook).
+- **Directional, confirm with M1 baseline:** WebLLM Gemma 2 2B is "probably
+  much much worse and should be removed" — if the M1 baseline confirms it,
+  queue removing the WebLLM backend, making Transformers.js (WASM-capable →
+  works without WebGPU) the default. That would also dissolve most of
+  public-release's unsupported-browser problem. Do not remove before the
+  baseline exists.
+
 This initiative supersedes the README parked-list line about eval work *for
 this initiative's scope only* (new conversational-quality eval dimensions are
 in scope here per Sharang's 2026-07-11 instruction). Everything else in the
@@ -55,9 +74,10 @@ parked list stays parked.
   (README), `EvalPanel.tsx`, `docs/evals/` history, the Day-30/32 revert
   precedents. The release gate applies unchanged to any fine-tuned model:
   below-floor = do not ship.
-- **Relationship to public-release:** parallel track, does NOT block the soft
-  launch (current models + prompt mitigations ship first) — flip only if
-  Sharang says the quality bar blocks release.
+- **Relationship to public-release:** BLOCKS the soft launch (Sharang
+  2026-07-12 — flipped from the parallel-track default). Public-release
+  R1e/R2 still proceed in parallel; R4 and LICENSE decisions are deferred
+  until the quality bar is met.
 
 ## Increments
 
@@ -66,7 +86,7 @@ parked list stays parked.
 | M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | queued |
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | queued |
 | M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | after M1 spec |
-| M3 | QLoRA fine-tune: 4-bit base + LoRA adapter (unsloth/PEFT, Colab or rented GPU), merge adapter → fp16 checkpoint on HF | gated on Sharang (GPU budget + HF hosting) |
+| M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab Pro), merge adapter → fp16 checkpoint on HF | base model + GPU decided 2026-07-12; needs HF account/token setup (see Blocked) |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | after M3 |
 | M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4 |
 
@@ -85,14 +105,19 @@ parked list stays parked.
   body; below-floor = do not merge.** → Verify: eval numbers at/above floors
   AND a before/after exchange on `vite preview` showing the reply no longer
   opens with the mirrored entry (screenshots).
-- [ ] 2026-07-11 · **M1 — Echo metric + conversational baseline**: add an
-  echo/repetition dimension to the eval harness (score = max n-gram overlap
-  between the user entry and the first sentence of the reply, normalized;
-  plus a "template smell" check for stock phrases), 8–12 cases across the 4
-  modes; run it against all 3 backends on the current models and record the
-  baseline table in this doc. New dimension is additive — do not touch
-  existing cases/floors. → Verify: baseline table committed here, harness runs
-  green in CI/test suite.
+- [ ] 2026-07-11 · **M1 — Echo metric + conversational baseline** (updated
+  2026-07-12 for the quality bar): add an echo/repetition dimension to the
+  eval harness (score = max n-gram overlap between the user entry and the
+  first sentence of the reply, normalized; plus a "template smell" check for
+  stock phrases), 8–12 cases across the 4 modes, **plus at least one scored
+  10-turn conversation scenario** (per-turn checks: logical continuity with
+  earlier turns, supportive move present, no full-entry echo; also record
+  whether 10 turns fit `MODEL_CONTEXT_LIMIT` 4096 and what truncation does
+  to coherence); run it against all 3 backends on the current models and
+  record the baseline table in this doc — this table also decides the
+  WebLLM-removal question (see Decisions). New dimension is additive — do
+  not touch existing cases/floors. → Verify: baseline table committed here,
+  harness runs green in CI/test suite.
 - [ ] 2026-07-11 · **M2a — Dataset spec (doc-only)**: write
   `docs/model-quality/DATASET.md` — schema (multi-turn, 4 modes, Gemma turn
   format), target size, generation plan (which teacher model, prompt
@@ -108,9 +133,11 @@ parked list stays parked.
 
 ## Blocked on Sharang
 
-- **M3 go-ahead**: GPU budget (Colab Pro / rented A100 hours), which HF
-  account/org hosts the merged weights, and base-model choice sign-off
-  (Gemma 4 E2B vs Gemma 2 2B) once M1 baseline data exists.
-- **Release coupling**: whether model-quality blocks the soft launch
-  (default: it does not — M0 prompt mitigation ships first, fine-tune lands
-  as an upgrade).
+- **M3 setup** (base model = Gemma 4 E2B and Colab Pro decided 2026-07-12;
+  remaining setup on Sharang's side):
+  1. Activate a **Colab Pro** subscription on his Google account.
+  2. Pick/confirm the **HF account or org** that hosts the merged weights,
+     and create a **write-scoped HF token** (pasted into the Colab session
+     at train time only — never committed to the repo).
+  3. On that HF account, **accept the Gemma license/terms** (required to
+     pull the base weights for training).

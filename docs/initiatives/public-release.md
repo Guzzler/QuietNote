@@ -138,6 +138,9 @@ Cross-cutting: Lora serif font broken in production build (missing woff2 in
 
 - **Go-public + Pages activation (R4)** — the release-day trigger. The loop
   prepares everything; Sharang flips visibility when he declares the app
-  ready. Never flip it autonomously.
+  ready. Never flip it autonomously. **Deferred until the model-quality bar
+  is met** (Sharang 2026-07-12): the soft launch is now gated on
+  model-quality's 10-turn quality bar; he'll decide R4 after that.
 - **LICENSE choice** — no license file yet (default all-rights-reserved).
-  Suggest MIT; execute must not add one autonomously.
+  Suggest MIT; execute must not add one autonomously. Deferred with R4
+  (2026-07-12).
