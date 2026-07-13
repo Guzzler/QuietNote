@@ -17,6 +17,7 @@ import { shouldAttemptReferralReprompt, withReferralReprompt } from "./utils/ref
 import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
 import { generateReflection, shouldRegenerate } from "./utils/sessionReflection";
 import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personalityPrompt";
+import { FEEDBACK_ISSUES_URL, FEEDBACK_MAILTO } from "./utils/feedbackLinks";
 import type { PersonalitySettings } from "./utils/personalityPrompt";
 import SettingsPanel from "./components/SettingsPanel";
 import EvalPanel from "./components/EvalPanel";
@@ -938,6 +939,26 @@ export default function App() {
       >
         <Lock className="h-3 w-3 text-slate-400" />
         <span>Quietnote — your journal entries stay on this device</span>
+        <span aria-hidden="true" className="text-slate-300">
+          ·
+        </span>
+        <a
+          href={FEEDBACK_ISSUES_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600 transition-colors"
+        >
+          Share feedback
+        </a>
+        <span aria-hidden="true" className="text-slate-300">
+          ·
+        </span>
+        <a
+          href={FEEDBACK_MAILTO}
+          className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600 transition-colors"
+        >
+          email
+        </a>
       </footer>
 
       {/* Track A6 — affordance back out of focus mode (the one bit of chrome that stays) */}
