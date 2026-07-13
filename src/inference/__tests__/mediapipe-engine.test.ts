@@ -179,6 +179,27 @@ describe("MediaPipeEngine", () => {
       expect(download.at(-1)!.progress).toBeCloseTo(0.9, 5);
     });
 
+    it("skips the cache put when quota can't hold the model (no double download)", async () => {
+      const storage = {
+        estimate: vi.fn(async () => ({
+          quota: MODEL_BYTES.length,
+          usage: 1,
+        })),
+      };
+      Object.defineProperty(navigator, "storage", {
+        value: storage,
+        configurable: true,
+      });
+      try {
+        await engine.load();
+        expect(fakeCaches.cache.put).not.toHaveBeenCalled();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(engine.getStatus()).toBe("ready");
+      } finally {
+        Reflect.deleteProperty(navigator, "storage");
+      }
+    });
+
     it("falls back to direct streaming when cache.put fails (quota)", async () => {
       fakeCaches.cache.put.mockRejectedValueOnce(
         new DOMException("quota", "QuotaExceededError"),

@@ -105,6 +105,25 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
 
     const res = await download();
     const total = Number(res.headers.get("Content-Length")) || 0;
+
+    // Skip Cache Storage when the model can't fit in the origin's quota —
+    // attempting the put would fail after consuming the stream and force a
+    // second full download. Stream straight into the graph instead.
+    let cacheHasRoom = cache !== null;
+    if (cacheHasRoom && total > 0 && navigator.storage?.estimate) {
+      try {
+        const est = await navigator.storage.estimate();
+        if (
+          est.quota !== undefined &&
+          est.quota - (est.usage ?? 0) < total * 1.1
+        ) {
+          cacheHasRoom = false;
+        }
+      } catch {
+        // estimate unavailable — try the put and rely on the failure fallback
+      }
+    }
+
     let received = 0;
     const netReader = res.body!.getReader();
     // Passthrough stream that counts bytes so the progress bar tracks the
@@ -131,7 +150,7 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
       },
     });
 
-    if (cache) {
+    if (cache && cacheHasRoom) {
       try {
         await cache.put(
           MODEL_URL,
