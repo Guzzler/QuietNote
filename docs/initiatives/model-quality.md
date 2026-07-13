@@ -23,7 +23,12 @@ prompt) — verify truncation behavior doesn't break coherence.
 
 **Decisions (Sharang 2026-07-12, interactive):**
 - **Base model: Gemma 4 E2B** (covers Transformers.js + MediaPipe with one
-  fine-tune).
+  fine-tune). Exact training base: **`google/gemma-4-E2B-it`**
+  (https://huggingface.co/google/gemma-4-E2B-it — verified 2026-07-12,
+  Apache 2.0, 2.3B effective params) — the parent of both deployed
+  conversions (`onnx-community/gemma-4-E2B-it-ONNX`,
+  `litert-community/gemma-4-E2B-it-litert-lm`). NOT `gemma-4-E4B` — the
+  larger sibling is not what the app ships.
 - **Training: Colab Pro** (Sharang subscribes; loop prepares the notebook).
 - **Directional, confirm with M1 baseline:** WebLLM Gemma 2 2B is "probably
   much much worse and should be removed" — if the M1 baseline confirms it,
