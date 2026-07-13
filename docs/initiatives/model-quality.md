@@ -144,10 +144,10 @@ parked list stays parked.
 ## Blocked on Sharang
 
 - **M3 setup** (base model = Gemma 4 E2B and Colab Pro decided 2026-07-12;
-  remaining setup on Sharang's side):
+  HF account = **Sharangp**, write token stored locally in git-ignored
+  `.env.local` as `HF_TOKEN` 2026-07-12 — never commit it, never expose it
+  via a `VITE_`-prefixed name, Sharang pastes it into Colab at train time):
   1. Activate a **Colab Pro** subscription on his Google account.
-  2. Pick/confirm the **HF account or org** that hosts the merged weights,
-     and create a **write-scoped HF token** (pasted into the Colab session
-     at train time only — never committed to the repo).
-  3. On that HF account, **accept the Gemma license/terms** (required to
-     pull the base weights for training).
+  2. Base repo `google/gemma-4-E2B-it` is Apache 2.0 and appears ungated;
+     if the notebook's first pull hits a terms gate anyway, Sharang accepts
+     it on the Sharangp account.
