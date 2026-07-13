@@ -25,6 +25,12 @@ const TASKS_GENAI_VERSION = "0.10.27";
 const MODEL_URL =
   "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.task";
 
+/** Cache Storage bucket for the ~3 GB .task file. WebLLM and Transformers.js
+ * persist their models in Cache Storage (`webllm/*`, `transformers-cache`);
+ * letting MediaPipe fetch `modelAssetPath` itself bypassed that entirely, so
+ * the model re-downloaded whenever the HTTP cache evicted it. */
+export const MEDIAPIPE_CACHE_NAME = "mediapipe-cache";
+
 export class MediaPipeEngine implements InferenceEngine, EngineCapability {
   readonly name = "MediaPipe";
   private inference: import("@mediapipe/tasks-genai").LlmInference | null =
@@ -66,6 +72,104 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
     }
   }
 
+  /**
+   * Streams the model out of Cache Storage, downloading it into the cache
+   * first on a miss. Owning the fetch (instead of handing MediaPipe
+   * `modelAssetPath`) is what makes the model persist across visits and lets
+   * us report real byte-level download progress instead of a synthetic jump.
+   */
+  private async getModelReader(
+    onProgress?: (p: LoadProgress) => void,
+  ): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+    const cache =
+      typeof caches !== "undefined"
+        ? await caches.open(MEDIAPIPE_CACHE_NAME)
+        : null;
+
+    const cached = cache ? await cache.match(MODEL_URL) : undefined;
+    if (cached?.body) {
+      onProgress?.({
+        progress: 0.9,
+        message: "Loading model from cache\u2026",
+      });
+      return cached.body.getReader();
+    }
+
+    const download = async () => {
+      const res = await fetch(MODEL_URL);
+      if (!res.ok || !res.body) {
+        throw new Error(`Model download failed: HTTP ${res.status}`);
+      }
+      return res;
+    };
+
+    const res = await download();
+    const total = Number(res.headers.get("Content-Length")) || 0;
+
+    // Skip Cache Storage when the model can't fit in the origin's quota —
+    // attempting the put would fail after consuming the stream and force a
+    // second full download. Stream straight into the graph instead.
+    let cacheHasRoom = cache !== null;
+    if (cacheHasRoom && total > 0 && navigator.storage?.estimate) {
+      try {
+        const est = await navigator.storage.estimate();
+        if (
+          est.quota !== undefined &&
+          est.quota - (est.usage ?? 0) < total * 1.1
+        ) {
+          cacheHasRoom = false;
+        }
+      } catch {
+        // estimate unavailable — try the put and rely on the failure fallback
+      }
+    }
+
+    let received = 0;
+    const netReader = res.body!.getReader();
+    // Passthrough stream that counts bytes so the progress bar tracks the
+    // actual download (0.1 \u2192 0.9 of the load) while Cache Storage consumes it.
+    const counted = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        const { done, value } = await netReader.read();
+        if (done) {
+          controller.close();
+          return;
+        }
+        received += value.byteLength;
+        if (total > 0) {
+          const frac = received / total;
+          onProgress?.({
+            progress: 0.1 + frac * 0.8,
+            message: `Downloading model\u2026 ${Math.round(frac * 100)}% of ${(total / 1e9).toFixed(1)} GB`,
+          });
+        }
+        controller.enqueue(value);
+      },
+      cancel(reason) {
+        void netReader.cancel(reason);
+      },
+    });
+
+    if (cache && cacheHasRoom) {
+      try {
+        await cache.put(
+          MODEL_URL,
+          new Response(counted, { headers: res.headers }),
+        );
+        const stored = await cache.match(MODEL_URL);
+        if (stored?.body) return stored.body.getReader();
+      } catch {
+        // Quota exceeded or storage failure \u2014 fall through to direct
+        // streaming below (re-fetch; the counted stream was consumed).
+      }
+      const retry = await download();
+      if (!retry.body) throw new Error("Model download failed: empty body");
+      return retry.body.getReader();
+    }
+
+    return counted.getReader();
+  }
+
   async load(onProgress?: (p: LoadProgress) => void): Promise<void> {
     if (this.status === "ready" || this.status === "loading") return;
 
@@ -90,9 +194,16 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
         message: "Downloading model\u2026",
       });
 
+      const modelReader = await this.getModelReader(onProgress);
+
+      onProgress?.({
+        progress: 0.95,
+        message: "Initializing model\u2026",
+      });
+
       this.inference = await LlmInference.createFromOptions(genaiFileset, {
         baseOptions: {
-          modelAssetPath: MODEL_URL,
+          modelAssetBuffer: modelReader,
           delegate: "GPU",
         },
         // MediaPipe's maxTokens is the TOTAL budget (input + output). The app

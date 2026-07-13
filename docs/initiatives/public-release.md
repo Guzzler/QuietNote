@@ -24,12 +24,12 @@ decisions, release gate, queue format).
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
   the Pages origin). `src/utils/webgpuCheck.ts` exists (capability detection).
-- **MediaPipe model caching (verified 2026-07-12):** the engine hands
-  MediaPipe a URL (`modelAssetPath`) so the download bypasses Cache Storage
-  entirely, and its `onProgress` is synthetic (0.05 → 0.1 → 1, no real
-  download progress). The installed `@mediapipe/tasks-genai@0.10.27` supports
-  `modelAssetBuffer` as a `ReadableStreamDefaultReader` → app-owned
-  fetch-through-cache is viable (see R1e).
+- **MediaPipe model caching: FIXED by R1e (PR #84, 2026-07-12).** The app
+  now owns the fetch (`mediapipe-cache` in Cache Storage, streamed into
+  `modelAssetBuffer`) with real byte-level download progress. Measured: the
+  `.task` is **2.00 GB** (earlier "~3 GB" was wrong). Browsers whose origin
+  quota can't hold it skip the cache and stream directly (still works,
+  re-downloads per visit).
 - **Known risk:** GitHub Pages cannot set COOP/COEP headers. WebGPU paths
   should not need cross-origin isolation; WASM *threading* might. If a
   backend breaks on the live origin, the fix ladder is: `coi-serviceworker`
@@ -62,7 +62,8 @@ decisions, release gate, queue format).
 
 ## Task queue
 
-- [ ] 2026-07-11 · **R1e — Cache the MediaPipe model in Cache Storage**
+- [x] 2026-07-11 · **R1e — Cache the MediaPipe model in Cache Storage**
+  (DONE 2026-07-12, PR #84 — see Ledger)
   (grounded 2026-07-12 against code + installed typings): the cause is
   structural — `src/inference/mediapipe-engine.ts` passes
   `modelAssetPath: MODEL_URL` and lets MediaPipe fetch the ~3 GB `.task`
@@ -128,6 +129,7 @@ Cross-cutting: Lora serif font broken in production build (missing woff2 in
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-12 | R1e — MediaPipe model persisted in Cache Storage | #84 | App now owns the fetch: miss → byte-counted stream into `mediapipe-cache` (real progress from Content-Length, e.g. "48% of 2.0 GB"), hit → stream from disk into `modelAssetBuffer` (dropped `modelAssetPath`). **Measured: the .task is 2.00 GB, not ~3 GB as previously documented.** Verified on `vite preview` (real Chromium profile): first load populated the cache entry + progress tracked the download; reload reached ready in <30 s with ZERO huggingface requests; full exchange before and after reload; sessions persisted. Two fallbacks, both tested: quota-precheck skips the put when the origin can't hold the model (avoids a doomed put + double download — hit for real in a 7.2 GB-quota browser profile, where load still succeeded by streaming direct with real progress), and put-failure refetches direct. 6 new tests; 1326 green. Total storage all 3 model caches ≈ 6.65 GB. |
 | 2026-07-11 | R1d — MediaPipe first-send inference failure | #83 | Not production-specific: MediaPipe's `maxTokens` is a TOTAL (input+output) budget and was 1024 while the app builds prompts to `MODEL_CONTEXT_LIMIT` 4096 (system prompt alone ~1.6–1.9k tokens) → first send always overflowed → `INVALID_ARGUMENT: CalculatorGraph::Run() failed`. Fix: `maxTokens: MODEL_CONTEXT_LIMIT` + pinned the CDN wasm fileset to the installed `@mediapipe/tasks-genai@0.10.27` (was unpinned → JS/WASM drift risk). Verified full exchange on `vite preview` (reply streamed, no console errors); 2 regression tests; 1320 green. Cache Storage gap (re-download) → queued R1e. |
 | 2026-07-11 | R1c — Lora font missing from production build | #82 | Root cause as diagnosed: CSS `@import "@fontsource-variable/lora"` shipped the package's relative `url(./files/...)` verbatim; no woff2 in `dist/`. Fix: JS import `@fontsource-variable/lora/index.css` in `main.tsx` (bare specifier fails TS strict — package ships no types). Built CSS now has `url(/QuietNote/assets/lora-*.woff2)`, 8 woff2 emitted, preview: woff2 200, no OTS error, `document.fonts.check("16px Lora Variable")` true, textarea computed font Lora. 1318 tests green. |
 | 2026-07-10 | R1a — Pages deploy workflow (dormant) + Vite base | #79 | Shipped. Build job = CI; deploy job gated on `!private`, skips until R4. Found+fixed `/logo.svg` absolute-path 404 under base (App.tsx → `import.meta.env.BASE_URL`). `vite preview` at `/QuietNote/` zero 404s; 1318 tests green. |
