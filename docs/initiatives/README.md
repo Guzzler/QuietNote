@@ -33,6 +33,12 @@ the planner no longer writes daily plan files).
    **Gemma 4 E2B**; training on **Colab Pro**. Within this initiative's
    scope, new conversational-quality eval dimensions are allowed (supersedes
    the parked line below — Sharang 2026-07-11).
+4. [`personalization.md`](personalization.md) — local memory → profile
+   injection → (future) adapter selection, so the app earns the
+   "personalized journaling" positioning (added 2026-07-12 by Sharang,
+   interactive). **Gated on model-quality's quality bar** — no queue items
+   until M4 clears it; its feasibility signal comes free from M1's
+   personalization rubric.
 
 `model-quality` is now the pacing initiative for the soft launch;
 `public-release` items (R1e, R2) stay workable in parallel since the release
