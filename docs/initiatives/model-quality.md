@@ -21,6 +21,32 @@ encode this as a scored multi-turn scenario, and note: 10 turns must fit the
 context budget (`MODEL_CONTEXT_LIMIT` 4096 with a ~1.6–1.9k-token system
 prompt) — verify truncation behavior doesn't break coherence.
 
+**Positioning (Sharang 2026-07-12): the thing to sell is a PERSONALIZED
+journaling experience.** The unique claim only QuietNote can make: deep
+personalization with zero data leaving the device — cloud journals must read
+your entries to personalize; QuietNote personalizes *because* everything is
+local. Consequences the loop must honor: (1) the eval bar tests
+personalization specifically (does the reply use THIS user's details,
+callbacks, and emotional throughline — not generic warmth?); (2) the M2
+dataset trains it (exemplars where the model weaves in user-specific details
+from earlier turns, recalls what the user said turns ago, adapts to their
+tone); (3) README/F2/welcome copy sells "a journal that gets to know you —
+and never phones home", not generic AI journaling.
+
+**Quality bar — concrete pass thresholds (set 2026-07-12; M1 encodes, M4
+must clear on the fine-tuned model before the bar counts as met):**
+- **Three** scored 10-turn scenarios (not one): a freewrite emotional arc, a
+  checkin-across-days arc with callbacks, and a thoughtrecord CBT arc.
+- Per-turn rubric, each dimension 0–2 (fail/partial/pass): logical
+  continuity (no contradiction with any earlier turn), supportive move
+  present, personalization (uses ≥1 specific detail from an EARLIER turn,
+  not the current one, where the scenario plants one), no-echo (opening
+  n-gram overlap below the M1 threshold), no template smell.
+- **Pass = every scenario ≥ 85% of max score, zero turns scoring 0 on
+  continuity or support, and all release-gate safety floors intact.** The
+  current models get baselined against this same rubric in M1 — expected to
+  fail; the gap is what M2/M3 exist to close.
+
 **Decisions (Sharang 2026-07-12, interactive):**
 - **Base model: Gemma 4 E2B** (covers Transformers.js + MediaPipe with one
   fine-tune). Exact training base: **`google/gemma-4-E2B-it`**
@@ -116,24 +142,31 @@ parked list stays parked.
   AND a before/after exchange on `vite preview` showing the reply no longer
   opens with the mirrored entry (screenshots).
 - [ ] 2026-07-11 · **M1 — Echo metric + conversational baseline** (updated
-  2026-07-12 for the quality bar): add an echo/repetition dimension to the
-  eval harness (score = max n-gram overlap between the user entry and the
-  first sentence of the reply, normalized; plus a "template smell" check for
-  stock phrases), 8–12 cases across the 4 modes, **plus at least one scored
-  10-turn conversation scenario** (per-turn checks: logical continuity with
-  earlier turns, supportive move present, no full-entry echo; also record
+  2026-07-12 for the quality bar + positioning): add an echo/repetition
+  dimension to the eval harness (score = max n-gram overlap between the user
+  entry and the first sentence of the reply, normalized; plus a "template
+  smell" check for stock phrases), 8–12 single-turn cases across the 4
+  modes, **plus the three 10-turn scenarios scored per the quality-bar
+  rubric above** (freewrite arc / checkin-with-callbacks / thoughtrecord CBT
+  arc; each scenario must PLANT specific details in early turns so the
+  personalization dimension is objectively checkable — e.g. a name, a
+  deadline, a recurring worry the model should call back to; also record
   whether 10 turns fit `MODEL_CONTEXT_LIMIT` 4096 and what truncation does
-  to coherence); run it against all 3 backends on the current models and
-  record the baseline table in this doc — this table also decides the
-  WebLLM-removal question (see Decisions). New dimension is additive — do
-  not touch existing cases/floors. → Verify: baseline table committed here,
-  harness runs green in CI/test suite.
-- [ ] 2026-07-11 · **M2a — Dataset spec (doc-only)**: write
-  `docs/model-quality/DATASET.md` — schema (multi-turn, 4 modes, Gemma turn
-  format), target size, generation plan (which teacher model, prompt
-  templates), safety-case coverage mirrored from the gate floors, anti-echo
-  exemplar design, curation/review protocol, and the hard rule that no real
-  user text ever enters the set. → Verify: doc reviewed in PR; unblocks M2
+  to coherence); run against all 3 backends on the current models and record
+  the baseline table + rubric scores in this doc — this table also decides
+  the WebLLM-removal question (see Decisions). New dimension is additive —
+  do not touch existing cases/floors. → Verify: baseline table committed
+  here, harness runs green in CI/test suite.
+- [ ] 2026-07-11 · **M2a — Dataset spec (doc-only)** (updated 2026-07-12 for
+  positioning): write `docs/model-quality/DATASET.md` — schema (multi-turn,
+  4 modes, Gemma turn format), target size, generation plan (which teacher
+  model, prompt templates), safety-case coverage mirrored from the gate
+  floors, anti-echo exemplar design, **personalization exemplar design as a
+  first-class section** (dialogues where the model recalls a detail from
+  turns earlier, tracks an emotional throughline across the session, and
+  adapts register to the user's tone — the behaviors the quality-bar rubric
+  scores), curation/review protocol, and the hard rule that no real user
+  text ever enters the set. → Verify: doc reviewed in PR; unblocks M2
   generation.
 
 ## Ledger
