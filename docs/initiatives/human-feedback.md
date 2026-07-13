@@ -33,7 +33,8 @@ prefilled or attached to anything. Rules of engagement:
 
 ## Task queue
 
-- [ ] 2026-07-10 · **F1 — Feedback channel**: add
+- [x] 2026-07-10 · **F1 — Feedback channel** (DONE 2026-07-12, PR #85 — see
+  Ledger): add
   `.github/ISSUE_TEMPLATE/feedback.yml` and `bug.yml` per the decided spec
   below; add an in-app "Share feedback" affordance in the footer beside the
   privacy lock and/or as a Settings row — a plain link-out opening
@@ -81,6 +82,7 @@ Both templates start with the same privacy guard as a `markdown` element:
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-12 | F1 — Feedback channel | #85 | Issue templates per the decided spec verbatim (`feedback.yml`, `bug.yml`, `config.yml` with mailto contact link) + calm footer affordance beside the privacy lock: "Share feedback" → `issues/new/choose` (new tab, noopener) · "email" → `mailto:`. Static links only, no query params, nothing prefilled — `FeedbackChannelGuards` (10 tests) pins hrefs, no-fetch, and the don't-paste-your-journal guard in both templates. Verified rendered footer + DOM hrefs on `vite preview` (screenshot). Template chooser rendering itself is only verifiable once the repo is public (F2/R4) — re-check then, incl. that GitHub accepts the `mailto:` contact link. 1336 tests green. |
 
 ## Blocked on Sharang
 
