@@ -36,6 +36,10 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
   private inference: import("@mediapipe/tasks-genai").LlmInference | null =
     null;
   private status: EngineStatus = "idle";
+  /** Temperature currently applied to the task (set at load, updated per
+   * call via setOptions so the app's GenerateOptions actually reach the
+   * graph instead of being silently discarded). */
+  private appliedTemperature = 0.8;
 
   getStatus(): EngineStatus {
     return this.status;
@@ -212,7 +216,7 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
         // INVALID_ARGUMENT: CalculatorGraph::Run() failed.
         maxTokens: MODEL_CONTEXT_LIMIT,
         topK: 40,
-        temperature: 0.8,
+        temperature: this.appliedTemperature,
         randomSeed: Date.now(),
       });
 
@@ -226,9 +230,23 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
 
   async *generate(
     messages: { role: string; content: string }[],
-    _options: GenerateOptions,
+    options: GenerateOptions,
   ): AsyncIterable<string> {
     if (!this.inference) throw new Error("Engine not loaded");
+
+    // Sampling parity (M0): the MediaPipe API takes sampling options on the
+    // task, not per generateResponse() call — apply the app's temperature
+    // via setOptions() when it changes. There is NO repetition-penalty knob
+    // in this API (LlmInferenceOptions: maxTokens/topK/temperature/
+    // randomSeed only), so options.repetitionPenalty cannot reach this
+    // backend — anti-echo behavior must come from the prompt/fine-tune.
+    if (
+      options.temperature !== undefined &&
+      options.temperature !== this.appliedTemperature
+    ) {
+      await this.inference.setOptions({ temperature: options.temperature });
+      this.appliedTemperature = options.temperature;
+    }
 
     // Build prompt from messages using Gemma turn markers
     const prompt = messages
