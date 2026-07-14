@@ -2,7 +2,8 @@
  * Transformers.js v4 backend implementing the InferenceEngine interface.
  *
  * Uses @huggingface/transformers to run Gemma 4 E2B (ONNX Q4) locally
- * via WebGPU (preferred) or WASM fallback.
+ * via WebGPU. WebGPU is required: the q4f16 export has no WASM/CPU kernel
+ * path (GatherBlockQuantized), so there is no WASM fallback for this model.
  */
 
 import type {
@@ -20,28 +21,40 @@ export class TransformersJSEngine implements InferenceEngine, EngineCapability {
   private tokenizer: any = null;
   private model: any = null;
   private status: EngineStatus = "idle";
-  private device: "webgpu" | "wasm" = "wasm";
+  private device: "webgpu" | "wasm" = "webgpu";
 
   getStatus(): EngineStatus {
     return this.status;
   }
 
   async checkSupport(): Promise<{ supported: boolean; reason?: string }> {
-    // Transformers.js supports both WebGPU and WASM — always supported
-    // but we prefer WebGPU when available
-    if ((navigator as any).gpu) {
-      try {
-        const adapter = await (navigator as any).gpu.requestAdapter();
-        if (adapter) {
-          this.device = "webgpu";
-          return { supported: true };
-        }
-      } catch {
-        // Fall through to WASM
-      }
+    // WebGPU is required: the ONNX q4f16 export uses GatherBlockQuantized,
+    // which has no WASM/CPU kernel (verified 2026-07-12, R2 audit) — the
+    // library's WASM fallback cannot load this model, so claiming WASM
+    // support here would ship a broken backend.
+    if (!(navigator as any).gpu) {
+      return {
+        supported: false,
+        reason: "Your browser does not support the WebGPU API.",
+      };
     }
-    this.device = "wasm";
-    return { supported: true };
+    try {
+      const adapter = await (navigator as any).gpu.requestAdapter();
+      if (!adapter) {
+        return {
+          supported: false,
+          reason:
+            "WebGPU API is available but no compatible GPU adapter was found.",
+        };
+      }
+      this.device = "webgpu";
+      return { supported: true };
+    } catch (err) {
+      return {
+        supported: false,
+        reason: `WebGPU adapter request failed: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
   }
 
   async load(onProgress?: (p: LoadProgress) => void): Promise<void> {

@@ -58,9 +58,10 @@ export default function WebGPUFallback({ reason }: WebGPUFallbackProps) {
 
         <div className="bg-indigo-50 rounded-lg px-4 py-3 border border-indigo-100">
           <p className="text-sm text-indigo-700">
-            Your journal entries are stored locally and don't require AI.
-            You can still use QuietNote for writing — the AI companion will
-            be available once you switch to a supported browser.
+            QuietNote's AI companion needs WebGPU, which this browser
+            doesn't offer yet. Your data never left this device — nothing
+            was sent or lost. To use QuietNote, open it in Chrome or Edge
+            113+ (or Chrome for Android 121+).
           </p>
         </div>
 
