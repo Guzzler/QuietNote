@@ -1,0 +1,254 @@
+[
+  {
+    "mode": "freewrite",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-07-14T04:12:39.362Z",
+    "finishedAt": "2026-07-14T04:46:30.852Z",
+    "summary": {
+      "total": 75,
+      "passed": 70,
+      "failed": 5,
+      "byDimension": {
+        "persona": {
+          "passed": 5,
+          "failed": 0,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 16,
+          "failed": 0,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 10,
+          "failed": 1,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 12,
+          "failed": 3,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 11,
+          "failed": 1,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 10,
+        "failed": 0,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "gratitude",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-07-14T04:46:30.855Z",
+    "finishedAt": "2026-07-14T05:12:36.440Z",
+    "summary": {
+      "total": 75,
+      "passed": 71,
+      "failed": 4,
+      "byDimension": {
+        "persona": {
+          "passed": 4,
+          "failed": 1,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 15,
+          "failed": 1,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 5,
+          "failed": 1,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 10,
+          "failed": 1,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 12,
+          "failed": 0,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 5,
+        "failed": 1,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 10,
+        "failed": 0,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "checkin",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-07-14T05:12:36.443Z",
+    "finishedAt": "2026-07-14T05:38:57.521Z",
+    "summary": {
+      "total": 75,
+      "passed": 67,
+      "failed": 8,
+      "byDimension": {
+        "persona": {
+          "passed": 3,
+          "failed": 2,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 15,
+          "failed": 1,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 5,
+          "failed": 1,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 10,
+          "failed": 1,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 13,
+          "failed": 2,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 11,
+          "failed": 1,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 5,
+        "failed": 1,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 10,
+        "failed": 0,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "thoughtrecord",
+    "modelLabel": "Gemma 4 E2B (Node onnxruntime-node)",
+    "startedAt": "2026-07-14T05:38:57.525Z",
+    "finishedAt": "2026-07-14T06:04:58.622Z",
+    "summary": {
+      "total": 75,
+      "passed": 69,
+      "failed": 6,
+      "byDimension": {
+        "persona": {
+          "passed": 4,
+          "failed": 1,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 15,
+          "failed": 1,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 4,
+          "failed": 2,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 9,
+          "failed": 2,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 12,
+          "failed": 0,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 9,
+        "failed": 1,
+        "total": 10
+      }
+    }
+  }
+]

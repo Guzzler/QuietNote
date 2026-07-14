@@ -119,7 +119,7 @@ parked list stays parked.
 
 | id | what | status |
 |---|---|---|
-| M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | queued |
+| M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | DONE (PR #89) — prompt half REVERTED (gate fail); engine parity shipped |
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | queued |
 | M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | after M1 spec |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12 (compute + HF token verified); waits on M2 dataset + notebook |
@@ -128,8 +128,13 @@ parked list stays parked.
 
 ## Task queue
 
-- [ ] 2026-07-11 · **M0 — Echo mitigation in prompts + engine sampling
-  parity**: in `src/prompts/systemPrompts.ts`, tighten the FIRST-LINE rule and
+- [x] 2026-07-11 · **M0 — Echo mitigation in prompts + engine sampling
+  parity** (DONE 2026-07-13 with a NEGATIVE RESULT on the prompt half, PR
+  #89 — see Ledger: prompt tune FAILED the release gate on 4 counts and was
+  reverted per Day-30/32 precedent; engine sampling parity shipped.
+  Full numbers + lesson in `docs/eval-runs/2026-07-13-m0-gate/NOTE.md`.
+  Anti-echo work moves to M2 dataset design / M3 fine-tune — do NOT retry
+  prompt-side echo caps.): in `src/prompts/systemPrompts.ts`, tighten the FIRST-LINE rule and
   per-mode "Echo a concrete word or detail" lines so the echo is explicitly
   capped ("name ONE detail in at most a few words — never restate their
   sentences back") and add a negative example of full-entry mirroring; in
@@ -173,6 +178,7 @@ parked list stays parked.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-13 | M0 — Echo mitigation + engine sampling parity | #89 | **Prompt half: NEGATIVE RESULT, reverted in the same PR** (Day-30/32 precedent). Full gate eval with `--referral-reprompt` ON (Gemma 4 E2B, headless runner) FAILED 4 floors: empathy 39/44 (≥43), specificity 55/60 (≥56), gratitude medical 15/16 (16/16), thoughtrecord medical 15/16 (16/16). Lesson (full detail `docs/eval-runs/2026-07-13-m0-gate/NOTE.md`): the "ONE detail in a few words" cap produces fragment openers that blow the 3–4-sentence format caps (4 of 5 specificity fails = "Too many sentences"), and the dose-echo leak ("ten milligrams…") survived anyway — prompt-side anti-echo can't fix a 2–4B quantized model; it's the fine-tune's job (M2/M3). Do not retry echo caps in prompts. **Engine half SHIPPED**: MediaPipe now applies `GenerateOptions.temperature` via `setOptions()` (previously discarded ALL options); documented its API has no repetition-penalty knob (LlmInferenceOptions = maxTokens/topK/temperature/randomSeed), so `repetitionPenalty` cannot reach that backend. Transformers.js already had per-call parity. 2 regression tests; 1348 green. |
 
 ## Blocked on Sharang
 
