@@ -51,3 +51,14 @@ export interface EngineCapability {
 }
 
 export type RuntimeId = "webllm" | "mediapipe" | "transformersjs";
+
+/**
+ * Measured first-download size per runtime, shown on the loading card so a
+ * cold start never silently pulls gigabytes (R2b). Sources: R1b smoke
+ * (webllm 1.49 GB, transformersjs 3.15 GB) and R1e (mediapipe 2.00 GB).
+ */
+export const MODEL_DOWNLOAD_SIZES: Record<RuntimeId, string> = {
+  webllm: "~1.5 GB",
+  transformersjs: "~3.2 GB",
+  mediapipe: "~2.0 GB",
+};
