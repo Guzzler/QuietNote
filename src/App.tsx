@@ -8,6 +8,7 @@ import MoodTracker from "./components/MoodTracker";
 import PrivacyDashboard from "./components/PrivacyDashboard";
 import WebGPUFallback from "./components/WebGPUFallback";
 import { useInferenceEngine } from "./hooks/useInferenceEngine";
+import { MODEL_DOWNLOAD_SIZES } from "./inference/types";
 import { putSession, listSessions, getSession, putMood, deleteSession, listMoods, getSetting, putSetting, saveThoughtRecord } from "./storage";
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
@@ -740,7 +741,11 @@ export default function App() {
           {/* First-time note */}
           <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
             <Lock className="h-3 w-3" />
-            <span>First time takes a few minutes. After that, it loads instantly.</span>
+            <span>
+              First time: downloads the AI model ({MODEL_DOWNLOAD_SIZES[runtimeId]})
+              once, then it's stored on this device. After that, it loads
+              instantly.
+            </span>
           </div>
         </div>
       </div>
