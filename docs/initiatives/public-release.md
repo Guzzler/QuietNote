@@ -6,21 +6,30 @@ reload) at a stable public URL, and the README tells them honestly what they
 are getting. Rules of engagement: [`README.md`](README.md) (standing
 decisions, release gate, queue format).
 
-## Grounding (verified 2026-07-11 — planner: re-verify before editing)
+## Grounding (verified 2026-07-13 — planner: re-verify before editing)
 
 - Client-only Vite app; `vite.config.ts` sets `base: "/QuietNote/"` (R1a) for
   the GitHub Pages project URL (`https://guzzler.github.io/QuietNote/`).
 - Single page, no client router → no SPA-404 fallback expected (verify).
-- **Unsupported-browser state (verified 2026-07-11):**
-  `src/components/WebGPUFallback.tsx` exists and App.tsx returns it *instead
+- **Unsupported-browser state (re-verified in code 2026-07-13):**
+  `src/components/WebGPUFallback.tsx` — App.tsx:705-707 returns it *instead
   of the app* (`fixed inset-0 z-50` full-screen card) when the active
-  runtime's support check fails. Its copy says "You can still use QuietNote
-  for writing" — **contradicted by the behavior: the screen blocks all
-  writing.** Also, `transformersjs-engine.ts` reports itself always-supported
-  (WASM fallback), **but R2 (2026-07-12) proved that claim false**: the
-  current ONNX q4f16 model cannot load on WASM/CPU (`GatherBlockQuantized`
-  kernel not found) — see the R2 matrix. The copy-only fallback fix is the
-  viable direction (R2a).
+  runtime's support check fails. The offending copy is the indigo callout at
+  `WebGPUFallback.tsx:59-65` ("You can still use QuietNote for writing…") —
+  **contradicted by the behavior: the screen blocks all writing.** Also,
+  `transformersjs-engine.ts#checkSupport` (lines 29-45) unconditionally
+  returns `{ supported: true }` with a WASM fallback, **but R2 (2026-07-12)
+  proved that claim false**: the current ONNX q4f16 model cannot load on
+  WASM/CPU (`GatherBlockQuantized` kernel not found) — see the R2 matrix.
+  The copy-only fallback fix is the viable direction (R2a).
+- **Loading card (verified 2026-07-13):** App.tsx:709-748; the only
+  first-time hint is the lock line at App.tsx:741-744 ("First time takes a
+  few minutes…") — no size disclosure (R2b). The active `runtimeId` lives in
+  `src/hooks/useInferenceEngine.ts` (localStorage `quietnote-runtime`), so
+  the card can show a per-backend size.
+- **Footer (verified 2026-07-13):** App.tsx:935-962 — lock + "stay on this
+  device" + "Share feedback" + "email" separated by `·` spans; room for one
+  more quiet link in the same pattern (R3b).
 - 3 backends: WebLLM (Gemma 2 2B, WebGPU), Transformers.js v4 (Gemma 4 E2B
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
@@ -56,77 +65,62 @@ decisions, release gate, queue format).
 | R1b | Production-build smoke test of all 3 backends + persistence on local `vite preview` | DONE (PR #80) |
 | R1c | Lora font missing from production build | DONE (PR #82) |
 | R1d | MediaPipe backend fails at inference under production build | DONE (PR #83) |
-| R2 | Cold-start audit (fresh profile: download UX, failure states, browser matrix doc, graceful unsupported-browser state, mobile honesty) — on `vite preview` now, re-run on the live URL at release day | queued |
+| R2 | Cold-start audit (fresh profile: download UX, failure states, browser matrix doc, graceful unsupported-browser state, mobile honesty) — on `vite preview` now, re-run on the live URL at release day | DONE (PR #86) |
+| R2a | Honest unsupported-browser fallback (copy-only) + truthful `checkSupport` | queued |
+| R2b | Download-size honesty on the loading card | queued |
 | R3a | README rewrite for strangers | DONE (PR #81) |
-| R3b | In-app about/footer link to the repo ("open source — verify it yourself") | after R3a |
+| R3b | In-app footer link to the repo ("open source — verify it yourself") | queued |
 | R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | blocked on Sharang |
 
 ## Task queue
 
 - [x] 2026-07-11 · **R1e — Cache the MediaPipe model in Cache Storage**
-  (DONE 2026-07-12, PR #84 — see Ledger)
-  (grounded 2026-07-12 against code + installed typings): the cause is
-  structural — `src/inference/mediapipe-engine.ts` passes
-  `modelAssetPath: MODEL_URL` and lets MediaPipe fetch the ~3 GB `.task`
-  itself, so nothing ever writes it to Cache Storage (unlike `webllm/*` and
-  `transformers-cache`) and it re-downloads whenever the HTTP cache evicts.
-  The fix path is **confirmed supported**: `@mediapipe/tasks-genai@0.10.27`'s
-  `BaseOptions` accepts `modelAssetBuffer?: Uint8Array |
-  ReadableStreamDefaultReader` (`node_modules/@mediapipe/tasks-genai/genai.d.ts:46`).
-  Implement in `load()`: open a cache (e.g. `mediapipe-cache`), on miss
-  `fetch(MODEL_URL)` → `cache.put`, then `cache.match` →
-  `response.body.getReader()` → pass as `modelAssetBuffer` (drop
-  `modelAssetPath`). Owning the fetch also unlocks **real download progress**
-  (Content-Length + bytes read) — today the MediaPipe path fakes progress
-  (jumps 0.1 → 1), which R2's download-UX audit would flag anyway; wire
-  `onProgress` to actual bytes. Fallback if streaming into the graph
-  misbehaves: honest size note in the backend picker ("~3 GB, may re-download
-  each visit"). → Verify on `vite preview`: first load populates a
-  `mediapipe-cache` Cache Storage entry + progress bar moves with the
-  download; reload with HTTP cache cleared (DevTools → Network → Disable
-  cache checked once, or clear browser cache, Cache Storage left intact)
-  reaches ready WITHOUT re-downloading 3 GB (network tab shows no model
-  fetch); full exchange still works; screenshots.
+  (DONE 2026-07-12, PR #84 — full detail in Ledger)
 - [x] 2026-07-11 · **R2 — Cold-start audit on `vite preview`** (DONE
-  2026-07-12 with one scope caveat, PR #86 — matrix below. Real
-  Firefox/Safari sessions were not available in the loop environment; the
-  WebGPU-less state was exercised by removing `navigator.gpu` before boot,
-  which is the exact check every engine's `checkSupport` uses. Re-verify in
-  real Firefox/Safari on the live URL at release day, as the task already
-  planned.) (do after R1c +
-  R1d so findings aren't polluted by known bugs): with a fresh browser
-  profile (or fully cleared site data), walk the stranger's path against
-  `npm run build` + `npx vite preview`: first paint → what tells you a
-  model is downloading → progress honesty on a slow connection → first
-  exchange → reload persistence. Then the failure states: (a) Firefox and
-  (b) Safari if available — confirm the grounding's finding that
-  `WebGPUFallback` full-screen-blocks the app while its copy claims "You can
-  still use QuietNote for writing", and whether switching to Transformers.js
-  (WASM, always-supported) is possible from that state; (c) narrow/mobile
-  viewport honesty. Write the results as a browser-matrix section in this
-  doc; file each defect found as a proposed queue item — **do not fix in the
-  audit PR**. For the unsupported-browser contradiction, the decided
-  direction (2026-07-11) is below — apply it as a queue item only after the
-  audit confirms the behavior. → Verify: matrix in this doc, screenshots per
-  browser to `docs/screenshots/2026-07-11/`.
-
-**Proposed queue items from the R2 audit (2026-07-12 — planner: firm up):**
-
-- [ ] proposed · **R2a — Honest unsupported-browser fallback (copy-only
-  variant)**: R2 confirmed the contradiction (full-screen block + "You can
-  still use QuietNote for writing") AND invalidated the preferred variant —
-  "Try Transformers.js instead" does not work, see matrix: the ONNX q4f16
-  model fails on WASM/CPU (`GatherBlockQuantized` kernel not found). Apply
-  the decided copy-only fix below to `src/components/WebGPUFallback.tsx`,
-  and fix `transformersjs-engine.ts#checkSupport` to stop reporting
-  always-supported (its WASM claim is false with the current model — require
-  WebGPU like the others until a WASM-loadable model exists).
-- [ ] proposed · **R2b — Download-size honesty on the loading card**: a
-  cold start auto-downloads 1.49 GB (WebLLM default; 2.00–3.15 GB alternates)
-  with no size disclosure — "First time takes a few minutes" is the only
-  hint, and on mobile/cellular that's a real cost. Add the measured size to
-  the loading card copy (calm, one line, e.g. "downloads ~1.5 GB once, then
-  cached"). Keep it copy-only; no consent-gate UI unless Sharang asks.
+  2026-07-12, PR #86 — matrix below, full detail in Ledger. Scope caveat:
+  WebGPU-less state simulated by deleting `navigator.gpu`; re-verify in real
+  Firefox/Safari on the live URL at release day.)
+- [ ] 2026-07-13 · **R2a — Honest unsupported-browser fallback (copy-only) +
+  truthful `checkSupport`** (firmed from the R2 audit; grounded in code
+  2026-07-13): in `src/components/WebGPUFallback.tsx`, replace the indigo
+  callout paragraph (lines 59-65, "Your journal entries are stored locally…
+  You can still use QuietNote for writing…") with the decided copy below —
+  the card full-screen-blocks the app, so it must never promise writing. In
+  `src/inference/transformersjs-engine.ts#checkSupport` (lines 29-45), stop
+  returning always-supported: require a WebGPU adapter like the other
+  engines (the ONNX q4f16 model has no WASM/CPU kernel path — R2 matrix) and
+  return `{ supported: false, reason: … }` otherwise; keep the
+  `device` field logic for when WebGPU exists. Update the file's header
+  comment (line 5, "WebGPU (preferred) or WASM fallback") to match. Add/
+  adjust unit tests: fallback card copy contains no "still use QuietNote"
+  promise; `checkSupport` returns unsupported when `navigator.gpu` is
+  absent. **Not gate-triggering** (no `src/prompts/`/send-path/safety-utils
+  files touched). → Verify: `npm run build` + full suite green; on
+  `vite preview` with `navigator.gpu` deleted before boot, the fallback card
+  shows the new copy and switching to Transformers.js is no longer offered
+  as supported; screenshots.
+- [ ] 2026-07-13 · **R2b — Download-size honesty on the loading card**
+  (firmed from the R2 audit; grounded in code 2026-07-13): a cold start
+  auto-downloads 1.49 GB (WebLLM default; 2.00 GB MediaPipe / 3.15 GB
+  Transformers.js) with no size disclosure — App.tsx:741-744's "First time
+  takes a few minutes." is the only hint. Add a per-runtime size map (e.g.
+  `MODEL_DOWNLOAD_SIZES: Record<RuntimeId, string>` = webllm "~1.5 GB",
+  transformersjs "~3.2 GB", mediapipe "~2.0 GB" — measured values from
+  R1b/R1e) in `src/inference/` and render the decided copy below in the
+  loading card's first-time note; `runtimeId` is already available via
+  `useInferenceEngine`. Copy-only; no consent-gate UI unless Sharang asks.
+  → Verify: unit test asserts the size string renders per runtime; on
+  `vite preview` the loading card shows the size line; screenshot.
+- [ ] 2026-07-13 · **R3b — Footer "open source" repo link**: in App.tsx's
+  footer (lines 935-962), add one more `·`-separated quiet link matching the
+  existing "Share feedback" pattern: text "open source", href
+  `https://github.com/Guzzler/QuietNote`, `target="_blank"
+  rel="noopener noreferrer"`, same classes. Hoist the URL as a constant
+  beside `FEEDBACK_ISSUES_URL` in `src/utils/feedbackLinks.ts`. (Link 404s
+  for outsiders while the repo is private — same accepted dormancy as F1's
+  issues link; activates at R4.) → Verify: unit test pins the href (extend
+  `FeedbackChannelGuards` pattern); footer renders calmly on `vite preview`;
+  screenshot.
 
 **R2 cold-start audit matrix (2026-07-12, `npm run build` + `npx vite
 preview`, Chromium via Playwright; screenshots in
@@ -141,16 +135,20 @@ preview`, Chromium via Playwright; screenshots in
 | Transformers.js without WebGPU | ❌ **Not actually WASM-capable with the current model**: ONNX q4f16 requires `com.microsoft.GatherBlockQuantized`, which has no CPU kernel → "Can't create a session … Kernel not found"; app at least fails visibly ("Something went wrong"). Invalidates the preferred "switch to Transformers.js" fix and the model-quality assumption that Transformers.js is the WASM-capable default candidate (`r2-transformersjs-wasm-failure.png`) |
 | Mobile 375×812 cold start | ✅ Loading card lays out cleanly at phone width (`r2-mobile-cold-start.png`); ⚠️ same missing size disclosure, worse on cellular → R2b |
 
-**Decided (2026-07-11) — unsupported-browser state, pending R2 confirmation:**
-the screen must never promise what it blocks. Preferred end state: when only
-the default runtime is unsupported, offer "Try Transformers.js instead — it
-runs without WebGPU (slower)" as an action on the fallback card. If that's
-more than a small change, the cheap honest fix is copy-only — replace the
-"You can still use QuietNote for writing" paragraph with:
+**Decided (2026-07-11; confirmed by R2 2026-07-12 — copy-only variant is
+the one to ship, the Transformers.js-switch variant is invalidated) —
+R2a fallback-card copy (execute: use verbatim):**
 > QuietNote's AI companion needs WebGPU, which this browser doesn't offer
 > yet. Your data never left this device — nothing was sent or lost. To use
 > QuietNote, open it in Chrome or Edge 113+ (or Chrome for Android 121+).
-Either way, no copy/behavior contradiction ships to strangers.
+
+**Decided (2026-07-13) — R2b loading-card size copy (execute: use
+verbatim):** replace the first-time note's text (App.tsx:743) with:
+> First time: downloads the AI model (~1.5 GB) once, then it's stored on
+> this device. After that, it loads instantly.
+where "~1.5 GB" comes from the per-runtime size map (webllm ~1.5 GB /
+transformersjs ~3.2 GB / mediapipe ~2.0 GB). One calm line, same lock icon
+and styling — the disclosure is honesty, not a warning.
 
 ## R1b smoke results (2026-07-10, `npx vite preview` on built `dist/`, real Chrome, Windows 11 + WebGPU)
 

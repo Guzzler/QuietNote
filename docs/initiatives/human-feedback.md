@@ -26,7 +26,7 @@ prefilled or attached to anything. Rules of engagement:
 
 | id | what | status |
 |---|---|---|
-| F1 | Feedback channel: issue templates + in-app "Share feedback" link-out | queued |
+| F1 | Feedback channel: issue templates + in-app "Share feedback" link-out | DONE (PR #85) |
 | F2 | Soft-launch kit: tester one-pager + share message for Sharang | gated on public-release R4 (needs the live URL; download sizes come from R1b) |
 | F3 | Field-notes intake convention + weekly issue→field-note triage | after first feedback exists |
 | F4 | Feedback-driven iteration: human reports outrank queue items | activates with F3 |
