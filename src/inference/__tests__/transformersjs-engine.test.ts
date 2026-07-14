@@ -39,12 +39,23 @@ describe("TransformersJSEngine", () => {
   });
 
   describe("checkSupport", () => {
-    it("returns supported:true (WASM fallback always available)", async () => {
+    // WebGPU is REQUIRED: the ONNX q4f16 model has no WASM/CPU kernel path
+    // (GatherBlockQuantized — R2 audit 2026-07-12), so this engine must not
+    // report itself supported without WebGPU.
+    it("returns supported:false without navigator.gpu (no WASM fallback for this model)", async () => {
+      const originalGpu = (navigator as any).gpu;
+      delete (navigator as any).gpu;
+
       const result = await engine.checkSupport();
-      expect(result.supported).toBe(true);
+      expect(result.supported).toBe(false);
+      expect(result.reason).toMatch(/WebGPU/);
+
+      if (originalGpu !== undefined) {
+        (navigator as any).gpu = originalGpu;
+      }
     });
 
-    it("detects WebGPU when navigator.gpu is available", async () => {
+    it("returns supported:true when a WebGPU adapter is available", async () => {
       const mockAdapter = { fake: "adapter" };
       const originalGpu = (navigator as any).gpu;
       (navigator as any).gpu = {
@@ -63,7 +74,25 @@ describe("TransformersJSEngine", () => {
       }
     });
 
-    it("falls back to WASM when WebGPU adapter request fails", async () => {
+    it("returns supported:false when no adapter is found", async () => {
+      const originalGpu = (navigator as any).gpu;
+      (navigator as any).gpu = {
+        requestAdapter: vi.fn().mockResolvedValue(null),
+      };
+
+      const freshEngine = new TransformersJSEngine();
+      const result = await freshEngine.checkSupport();
+      expect(result.supported).toBe(false);
+      expect(result.reason).toMatch(/adapter/i);
+
+      if (originalGpu === undefined) {
+        delete (navigator as any).gpu;
+      } else {
+        (navigator as any).gpu = originalGpu;
+      }
+    });
+
+    it("returns supported:false when the adapter request fails", async () => {
       const originalGpu = (navigator as any).gpu;
       (navigator as any).gpu = {
         requestAdapter: vi.fn().mockRejectedValue(new Error("no adapter")),
@@ -71,7 +100,7 @@ describe("TransformersJSEngine", () => {
 
       const freshEngine = new TransformersJSEngine();
       const result = await freshEngine.checkSupport();
-      expect(result.supported).toBe(true);
+      expect(result.supported).toBe(false);
 
       if (originalGpu === undefined) {
         delete (navigator as any).gpu;
