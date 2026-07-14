@@ -211,6 +211,65 @@ describe("MediaPipeEngine", () => {
     });
   });
 
+  describe("sampling parity (M0 — GenerateOptions must reach the task)", () => {
+    function makeStreamingInference() {
+      return {
+        generateResponse: vi.fn(
+          (_prompt: string, cb: (part: string, done: boolean) => void) => {
+            cb("hello", true);
+            return Promise.resolve("hello");
+          },
+        ),
+        setOptions: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn(),
+        isIdle: true,
+      };
+    }
+
+    async function drain(gen: AsyncIterable<string>) {
+      const out: string[] = [];
+      for await (const t of gen) out.push(t);
+      return out.join("");
+    }
+
+    it("applies the app's temperature via setOptions when it differs from the loaded value", async () => {
+      const inference = makeStreamingInference();
+      vi.mocked(LlmInference.createFromOptions).mockResolvedValueOnce(
+        inference as never,
+      );
+      await engine.load();
+
+      await drain(
+        engine.generate([{ role: "user", content: "hi" }], {
+          temperature: 0.6,
+        }),
+      );
+      expect(inference.setOptions).toHaveBeenCalledWith({ temperature: 0.6 });
+
+      // Same temperature again → no redundant graph reconfiguration
+      inference.setOptions.mockClear();
+      await drain(
+        engine.generate([{ role: "user", content: "hi again" }], {
+          temperature: 0.6,
+        }),
+      );
+      expect(inference.setOptions).not.toHaveBeenCalled();
+    });
+
+    it("documents that the API has no repetition-penalty knob (source guard)", async () => {
+      // LlmInferenceOptions has maxTokens/topK/temperature/randomSeed only —
+      // the app's repetitionPenalty CANNOT reach this backend. The engine
+      // must say so where the options are handled.
+      const { readFileSync } = await import("node:fs");
+      const { fileURLToPath } = await import("node:url");
+      const source = readFileSync(
+        fileURLToPath(new URL("../mediapipe-engine.ts", import.meta.url)),
+        "utf-8",
+      );
+      expect(source).toMatch(/no repetition-penalty knob/i);
+    });
+  });
+
   describe("model reference metadata", () => {
     it("has a valid modelId", () => {
       expect(MEDIAPIPE_MODEL_REF.modelId).toBeTruthy();
