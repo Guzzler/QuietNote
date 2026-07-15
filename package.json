@@ -14,7 +14,8 @@
     "eval:smoke": "tsx scripts/run-eval.ts --limit=5",
     "eval:scripts": "tsx scripts/run-eval.ts --scripts",
     "eval:scripts:all": "tsx scripts/run-eval.ts --scripts --strategy=all",
-    "eval:tools": "tsx scripts/run-eval.ts --tools"
+    "eval:tools": "tsx scripts/run-eval.ts --tools",
+    "eval:m1": "tsx scripts/run-m1-baseline.ts"
   },
   "dependencies": {
     "@fontsource-variable/lora": "^5.2.8",
