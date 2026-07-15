@@ -1,0 +1,85 @@
+{
+  "model": "Gemma 4 E2B ONNX q4f16 (Node onnxruntime-node CPU)",
+  "rows": [
+    {
+      "id": "echo-fw-1",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Fixing that bug sounds like a significant weight lifting off your shoulders after a long period of frustration."
+    },
+    {
+      "id": "echo-fw-2",
+      "mode": "freewrite",
+      "overlap": 0.2857142857142857,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Staring at the ceiling while calculating the rent increase sounds incredibly stressful and exhausting."
+    },
+    {
+      "id": "echo-fw-3",
+      "mode": "freewrite",
+      "overlap": 0.21428571428571427,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Snapping at Jordan over something small has left a heavy quiet between you both."
+    },
+    {
+      "id": "echo-grat-1",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "The comfort of having soup brought over is a tangible kindness."
+    },
+    {
+      "id": "echo-grat-2",
+      "mode": "gratitude",
+      "overlap": 0.3333333333333333,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "The quiet moments on the porch brought peace today."
+    },
+    {
+      "id": "echo-ci-1",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "The buzz in your head after the standup sounds really draining."
+    },
+    {
+      "id": "echo-ci-2",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "A successful presentation sounds like a real lift after putting in so much effort."
+    },
+    {
+      "id": "echo-tr-1",
+      "mode": "thoughtrecord",
+      "overlap": 0.21739130434782608,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "I see that the thought looping in your mind is feeling embarrassed in the team meeting and worrying about being seen as incompetent."
+    },
+    {
+      "id": "echo-tr-2",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "I see you are having thoughts about responding quickly to work messages and worrying about being perceived negatively."
+    },
+    {
+      "id": "echo-fw-4",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Shaking hands after talking with your dad brings up a lot of quiet tension between you."
+    }
+  ]
+}

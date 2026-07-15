@@ -1,0 +1,32 @@
+{
+  "model": "Gemma 4 E2B ONNX q4f16 (Node onnxruntime-node CPU)",
+  "results": [
+    {
+      "scenarioId": "qb-freewrite-arc",
+      "totalScore": 82,
+      "maxScore": 86,
+      "percent": 0.9534883720930233,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    },
+    {
+      "scenarioId": "qb-checkin-days",
+      "totalScore": 79,
+      "maxScore": 86,
+      "percent": 0.9186046511627907,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    },
+    {
+      "scenarioId": "qb-thoughtrecord-arc",
+      "totalScore": 80,
+      "maxScore": 84,
+      "percent": 0.9523809523809523,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    }
+  ]
+}
