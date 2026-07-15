@@ -27,9 +27,11 @@ decisions, release gate, queue format).
   few minutes…") — no size disclosure (R2b). The active `runtimeId` lives in
   `src/hooks/useInferenceEngine.ts` (localStorage `quietnote-runtime`), so
   the card can show a per-backend size.
-- **Footer (verified 2026-07-13):** App.tsx:935-962 — lock + "stay on this
-  device" + "Share feedback" + "email" separated by `·` spans; room for one
-  more quiet link in the same pattern (R3b).
+- **Footer (re-verified 2026-07-14):** App.tsx:940-967 (drifted from 935-962
+  after PRs #87/#88) — lock + "stay on this device" + "Share feedback" +
+  "email" separated by `·` spans; room for one more quiet link in the same
+  pattern (R3b). `FEEDBACK_ISSUES_URL`/`FEEDBACK_MAILTO` confirmed in
+  `src/utils/feedbackLinks.ts` (no query params, bare constants).
 - 3 backends: WebLLM (Gemma 2 2B, WebGPU), Transformers.js v4 (Gemma 4 E2B
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
@@ -82,39 +84,11 @@ decisions, release gate, queue format).
   Firefox/Safari on the live URL at release day.)
 - [x] 2026-07-13 · **R2a — Honest unsupported-browser fallback (copy-only) +
   truthful `checkSupport`** (DONE 2026-07-13, PR #87 — see Ledger)
-  (firmed from the R2 audit; grounded in code
-  2026-07-13): in `src/components/WebGPUFallback.tsx`, replace the indigo
-  callout paragraph (lines 59-65, "Your journal entries are stored locally…
-  You can still use QuietNote for writing…") with the decided copy below —
-  the card full-screen-blocks the app, so it must never promise writing. In
-  `src/inference/transformersjs-engine.ts#checkSupport` (lines 29-45), stop
-  returning always-supported: require a WebGPU adapter like the other
-  engines (the ONNX q4f16 model has no WASM/CPU kernel path — R2 matrix) and
-  return `{ supported: false, reason: … }` otherwise; keep the
-  `device` field logic for when WebGPU exists. Update the file's header
-  comment (line 5, "WebGPU (preferred) or WASM fallback") to match. Add/
-  adjust unit tests: fallback card copy contains no "still use QuietNote"
-  promise; `checkSupport` returns unsupported when `navigator.gpu` is
-  absent. **Not gate-triggering** (no `src/prompts/`/send-path/safety-utils
-  files touched). → Verify: `npm run build` + full suite green; on
-  `vite preview` with `navigator.gpu` deleted before boot, the fallback card
-  shows the new copy and switching to Transformers.js is no longer offered
-  as supported; screenshots.
 - [x] 2026-07-13 · **R2b — Download-size honesty on the loading card**
   (DONE 2026-07-13, PR #88 — see Ledger)
-  (firmed from the R2 audit; grounded in code 2026-07-13): a cold start
-  auto-downloads 1.49 GB (WebLLM default; 2.00 GB MediaPipe / 3.15 GB
-  Transformers.js) with no size disclosure — App.tsx:741-744's "First time
-  takes a few minutes." is the only hint. Add a per-runtime size map (e.g.
-  `MODEL_DOWNLOAD_SIZES: Record<RuntimeId, string>` = webllm "~1.5 GB",
-  transformersjs "~3.2 GB", mediapipe "~2.0 GB" — measured values from
-  R1b/R1e) in `src/inference/` and render the decided copy below in the
-  loading card's first-time note; `runtimeId` is already available via
-  `useInferenceEngine`. Copy-only; no consent-gate UI unless Sharang asks.
-  → Verify: unit test asserts the size string renders per runtime; on
-  `vite preview` the loading card shows the size line; screenshot.
-- [ ] 2026-07-13 · **R3b — Footer "open source" repo link**: in App.tsx's
-  footer (lines 935-962), add one more `·`-separated quiet link matching the
+- [ ] 2026-07-13 · **R3b — Footer "open source" repo link** (re-grounded
+  2026-07-14): in App.tsx's
+  footer (lines 940-967), add one more `·`-separated quiet link matching the
   existing "Share feedback" pattern: text "open source", href
   `https://github.com/Guzzler/QuietNote`, `target="_blank"
   rel="noopener noreferrer"`, same classes. Hoist the URL as a constant
@@ -123,6 +97,11 @@ decisions, release gate, queue format).
   issues link; activates at R4.) → Verify: unit test pins the href (extend
   `FeedbackChannelGuards` pattern); footer renders calmly on `vite preview`;
   screenshot.
+
+**Queue note (2026-07-14):** R3b is the LAST non-gated public-release
+increment. After it ships, this initiative is release-ready and everything
+remaining (R4, LICENSE) is Sharang-gated — do not invent further items here;
+model-quality (M1/M2a) is where open work lives.
 
 **R2 cold-start audit matrix (2026-07-12, `npm run build` + `npx vite
 preview`, Chromium via Playwright; screenshots in

@@ -71,12 +71,42 @@ Both templates start with the same privacy guard as a `markdown` element:
 - `config.yml` — `blank_issues_enabled: true`, one contact link:
   "Prefer email?" → `mailto:sharangpaiusa@gmail.com`.
 - [ ] gated on public-release R4 · **F2 — Soft-launch kit**: write
-  `docs/beta/WELCOME.md` (what QuietNote is, requirements + measured
-  model-download size from R1b, what to try in each of the 4 modes, known
-  limits from the browser matrix, how to send feedback) linked from README;
+  `docs/beta/WELCOME.md` per the decided outline below, linked from README;
   include a short copy-paste share message for Sharang in the PR body and
   the ntfy notification ("ready to share"). Sharing with testers is
   **Sharang's action, not the loop's**.
+
+**Decided (2026-07-14) — F2 WELCOME.md outline (execute: follow this
+structure; sizes/requirements are the measured values, re-check against the
+live URL at R4):**
+
+1. **Hi — thanks for trying QuietNote** (2–3 sentences): a private AI
+   journaling companion that runs entirely in your browser — the AI model
+   downloads to your device and your writing never leaves it. You're one of
+   the first ~10 people to use it; rough edges expected.
+2. **What you need**: Chrome or Edge 113+ (or Chrome for Android 121+) with
+   WebGPU; ~1.5 GB one-time model download on first visit (Wi-Fi
+   recommended; alternates in Settings are ~2.0–3.2 GB); a few GB free disk.
+   Live URL: https://guzzler.github.io/QuietNote/ (insert at R4).
+3. **What to try** — one bullet per mode, phrased as an invitation:
+   freewrite (just write what's on your mind and reply to what comes back),
+   check-in (a guided mood check), thought record (work through one stressful
+   thought, CBT-style), gratitude. Suggested: have at least one conversation
+   that goes 5+ turns.
+4. **Honest limits**: the AI is a small on-device model — it can be clumsy,
+   repeat your words back, or miss nuance; it is not a therapist and will
+   point you to real help if you write about being in crisis; Firefox/Safari
+   aren't supported yet.
+5. **Your data**: everything (entries, moods, the model) lives in this
+   browser's storage — clearing site data deletes it; there's no account and
+   no sync; the Privacy dashboard in Settings shows exactly what's stored.
+6. **Telling us what happened** (the part we actually need): the in-app
+   "Share feedback" footer link → GitHub form (please don't paste journal
+   entries — it's public), or email sharangpaiusa@gmail.com. What helps most:
+   what you were doing, what you expected, what happened instead.
+
+Tone: warm, plain, no marketing voice; under ~80 lines; no screenshots
+needed (README has them).
 
 ## Ledger
 
