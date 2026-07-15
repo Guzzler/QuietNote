@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   FEEDBACK_ISSUES_URL,
   FEEDBACK_MAILTO,
+  REPO_URL,
 } from "../../utils/feedbackLinks";
 
 // Guards for the F1 feedback channel (2026-07-12). Feedback is
@@ -32,6 +33,11 @@ describe("Feedback channel guards (F1)", () => {
       expect(FEEDBACK_MAILTO).not.toContain("?");
     });
 
+    it("repo link points at the repository with no query string (R3b)", () => {
+      expect(REPO_URL).toBe("https://github.com/Guzzler/QuietNote");
+      expect(REPO_URL).not.toContain("?");
+    });
+
     it("feedbackLinks module performs no network calls", () => {
       const source = read("../../utils/feedbackLinks.ts");
       expect(source).not.toContain("fetch(");
@@ -54,6 +60,11 @@ describe("Feedback channel guards (F1)", () => {
 
     it("App footer carries the mailto alternative", () => {
       expect(source).toContain("FEEDBACK_MAILTO");
+    });
+
+    it("App footer carries the open-source repo link (R3b)", () => {
+      expect(source).toContain("REPO_URL");
+      expect(source).toContain("open source");
     });
   });
 

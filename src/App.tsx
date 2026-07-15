@@ -18,7 +18,11 @@ import { shouldAttemptReferralReprompt, withReferralReprompt } from "./utils/ref
 import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
 import { generateReflection, shouldRegenerate } from "./utils/sessionReflection";
 import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personalityPrompt";
-import { FEEDBACK_ISSUES_URL, FEEDBACK_MAILTO } from "./utils/feedbackLinks";
+import {
+  FEEDBACK_ISSUES_URL,
+  FEEDBACK_MAILTO,
+  REPO_URL,
+} from "./utils/feedbackLinks";
 import type { PersonalitySettings } from "./utils/personalityPrompt";
 import SettingsPanel from "./components/SettingsPanel";
 import EvalPanel from "./components/EvalPanel";
@@ -963,6 +967,17 @@ export default function App() {
           className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600 transition-colors"
         >
           email
+        </a>
+        <span aria-hidden="true" className="text-slate-300">
+          ·
+        </span>
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600 transition-colors"
+        >
+          open source
         </a>
       </footer>
 

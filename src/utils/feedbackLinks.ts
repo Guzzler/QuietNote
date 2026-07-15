@@ -9,3 +9,5 @@ export const FEEDBACK_ISSUES_URL =
   "https://github.com/Guzzler/QuietNote/issues/new/choose";
 
 export const FEEDBACK_MAILTO = "mailto:sharangpaiusa@gmail.com";
+
+export const REPO_URL = "https://github.com/Guzzler/QuietNote";
