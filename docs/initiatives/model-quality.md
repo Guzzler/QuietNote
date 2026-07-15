@@ -121,7 +121,7 @@ parked list stays parked.
 |---|---|---|
 | M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | DONE (PR #89) — prompt half REVERTED (gate fail); engine parity shipped |
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | queued |
-| M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | after M1 spec |
+| M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91) — generation open |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12 (compute + HF token verified); waits on M2 dataset + notebook |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | after M3 |
 | M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4 |
@@ -162,7 +162,8 @@ parked list stays parked.
   the WebLLM-removal question (see Decisions). New dimension is additive —
   do not touch existing cases/floors. → Verify: baseline table committed
   here, harness runs green in CI/test suite.
-- [ ] 2026-07-11 · **M2a — Dataset spec (doc-only)** (updated 2026-07-12 for
+- [x] 2026-07-11 · **M2a — Dataset spec (doc-only)** (DONE 2026-07-14, PR
+  #91 — see Ledger) (updated 2026-07-12 for
   positioning): write `docs/model-quality/DATASET.md` — schema (multi-turn,
   4 modes, Gemma turn format), target size, generation plan (which teacher
   model, prompt templates), safety-case coverage mirrored from the gate
@@ -178,6 +179,7 @@ parked list stays parked.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-14 | M2a — Dataset spec (doc-only) | #91 | `docs/model-quality/DATASET.md` written per the updated task: JSONL schema (format-agnostic; Gemma turn rendering + real system prompt happen in the M3 notebook, responses-only masking), target ~2,000 dialogues (fw 40/ci 25/tr 20/gr 15), teacher = Claude via API from a local script with scenario cards, mechanical reject-and-regenerate filters reusing `echoMetric.ts` thresholds, safety mirror ~10% (crisis turns EXCLUDED — guards own that behavior), personalization exemplars as a first-class section (callbacks, throughline, register adaptation, cross-day memory), curation protocol (10%/slice hand review, 100% of safety mirror, ~20 exemplars quoted in the M2 PR for Sharang's tone veto), and the hard no-real-user-text rule with provenance re-check. Unblocks M2 generation. |
 | 2026-07-13 | M0 — Echo mitigation + engine sampling parity | #89 | **Prompt half: NEGATIVE RESULT, reverted in the same PR** (Day-30/32 precedent). Full gate eval with `--referral-reprompt` ON (Gemma 4 E2B, headless runner) FAILED 4 floors: empathy 39/44 (≥43), specificity 55/60 (≥56), gratitude medical 15/16 (16/16), thoughtrecord medical 15/16 (16/16). Lesson (full detail `docs/eval-runs/2026-07-13-m0-gate/NOTE.md`): the "ONE detail in a few words" cap produces fragment openers that blow the 3–4-sentence format caps (4 of 5 specificity fails = "Too many sentences"), and the dose-echo leak ("ten milligrams…") survived anyway — prompt-side anti-echo can't fix a 2–4B quantized model; it's the fine-tune's job (M2/M3). Do not retry echo caps in prompts. **Engine half SHIPPED**: MediaPipe now applies `GenerateOptions.temperature` via `setOptions()` (previously discarded ALL options); documented its API has no repetition-penalty knob (LlmInferenceOptions = maxTokens/topK/temperature/randomSeed), so `repetitionPenalty` cannot reach that backend. Transformers.js already had per-call parity. 2 regression tests; 1348 green. |
 
 ## Blocked on Sharang
