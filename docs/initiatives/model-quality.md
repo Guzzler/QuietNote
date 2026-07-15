@@ -120,7 +120,7 @@ parked list stays parked.
 | id | what | status |
 |---|---|---|
 | M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | DONE (PR #89) — prompt half REVERTED (gate fail); engine parity shipped |
-| M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | queued |
+| M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | harness DONE + Gemma 4 E2B headless baseline recorded (PR #92); browser-backend baseline (WebLLM/MediaPipe) still open → M1b |
 | M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91) — generation open |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12 (compute + HF token verified); waits on M2 dataset + notebook |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | after M3 |
@@ -146,7 +146,13 @@ parked list stays parked.
   body; below-floor = do not merge.** → Verify: eval numbers at/above floors
   AND a before/after exchange on `vite preview` showing the reply no longer
   opens with the mirrored entry (screenshots).
-- [ ] 2026-07-11 · **M1 — Echo metric + conversational baseline** (updated
+- [x] 2026-07-11 · **M1 — Echo metric + conversational baseline** (DONE
+  2026-07-14 as the honest smaller version, PR #92 — harness + rubric +
+  scenarios shipped and the Gemma 4 E2B baseline recorded below via the
+  headless Node path; **discrepancy vs. the task text: the WebLLM and
+  MediaPipe baselines are NOT run** — both are browser-bound with no
+  headless path, and 40+ in-browser generations per backend need a
+  dedicated run → proposed M1b below. See Ledger.) (updated
   2026-07-12 for the quality bar + positioning): add an echo/repetition
   dimension to the eval harness (score = max n-gram overlap between the user
   entry and the first sentence of the reply, normalized; plus a "template
@@ -174,11 +180,63 @@ parked list stays parked.
   scores), curation/review protocol, and the hard rule that no real user
   text ever enters the set. → Verify: doc reviewed in PR; unblocks M2
   generation.
+- [ ] PROPOSED 2026-07-14 (execute-filed, planner to confirm/re-scope) ·
+  **M1b — Browser-backend baseline (WebLLM Gemma 2 2B + MediaPipe E2B)**:
+  the M1 instrument exists (`ECHO_EVAL_CASES`, `QUALITY_BAR_SCENARIOS`,
+  `qualityBarRubric`) but the two browser-bound backends are unbaselined —
+  and **the WebLLM-removal decision (see Decisions) has no data yet**; the
+  live parroting Sharang saw was on a browser backend, so the headless pass
+  below must not be read as "echo solved". Plan: wire the M1 instrument
+  into `EvalPanel.tsx` (or a dev-only route) so the scenarios can run
+  in-browser against the real engines on `vite preview`, then record both
+  baselines in the table below. Long inference runs — budget a dedicated
+  run per backend. → Verify: table rows filled, transcripts committed
+  under `docs/eval-runs/`.
+
+## M1 baseline (2026-07-14, headless — `npm run eval:m1`)
+
+Model: **Gemma 4 E2B ONNX q4f16 via Node onnxruntime-node CPU** — the same
+model+quantization Transformers.js serves in the app, generation defaults
+mirrored from `transformersjs-engine.ts` (incl. `repetition_penalty: 1.3`),
+scenarios run through the C1 driver on the **managed** strategy (the real
+app send path: recap + trim). Raw outputs + full transcripts:
+`docs/eval-runs/2026-07-14-m1-baseline/`.
+
+| instrument | result |
+|---|---|
+| Echo cases (10 single-turn, all modes) | **10/10 no-echo passes; mean overlap 0.11** (threshold 0.35) |
+| qb-freewrite-arc (10 turns) | 82/86 = **95%**, zero-critical: none, trims: none → rubric PASS |
+| qb-checkin-days (10 turns) | 79/86 = **92%**, zero-critical: none, trims: none → rubric PASS |
+| qb-thoughtrecord-arc (10 turns) | 80/84 = **95%**, zero-critical: none, trims: none → rubric PASS |
+| Context budget | **10 turns never trimmed** under managed strategy (recap fired; est. history well under budget) — the 10-turn bar fits `MODEL_CONTEXT_LIMIT` 4096 |
+| WebLLM Gemma 2 2B | **not run** — browser-bound (M1b) |
+| MediaPipe Gemma 4 E2B LiteRT | **not run** — browser-bound (M1b); NOTE: no repetition penalty exists on this backend (M0), so its echo numbers are expected to be the worst |
+
+**How to read this (do NOT over-claim):** the expectation was "current
+models fail the bar"; the headless E2B path instead PASSES the
+deterministic rubric and shows near-zero opening echo with
+`repetition_penalty: 1.3` applied. Three caveats keep the quality bar
+OPEN: (1) the rubric's continuity/support dimensions are string
+heuristics — reading the transcripts, replies are coherent and do make
+real callbacks (e.g. the Harlow report resurfaces at turn 9), but the
+register is stiff, formal, and interview-like ("What pattern from the past
+few days suggests…"), with template smell surviving in places — a human
+read does not call this "a warm journal with a therapy aspect" yet;
+(2) the parroting Sharang saw live was on a browser backend — MediaPipe
+has NO repetition penalty, so the echo failure plausibly lives there and
+in WebLLM's Gemma 2 2B, neither of which is measured yet (M1b);
+(3) per the bar's definition, it is met only when **M4 clears it on the
+fine-tuned model** plus intact gate floors — a baseline rubric pass on one
+backend changes the *gap estimate*, not the bar. Implication for M2/M3:
+the dataset's priority shifts slightly from raw anti-echo (already decent
+on this path) toward **warmth/register and personalization depth** — §1 of
+`DATASET.md` already orders it that way.
 
 ## Ledger
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-14 | M1 — Echo metric + conversational baseline (honest smaller version) | #92 | Harness shipped additively (`echoMetric.ts` n-gram overlap with pronoun folding + template-smell list; `echoEvalCases.ts` 10 cases; `qualityBarScenarios.ts` three 10-turn scenarios with planted details + fairness-tested callbacks; `qualityBarRubric.ts` 0–2 × 5 dims, pass = ≥85% + zero critical zeros; `EVAL_CASES`/floors untouched). Headless Gemma 4 E2B baseline via `npm run eval:m1` on the managed send path: 10/10 no-echo (mean overlap 0.11), scenarios 95%/92%/95% rubric PASS, zero trims in 10 turns. **Read the caveats in the baseline section — quality bar stays OPEN** (heuristic rubric; stiff register on human read; browser backends incl. the no-repetition-penalty MediaPipe unmeasured → M1b proposed; WebLLM-removal question still has no data). 33 new tests; 1383 green. |
 | 2026-07-14 | M2a — Dataset spec (doc-only) | #91 | `docs/model-quality/DATASET.md` written per the updated task: JSONL schema (format-agnostic; Gemma turn rendering + real system prompt happen in the M3 notebook, responses-only masking), target ~2,000 dialogues (fw 40/ci 25/tr 20/gr 15), teacher = Claude via API from a local script with scenario cards, mechanical reject-and-regenerate filters reusing `echoMetric.ts` thresholds, safety mirror ~10% (crisis turns EXCLUDED — guards own that behavior), personalization exemplars as a first-class section (callbacks, throughline, register adaptation, cross-day memory), curation protocol (10%/slice hand review, 100% of safety mirror, ~20 exemplars quoted in the M2 PR for Sharang's tone veto), and the hard no-real-user-text rule with provenance re-check. Unblocks M2 generation. |
 | 2026-07-13 | M0 — Echo mitigation + engine sampling parity | #89 | **Prompt half: NEGATIVE RESULT, reverted in the same PR** (Day-30/32 precedent). Full gate eval with `--referral-reprompt` ON (Gemma 4 E2B, headless runner) FAILED 4 floors: empathy 39/44 (≥43), specificity 55/60 (≥56), gratitude medical 15/16 (16/16), thoughtrecord medical 15/16 (16/16). Lesson (full detail `docs/eval-runs/2026-07-13-m0-gate/NOTE.md`): the "ONE detail in a few words" cap produces fragment openers that blow the 3–4-sentence format caps (4 of 5 specificity fails = "Too many sentences"), and the dose-echo leak ("ten milligrams…") survived anyway — prompt-side anti-echo can't fix a 2–4B quantized model; it's the fine-tune's job (M2/M3). Do not retry echo caps in prompts. **Engine half SHIPPED**: MediaPipe now applies `GenerateOptions.temperature` via `setOptions()` (previously discarded ALL options); documented its API has no repetition-penalty knob (LlmInferenceOptions = maxTokens/topK/temperature/randomSeed), so `repetitionPenalty` cannot reach that backend. Transformers.js already had per-call parity. 2 regression tests; 1348 green. |
 
