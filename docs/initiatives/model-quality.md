@@ -1,12 +1,10 @@
 # Initiative: model-quality (QLoRA fine-tune + conversational eval)
 
 **Created 2026-07-11 (interactive, Sharang).** Trigger: watching the R1d
-verification exchange live, Sharang's verdict was that the model is "pretty
-horrible" — the reply opened by restating his whole entry back pronoun-swapped
-("I finally fixed a bug that had been bothering you all week and you feel
-lighter than you have in days. …"). Direction from Sharang: **run QLoRA and
-add an adapter** — train and test a model that is genuinely conversational
-for these journaling use cases, and make sure it actually works well.
+exchange live, Sharang's verdict was "pretty horrible" — the reply restated
+his whole entry back pronoun-swapped. Direction: **run QLoRA and add an
+adapter** — train and test a model that is genuinely conversational for
+these journaling use cases.
 
 **Mission:** QuietNote's replies read like a warm, natural conversational
 companion — no parroting the entry back, no template smell — proven by a
@@ -73,23 +71,16 @@ this initiative's scope only* (new conversational-quality eval dimensions are
 in scope here per Sharang's 2026-07-11 instruction). Everything else in the
 parked list stays parked.
 
-## Why the model parrots the entry (diagnosed 2026-07-11)
+## Why the model parrots the entry (diagnosed 2026-07-11; updated 2026-07-14)
 
-1. **The prompt tells it to echo, and a 2–4B model over-complies.**
-   `src/prompts/systemPrompts.ts` FIRST-LINE rule: "open by naming something
-   concrete the user wrote … If you cannot find a concrete detail to name,
-   restate one of their own phrases back to them", plus per-mode "Echo a
-   concrete word or detail from what the user wrote". Frontier models take
-   "a detail"; small quantized models mirror the whole entry. (Same family as
-   the parked freewrite "dose-echo WATCH".)
-2. **MediaPipe ignores all sampling options.** `MediaPipeEngine.generate()`
-   discards `GenerateOptions` — the app's `repetitionPenalty: 1.3` (applied
-   by WebLLM) never reaches it, and its API has no repetition penalty at all;
-   temperature/topK are frozen at load time. Nothing discourages copying.
-3. **Base models are small and heavily quantized** (2B q4f16 / E2B int4) —
-   instruction-following nuance is exactly what quantization erodes. This is
-   the part only fine-tuning can fix: bake the desired conversational
-   behavior into the weights instead of asking for it in a 1.6k-token prompt.
+1. The prompt's FIRST-LINE/echo rules over-drive small quantized models
+   (prompt-side fix FAILED the gate — M0, do not retry).
+2. MediaPipe has NO repetition-penalty knob at all (M0 documented its API;
+   per-call temperature now wired). The M1 headless E2B path WITH
+   `repetition_penalty: 1.3` shows near-zero echo — so the live parroting
+   plausibly lives in MediaPipe/WebLLM, measured by M1b.
+3. Small + heavily quantized bases erode instruction nuance — the part only
+   the M3 fine-tune fixes (bake behavior into weights, not the prompt).
 
 ## Grounding / constraints (verified 2026-07-11)
 
@@ -99,10 +90,6 @@ parked list stays parked.
   the QLoRA adapter must be **merged into the base weights, then converted
   per format** (MLC: `mlc_llm convert_weight`; ONNX: optimum/ai-edge export;
   LiteRT: `ai-edge-torch`). Hosting: HF under an account Sharang controls.
-- Base model candidates: **Gemma 4 E2B** (already the base for 2 of 3
-  backends — one fine-tune covers Transformers.js + MediaPipe) or **Gemma 2
-  2B** (the WebLLM default most users hit first). Decide with M1 baseline
-  data on which backend real users will actually feel.
 - **Training data must be synthetic/curated — NEVER real user journal
   content.** The local-only rule is absolute; nothing a tester ever typed can
   enter a dataset.
@@ -129,69 +116,65 @@ parked list stays parked.
 ## Task queue
 
 - [x] 2026-07-11 · **M0 — Echo mitigation in prompts + engine sampling
-  parity** (DONE 2026-07-13 with a NEGATIVE RESULT on the prompt half, PR
-  #89 — see Ledger: prompt tune FAILED the release gate on 4 counts and was
-  reverted per Day-30/32 precedent; engine sampling parity shipped.
-  Full numbers + lesson in `docs/eval-runs/2026-07-13-m0-gate/NOTE.md`.
-  Anti-echo work moves to M2 dataset design / M3 fine-tune — do NOT retry
-  prompt-side echo caps.): in `src/prompts/systemPrompts.ts`, tighten the FIRST-LINE rule and
-  per-mode "Echo a concrete word or detail" lines so the echo is explicitly
-  capped ("name ONE detail in at most a few words — never restate their
-  sentences back") and add a negative example of full-entry mirroring; in
-  `src/inference/mediapipe-engine.ts` / `transformersjs-engine.ts`, wire
-  whatever sampling knobs each API actually has (temperature/topK per call if
-  supported; document that MediaPipe has no repetition penalty). **This
-  touches `src/prompts/` → run the full 4-mode eval read with
-  `--referral-reprompt` ON and put the numbers vs the gate floors in the PR
-  body; below-floor = do not merge.** → Verify: eval numbers at/above floors
-  AND a before/after exchange on `vite preview` showing the reply no longer
-  opens with the mirrored entry (screenshots).
+  parity** (DONE 2026-07-13, PR #89 — prompt half REVERTED on a 4-floor
+  release-gate FAIL, engine parity shipped; full numbers + lesson in Ledger
+  and `docs/eval-runs/2026-07-13-m0-gate/NOTE.md`. Do NOT retry prompt-side
+  echo caps — anti-echo belongs to M2/M3.)
 - [x] 2026-07-11 · **M1 — Echo metric + conversational baseline** (DONE
   2026-07-14 as the honest smaller version, PR #92 — harness + rubric +
-  scenarios shipped and the Gemma 4 E2B baseline recorded below via the
-  headless Node path; **discrepancy vs. the task text: the WebLLM and
-  MediaPipe baselines are NOT run** — both are browser-bound with no
-  headless path, and 40+ in-browser generations per backend need a
-  dedicated run → proposed M1b below. See Ledger.) (updated
-  2026-07-12 for the quality bar + positioning): add an echo/repetition
-  dimension to the eval harness (score = max n-gram overlap between the user
-  entry and the first sentence of the reply, normalized; plus a "template
-  smell" check for stock phrases), 8–12 single-turn cases across the 4
-  modes, **plus the three 10-turn scenarios scored per the quality-bar
-  rubric above** (freewrite arc / checkin-with-callbacks / thoughtrecord CBT
-  arc; each scenario must PLANT specific details in early turns so the
-  personalization dimension is objectively checkable — e.g. a name, a
-  deadline, a recurring worry the model should call back to; also record
-  whether 10 turns fit `MODEL_CONTEXT_LIMIT` 4096 and what truncation does
-  to coherence); run against all 3 backends on the current models and record
-  the baseline table + rubric scores in this doc — this table also decides
-  the WebLLM-removal question (see Decisions). New dimension is additive —
-  do not touch existing cases/floors. → Verify: baseline table committed
-  here, harness runs green in CI/test suite.
+  three 10-turn scenarios shipped; headless Gemma 4 E2B baseline in the
+  table below; WebLLM/MediaPipe browser baselines NOT run → M1b. See
+  Ledger.)
 - [x] 2026-07-11 · **M2a — Dataset spec (doc-only)** (DONE 2026-07-14, PR
-  #91 — see Ledger) (updated 2026-07-12 for
-  positioning): write `docs/model-quality/DATASET.md` — schema (multi-turn,
-  4 modes, Gemma turn format), target size, generation plan (which teacher
-  model, prompt templates), safety-case coverage mirrored from the gate
-  floors, anti-echo exemplar design, **personalization exemplar design as a
-  first-class section** (dialogues where the model recalls a detail from
-  turns earlier, tracks an emotional throughline across the session, and
-  adapts register to the user's tone — the behaviors the quality-bar rubric
-  scores), curation/review protocol, and the hard rule that no real user
-  text ever enters the set. → Verify: doc reviewed in PR; unblocks M2
-  generation.
-- [ ] PROPOSED 2026-07-14 (execute-filed, planner to confirm/re-scope) ·
-  **M1b — Browser-backend baseline (WebLLM Gemma 2 2B + MediaPipe E2B)**:
-  the M1 instrument exists (`ECHO_EVAL_CASES`, `QUALITY_BAR_SCENARIOS`,
-  `qualityBarRubric`) but the two browser-bound backends are unbaselined —
-  and **the WebLLM-removal decision (see Decisions) has no data yet**; the
-  live parroting Sharang saw was on a browser backend, so the headless pass
-  below must not be read as "echo solved". Plan: wire the M1 instrument
-  into `EvalPanel.tsx` (or a dev-only route) so the scenarios can run
-  in-browser against the real engines on `vite preview`, then record both
-  baselines in the table below. Long inference runs — budget a dedicated
-  run per backend. → Verify: table rows filled, transcripts committed
-  under `docs/eval-runs/`.
+  #91 — `docs/model-quality/DATASET.md`; see Ledger. Unblocks M2b.)
+- [ ] 2026-07-16 · **M1b — Browser-backend baseline (WebLLM Gemma 2 2B +
+  MediaPipe E2B)** (confirmed from execute's 2026-07-14 proposal;
+  RE-SCOPED after grounding: `EvalPanel.tsx:36-37` renders only when
+  `import.meta.env.DEV` AND a `?eval` query param are present, so the
+  panel does NOT exist on `vite preview` — run on the dev server instead;
+  engine/model/sampling behavior is identical for what M1b measures):
+  add a dev-only "Quality bar (M1)" section to
+  `src/components/EvalPanel.tsx` that runs `ECHO_EVAL_CASES`
+  (`src/utils/echoEvalCases.ts`) and the three `QUALITY_BAR_SCENARIOS`
+  through the same managed send path the headless runner uses, scores with
+  `qualityBarRubric.ts`, and extends the existing copy-markdown affordance
+  to emit the same transcript/rubric markdown as `npm run eval:m1`. Run
+  per backend on `npm run dev` + `?eval` (switch engine in Settings,
+  reload, run): WebLLM Gemma 2 2B, then MediaPipe Gemma 4 E2B LiteRT.
+  Long inference runs — budget a dedicated run per backend; per-scenario
+  abort/rerun is acceptable. → Verify: both open rows in the M1 baseline
+  table below filled; transcripts committed under
+  `docs/eval-runs/<run-date>-m1b-webllm/` and `…-m1b-mediapipe/`;
+  WebLLM-removal recommendation (keep/remove, with numbers) recorded in
+  Decisions for Sharang.
+- [ ] 2026-07-16 · **M2b — Dataset generator script (mock-teacher
+  first)**: write `scripts/generate-m2-dataset.ts` per `DATASET.md` §5 —
+  scenario-card sampler (mode/topic/persona/planted-details/arc/length
+  honoring the §3 slice shares and §4 composition), teacher prompt
+  template rendering the §1 behavior contract + card, mechanical
+  reject-and-regenerate filters reusing `echoMetric.ts`
+  (`maxNgramOverlap < 0.35`, template-smell/banned openers,
+  sentence-count + no-markdown, callback-present, safety-mirror referral
+  vocab + dose/advice bans), §2-schema JSONL writer, and rejection
+  telemetry. Teacher call sits behind `--teacher=anthropic|mock`;
+  `--teacher=mock` (deterministic canned dialogues) is what tests and
+  this PR exercise — **no API calls in the suite; the real batch is M2c,
+  blocked on Sharang (see below)**. → Verify:
+  `npx tsx scripts/generate-m2-dataset.ts --teacher=mock --count 20`
+  emits schema-valid records with correct slice shares; unit tests cover
+  the card sampler and each filter; suite green.
+- [ ] 2026-07-16 · **M3a — Colab training notebook (artifact-only; Sharang
+  executes)**: write `notebooks/m3-qlora-gemma4-e2b.ipynb` — 4-bit QLoRA
+  on `google/gemma-4-E2B-it` (unsloth preferred, PEFT+bitsandbytes
+  fallback; T4/A100-friendly), config cell up top (HF dataset repo id
+  `Sharangp/quietnote-m2-v1` + HF_TOKEN paste-in), renders Gemma turn
+  format with the real app system prompt prepended (committed snapshot
+  cell with a re-sync note against `src/prompts/systemPrompts.ts`),
+  responses-only loss masking, train/eval split, merge adapter → fp16 →
+  `push_to_hub` under Sharangp, final cell printing the M4 handoff
+  checklist. The loop writes it, never runs it (standing M3 rule). →
+  Verify: notebook is nbformat-valid (validation script in the PR),
+  cells reviewed in the PR body.
 
 ## M1 baseline (2026-07-14, headless — `npm run eval:m1`)
 
@@ -212,25 +195,17 @@ app send path: recap + trim). Raw outputs + full transcripts:
 | WebLLM Gemma 2 2B | **not run** — browser-bound (M1b) |
 | MediaPipe Gemma 4 E2B LiteRT | **not run** — browser-bound (M1b); NOTE: no repetition penalty exists on this backend (M0), so its echo numbers are expected to be the worst |
 
-**How to read this (do NOT over-claim):** the expectation was "current
-models fail the bar"; the headless E2B path instead PASSES the
-deterministic rubric and shows near-zero opening echo with
-`repetition_penalty: 1.3` applied. Three caveats keep the quality bar
-OPEN: (1) the rubric's continuity/support dimensions are string
-heuristics — reading the transcripts, replies are coherent and do make
-real callbacks (e.g. the Harlow report resurfaces at turn 9), but the
-register is stiff, formal, and interview-like ("What pattern from the past
-few days suggests…"), with template smell surviving in places — a human
-read does not call this "a warm journal with a therapy aspect" yet;
-(2) the parroting Sharang saw live was on a browser backend — MediaPipe
-has NO repetition penalty, so the echo failure plausibly lives there and
-in WebLLM's Gemma 2 2B, neither of which is measured yet (M1b);
-(3) per the bar's definition, it is met only when **M4 clears it on the
-fine-tuned model** plus intact gate floors — a baseline rubric pass on one
-backend changes the *gap estimate*, not the bar. Implication for M2/M3:
-the dataset's priority shifts slightly from raw anti-echo (already decent
-on this path) toward **warmth/register and personalization depth** — §1 of
-`DATASET.md` already orders it that way.
+**How to read this (do NOT over-claim):** the headless E2B path PASSES the
+deterministic rubric — but the quality bar stays OPEN on three grounds:
+(1) the rubric's continuity/support dims are string heuristics; on a human
+read the transcripts are coherent with real callbacks but stiff, formal,
+interview-like — not yet "a warm journal with a therapy aspect";
+(2) the parroting Sharang saw live was on a browser backend (MediaPipe has
+NO repetition penalty), neither of which is measured yet → M1b;
+(3) by definition the bar is met only when **M4 clears it on the
+fine-tuned model** with gate floors intact. Implication: the M2 dataset
+tilts from raw anti-echo toward **warmth/register + personalization
+depth** — `DATASET.md` §1 already orders it that way.
 
 ## Ledger
 
@@ -242,6 +217,15 @@ on this path) toward **warmth/register and personalization depth** — §1 of
 
 ## Blocked on Sharang
 
+- **M2c — teacher API key / cost approval for the real dataset batch**
+  (added 2026-07-16): `DATASET.md` §5 names Claude via API as the teacher;
+  `.env.local` today holds only `HF_TOKEN` — there is no
+  `ANTHROPIC_API_KEY`. Before M2c (generating the ~2,000-dialogue set +
+  rejects) can run, Sharang either adds `ANTHROPIC_API_KEY` to
+  `.env.local` (rough order: low tens of dollars on a Sonnet-class
+  teacher) or picks the §5 open-weights fallback. M2b's `--teacher=mock`
+  mode keeps the whole pipeline buildable and tested meanwhile — the key
+  is the only missing piece.
 - ~~**M3 setup**~~ **COMPLETE 2026-07-12 — M3 is fully unblocked** (waits
   only on M2 dataset + the training notebook). State for future runs:
   - **Compute:** Colab compute purchased and active on Sharang's Google
