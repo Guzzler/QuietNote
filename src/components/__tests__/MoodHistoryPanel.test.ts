@@ -88,7 +88,12 @@ describe("MoodHistoryPanel grouping logic", () => {
   });
 
   it("groups multiple moods into correct buckets in order", () => {
-    const now = Date.now();
+    // Anchor "now" to midday: with a raw Date.now(), `now - 3600000` falls on
+    // the previous day when the test runs between 00:00 and 01:00, collapsing
+    // the Today bucket to one entry (flaked in the 2026-07-16 00:06 run).
+    const nowDate = new Date();
+    nowDate.setHours(12, 0, 0, 0);
+    const now = nowDate.getTime();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(12, 0, 0, 0);
