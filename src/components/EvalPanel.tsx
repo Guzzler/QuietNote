@@ -2,6 +2,11 @@ import { useState, useRef } from "react";
 import { runEvalSuite, reportToMarkdown } from "../utils/evalDriver";
 import type { EvalRunReport } from "../utils/evalDriver";
 import type { EvalResult, EvalDimension } from "../utils/evalRunner";
+import {
+  runM1Baseline,
+  m1ResultToMarkdown,
+  type M1Progress,
+} from "../utils/m1BrowserRunner";
 import type { InferenceEngine } from "../inference/types";
 import type { JournalingMode } from "./JournalingModeSelector";
 
@@ -32,6 +37,12 @@ export default function EvalPanel({ engine, getSystemInstruction, modelLabel }: 
   const [report, setReport] = useState<EvalRunReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // M1 baseline (model-quality M1b): echo cases + 10-turn quality-bar
+  // scenarios against the LIVE engine, app-faithful generation options.
+  const [m1Running, setM1Running] = useState(false);
+  const [m1Progress, setM1Progress] = useState<M1Progress | null>(null);
+  const [m1Markdown, setM1Markdown] = useState<string | null>(null);
 
   if (!import.meta.env.DEV) return null;
   if (!new URLSearchParams(window.location.search).has("eval")) return null;
@@ -110,6 +121,50 @@ export default function EvalPanel({ engine, getSystemInstruction, modelLabel }: 
     abortRef.current?.abort();
   };
 
+  const handleRunM1 = async () => {
+    if (!engine || engine.getStatus() !== "ready") {
+      setError("Model not loaded. Load the model first.");
+      return;
+    }
+
+    setM1Running(true);
+    setError(null);
+    setM1Markdown(null);
+    setM1Progress(null);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // The app's real send-path options (App.tsx:389/584).
+    const generate = async (messages: { role: string; content: string }[]): Promise<string> => {
+      await engine.resetContext();
+      let acc = "";
+      for await (const token of engine.generate(messages, {
+        temperature: 0.6,
+        maxTokens: 200,
+        repetitionPenalty: 1.3,
+      })) {
+        acc += token;
+      }
+      return acc;
+    };
+
+    try {
+      const result = await runM1Baseline({
+        generate,
+        modelLabel,
+        signal: controller.signal,
+        onProgress: setM1Progress,
+      });
+      setM1Markdown(m1ResultToMarkdown(result));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setM1Running(false);
+      abortRef.current = null;
+    }
+  };
+
   const handleCopyMarkdown = () => {
     if (!report) return;
     const md = reportToMarkdown(report);
@@ -181,6 +236,30 @@ export default function EvalPanel({ engine, getSystemInstruction, modelLabel }: 
             )}
           </div>
 
+          <div className="flex items-center gap-4 pt-1 border-t border-slate-800">
+            {!m1Running ? (
+              <button
+                onClick={handleRunM1}
+                disabled={running}
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-600 px-4 py-1.5 rounded text-sm font-medium"
+              >
+                Run M1 baseline (echo + quality bar)
+              </button>
+            ) : (
+              <button
+                onClick={handleAbort}
+                className="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded text-sm font-medium"
+              >
+                Abort M1
+              </button>
+            )}
+            {m1Progress && m1Running && (
+              <span className="text-sm text-slate-300" data-testid="m1-progress">
+                {m1Progress.done}/{m1Progress.total} — {m1Progress.label}
+              </span>
+            )}
+          </div>
+
           {progress && running && (
             <div className="text-sm text-slate-300">
               Progress: {progress.done}/{progress.total}
@@ -197,6 +276,25 @@ export default function EvalPanel({ engine, getSystemInstruction, modelLabel }: 
 
         {/* Results */}
         <div className="flex-1 overflow-auto p-4">
+          {m1Markdown && (
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">M1 baseline report</span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(m1Markdown)}
+                  className="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs"
+                >
+                  Copy M1 Markdown
+                </button>
+              </div>
+              <pre
+                data-testid="m1-report"
+                className="bg-slate-800 rounded p-2 text-xs whitespace-pre-wrap max-h-96 overflow-auto"
+              >
+                {m1Markdown}
+              </pre>
+            </div>
+          )}
           {report && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
