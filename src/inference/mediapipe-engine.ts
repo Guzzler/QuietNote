@@ -31,15 +31,20 @@ const MODEL_URL =
  * the model re-downloaded whenever the HTTP cache evicted it. */
 export const MEDIAPIPE_CACHE_NAME = "mediapipe-cache";
 
+/** Sampling temperature baked into the graph at load time, matching the
+ * app's send path (App.tsx sends temperature 0.6 on every generate). It is
+ * fixed for the lifetime of the loaded task: `setOptions()` rebuilds the
+ * inference session, and because the model is fed as a one-shot streamed
+ * `modelAssetBuffer` (R1e), the rebuilt session has no model asset and every
+ * subsequent generate fails with "No model asset provided" — the regression
+ * that broke all MediaPipe sends between M0 (2026-07-13) and 2026-07-16. */
+export const MEDIAPIPE_LOAD_TEMPERATURE = 0.6;
+
 export class MediaPipeEngine implements InferenceEngine, EngineCapability {
   readonly name = "MediaPipe";
   private inference: import("@mediapipe/tasks-genai").LlmInference | null =
     null;
   private status: EngineStatus = "idle";
-  /** Temperature currently applied to the task (set at load, updated per
-   * call via setOptions so the app's GenerateOptions actually reach the
-   * graph instead of being silently discarded). */
-  private appliedTemperature = 0.8;
 
   getStatus(): EngineStatus {
     return this.status;
@@ -216,7 +221,7 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
         // INVALID_ARGUMENT: CalculatorGraph::Run() failed.
         maxTokens: MODEL_CONTEXT_LIMIT,
         topK: 40,
-        temperature: this.appliedTemperature,
+        temperature: MEDIAPIPE_LOAD_TEMPERATURE,
         randomSeed: Date.now(),
       });
 
@@ -230,23 +235,16 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
 
   async *generate(
     messages: { role: string; content: string }[],
-    options: GenerateOptions,
+    _options: GenerateOptions,
   ): AsyncIterable<string> {
     if (!this.inference) throw new Error("Engine not loaded");
 
-    // Sampling parity (M0): the MediaPipe API takes sampling options on the
-    // task, not per generateResponse() call — apply the app's temperature
-    // via setOptions() when it changes. There is NO repetition-penalty knob
-    // in this API (LlmInferenceOptions: maxTokens/topK/temperature/
-    // randomSeed only), so options.repetitionPenalty cannot reach this
-    // backend — anti-echo behavior must come from the prompt/fine-tune.
-    if (
-      options.temperature !== undefined &&
-      options.temperature !== this.appliedTemperature
-    ) {
-      await this.inference.setOptions({ temperature: options.temperature });
-      this.appliedTemperature = options.temperature;
-    }
+    // Per-call sampling options CANNOT reach this backend. The API has
+    // no repetition-penalty knob (LlmInferenceOptions: maxTokens/topK/
+    // temperature/randomSeed only), and temperature is fixed at load:
+    // calling setOptions() here rebuilds the session and loses the streamed
+    // model asset (see MEDIAPIPE_LOAD_TEMPERATURE). Anti-echo behavior must
+    // come from the prompt/fine-tune.
 
     // Build prompt from messages using Gemma turn markers
     const prompt = messages

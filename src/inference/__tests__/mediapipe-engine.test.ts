@@ -232,7 +232,12 @@ describe("MediaPipeEngine", () => {
       return out.join("");
     }
 
-    it("applies the app's temperature via setOptions when it differs from the loaded value", async () => {
+    it("NEVER calls setOptions during generate — rebuilding the session loses the streamed model asset", async () => {
+      // Regression guard (2026-07-16): M0 called setOptions({temperature})
+      // on the first send (app 0.6 vs loaded 0.8). MediaPipe rebuilds the
+      // inference session on setOptions, and the model was fed as a one-shot
+      // streamed modelAssetBuffer (R1e), so every MediaPipe send failed with
+      // "[newSession] Inference failed: Error: No model asset provided."
       const inference = makeStreamingInference();
       vi.mocked(LlmInference.createFromOptions).mockResolvedValueOnce(
         inference as never,
@@ -244,16 +249,22 @@ describe("MediaPipeEngine", () => {
           temperature: 0.6,
         }),
       );
-      expect(inference.setOptions).toHaveBeenCalledWith({ temperature: 0.6 });
-
-      // Same temperature again → no redundant graph reconfiguration
-      inference.setOptions.mockClear();
       await drain(
         engine.generate([{ role: "user", content: "hi again" }], {
-          temperature: 0.6,
+          temperature: 0.9,
         }),
       );
       expect(inference.setOptions).not.toHaveBeenCalled();
+    });
+
+    it("bakes the app send-path temperature (0.6) into the graph at load", async () => {
+      const inference = makeStreamingInference();
+      vi.mocked(LlmInference.createFromOptions).mockResolvedValueOnce(
+        inference as never,
+      );
+      await engine.load();
+      const opts = vi.mocked(LlmInference.createFromOptions).mock.calls.at(-1)![1];
+      expect(opts.temperature).toBe(0.6);
     });
 
     it("documents that the API has no repetition-penalty knob (source guard)", async () => {
