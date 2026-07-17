@@ -40,6 +40,75 @@ export const MEDIAPIPE_CACHE_NAME = "mediapipe-cache";
  * that broke all MediaPipe sends between M0 (2026-07-13) and 2026-07-16. */
 export const MEDIAPIPE_LOAD_TEMPERATURE = 0.6;
 
+/**
+ * Streaming filter that stops the reply at the first leaked Gemma turn-marker
+ * fragment (M1c). The LiteRT runtime leaks markers into user-visible replies
+ * and NOT as one clean token — the M1b transcripts
+ * (docs/eval-runs/2026-07-16-m1b-mediapipe/report.md) show `<end_of_turn>`,
+ * doubled `<end_of_turn><end_of_turn>`, and malformed `<end{turn>`,
+ * `<end{end_of_turn>`, `<end of turn>`, `<end of_turn>` — so an exact-string
+ * whitelist is insufficient. Instead, any occurrence of `<end` or
+ * `<start_of_turn` is treated as a STOP: these never occur in legit replies
+ * (markdown isn't rendered). A chunk-final fragment that could still grow
+ * into a marker (plus the whitespace before it, so the stop point trims
+ * clean) is held back until the next chunk disambiguates it; `flush()`
+ * releases it if the stream ends and it turned out benign.
+ */
+export class TurnMarkerStreamFilter {
+  private held = "";
+  private stopped = false;
+
+  /** True once a stop marker was seen — no further text will be emitted. */
+  get isStopped(): boolean {
+    return this.stopped;
+  }
+
+  private static readonly STOP_MARKERS = ["<end", "<start_of_turn"];
+
+  /** Feed a raw chunk; returns the text now safe to show ("" if none yet). */
+  push(chunk: string): string {
+    if (this.stopped) return "";
+    const text = this.held + chunk;
+    this.held = "";
+
+    let stopIdx = -1;
+    for (const marker of TurnMarkerStreamFilter.STOP_MARKERS) {
+      const i = text.indexOf(marker);
+      if (i !== -1 && (stopIdx === -1 || i < stopIdx)) stopIdx = i;
+    }
+    if (stopIdx !== -1) {
+      this.stopped = true;
+      return text.slice(0, stopIdx).replace(/\s+$/, "");
+    }
+
+    // Hold back a trailing `<`-initiated fragment that is still a strict
+    // prefix of a stop marker (max 13 chars: "<start_of_tur"), plus any
+    // whitespace right before it — the marker (or the rest of it) may arrive
+    // in the next chunk, and the stop point must trim clean.
+    let holdIdx = text.length;
+    const lt = text.lastIndexOf("<");
+    if (lt !== -1) {
+      const tail = text.slice(lt);
+      if (
+        TurnMarkerStreamFilter.STOP_MARKERS.some((m) => m.startsWith(tail))
+      ) {
+        holdIdx = lt;
+      }
+    }
+    while (holdIdx > 0 && /\s/.test(text[holdIdx - 1])) holdIdx--;
+    this.held = text.slice(holdIdx);
+    return text.slice(0, holdIdx);
+  }
+
+  /** Stream ended: release anything still held (it turned out benign). */
+  flush(): string {
+    if (this.stopped) return "";
+    const out = this.held;
+    this.held = "";
+    return out;
+  }
+}
+
 export class MediaPipeEngine implements InferenceEngine, EngineCapability {
   readonly name = "MediaPipe";
   private inference: import("@mediapipe/tasks-genai").LlmInference | null =
@@ -257,7 +326,10 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
       })
       .join("\n") + "\n<start_of_turn>model\n";
 
-    // MediaPipe uses callback-based streaming — wrap in async iterator
+    // MediaPipe uses callback-based streaming — wrap in async iterator.
+    // Chunks pass through TurnMarkerStreamFilter (M1c): the runtime leaks
+    // Gemma turn markers (incl. malformed variants) into replies; the filter
+    // stops emission at the first `<end`/`<start_of_turn` fragment.
     const chunks: string[] = [];
     let resolve: (() => void) | null = null;
     let done = false;
@@ -274,16 +346,21 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
       },
     );
 
-    while (!done) {
-      if (chunks.length === 0) {
-        await new Promise<void>((r) => {
-          resolve = r;
-        });
+    const filter = new TurnMarkerStreamFilter();
+    // Drain before checking `done` — the callback may deliver the final
+    // chunks and `complete` in one burst, and they must still be emitted.
+    for (;;) {
+      while (chunks.length > 0 && !filter.isStopped) {
+        const out = filter.push(chunks.shift()!);
+        if (out) yield out;
       }
-      while (chunks.length > 0) {
-        yield chunks.shift()!;
-      }
+      if (done || filter.isStopped) break;
+      await new Promise<void>((r) => {
+        resolve = r;
+      });
     }
+    const tail = filter.flush();
+    if (tail) yield tail;
 
     await resultPromise;
   }

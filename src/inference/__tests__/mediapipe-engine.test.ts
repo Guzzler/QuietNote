@@ -26,6 +26,7 @@ import {
   MediaPipeEngine,
   MEDIAPIPE_MODEL_REF,
   MEDIAPIPE_CACHE_NAME,
+  TurnMarkerStreamFilter,
 } from "../mediapipe-engine";
 import { MODEL_CONTEXT_LIMIT } from "../../utils/tokenEstimator";
 import pkg from "../../../package.json";
@@ -278,6 +279,104 @@ describe("MediaPipeEngine", () => {
         "utf-8",
       );
       expect(source).toMatch(/no repetition-penalty knob/i);
+    });
+  });
+
+  describe("turn-marker leak filter (M1c — LiteRT leaks Gemma markers into replies)", () => {
+    /** Run chunks through the filter the way generate() does. */
+    function filterChunks(chunks: string[]): string {
+      const filter = new TurnMarkerStreamFilter();
+      const out: string[] = [];
+      for (const c of chunks) {
+        if (filter.isStopped) break;
+        const t = filter.push(c);
+        if (t) out.push(t);
+      }
+      const tail = filter.flush();
+      if (tail) out.push(tail);
+      return out.join("");
+    }
+
+    // Every variant observed in the M1b transcripts
+    // (docs/eval-runs/2026-07-16-m1b-mediapipe/report.md).
+    it.each([
+      ["<end_of_turn>"],
+      ["<end_of_turn><end_of_turn>"],
+      ["<end{turn>"],
+      ["<end{end_of_turn>"],
+      ["<end of turn>"],
+      ["<end of_turn>"],
+      ["<start_of_turn>user"],
+    ])("stops at observed leak variant %j and trims trailing whitespace", (marker) => {
+      expect(filterChunks([`That sounds heavy. ${marker}`])).toBe(
+        "That sounds heavy.",
+      );
+    });
+
+    it("stops when the marker is split across two chunks", () => {
+      expect(filterChunks(["It makes sense you're tired.<end", "_of_turn>"])).toBe(
+        "It makes sense you're tired.",
+      );
+    });
+
+    it("holds a partial marker prefix at chunk end until the next chunk completes it", () => {
+      // "<en" is shorter than the "<end" stop fragment — the filter must
+      // hold it back instead of showing it, then stop when the rest arrives.
+      expect(filterChunks(["It makes sense you're tired.<en", "d_of_turn>"])).toBe(
+        "It makes sense you're tired.",
+      );
+    });
+
+    it("drops everything after the first marker, even across later chunks", () => {
+      expect(
+        filterChunks(["A reply.", " <end_of_turn>", "leaked continuation"]),
+      ).toBe("A reply.");
+    });
+
+    it("passes a benign '<' in reply text through unchanged", () => {
+      expect(filterChunks(["your worry <that you failed> isn't the whole story"])).toBe(
+        "your worry <that you failed> isn't the whole story",
+      );
+    });
+
+    it("flushes a held benign '<e...' fragment when the stream ends", () => {
+      // "<e" is a marker prefix at chunk end — held back, then released
+      // by flush() because no more chunks disambiguated it.
+      expect(filterChunks(["score was 3", "<e"])).toBe("score was 3<e");
+    });
+
+    it("emits nothing extra for a marker-only final chunk", () => {
+      expect(filterChunks(["You showed up for yourself today.", "<end_of_turn>"])).toBe(
+        "You showed up for yourself today.",
+      );
+    });
+
+    it("generate() applies the filter to the streamed reply", async () => {
+      const inference = {
+        generateResponse: vi.fn(
+          (_prompt: string, cb: (part: string, done: boolean) => void) => {
+            cb("Thanks for writing", false);
+            cb(" that down.", false);
+            cb("<end", false);
+            cb("_of_turn>", true);
+            return Promise.resolve("");
+          },
+        ),
+        close: vi.fn(),
+        isIdle: true,
+      };
+      vi.mocked(LlmInference.createFromOptions).mockResolvedValueOnce(
+        inference as never,
+      );
+      await engine.load();
+      const out: string[] = [];
+      for await (const t of engine.generate(
+        [{ role: "user", content: "hi" }],
+        { temperature: 0.6 },
+      )) {
+        out.push(t);
+      }
+      expect(out.join("")).toBe("Thanks for writing that down.");
     });
   });
 
