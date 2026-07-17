@@ -142,43 +142,32 @@ parked list stays parked.
 - [x] 2026-07-11 · **M2a — Dataset spec (doc-only)** (DONE 2026-07-14, PR
   #91 — `docs/model-quality/DATASET.md`; see Ledger. Unblocks M2b.)
 - [x] 2026-07-16 · **M1b — Browser-backend baseline (WebLLM Gemma 2 2B +
-  MediaPipe E2B)** (DONE 2026-07-16, PR #95 — both baselines recorded in
-  the table below; run surfaced and fixed a P1 en route: **every MediaPipe
-  send had been broken since M0** (PR #89's `setOptions` call rebuilds the
-  session and loses the streamed model asset → "No model asset provided"),
-  fixed in PR #94 before the baseline could run. WebLLM-removal
-  recommendation recorded in Decisions. See Ledger.)
-  (confirmed from execute's 2026-07-14 proposal;
-  RE-SCOPED after grounding: `EvalPanel.tsx:36-37` renders only when
-  `import.meta.env.DEV` AND a `?eval` query param are present, so the
-  panel does NOT exist on `vite preview` — run on the dev server instead;
-  engine/model/sampling behavior is identical for what M1b measures):
-  add a dev-only "Quality bar (M1)" section to
-  `src/components/EvalPanel.tsx` that runs `ECHO_EVAL_CASES`
-  (`src/utils/echoEvalCases.ts`) and the three `QUALITY_BAR_SCENARIOS`
-  through the same managed send path the headless runner uses, scores with
-  `qualityBarRubric.ts`, and extends the existing copy-markdown affordance
-  to emit the same transcript/rubric markdown as `npm run eval:m1`. Run
-  per backend on `npm run dev` + `?eval` (switch engine in Settings,
-  reload, run): WebLLM Gemma 2 2B, then MediaPipe Gemma 4 E2B LiteRT.
-  Long inference runs — budget a dedicated run per backend; per-scenario
-  abort/rerun is acceptable. → Verify: both open rows in the M1 baseline
-  table below filled; transcripts committed under
-  `docs/eval-runs/<run-date>-m1b-webllm/` and `…-m1b-mediapipe/`;
-  WebLLM-removal recommendation (keep/remove, with numbers) recorded in
-  Decisions for Sharang.
-- [ ] PROPOSED 2026-07-16 (execute-filed, planner to confirm/re-scope) ·
-  **M1c — Strip leaked Gemma turn markers from MediaPipe replies**: the
-  M1b MediaPipe transcripts show raw `<end_of_turn>` and malformed
-  `<end{turn>` markers reaching user-visible reply text (e.g.
-  qb-checkin-days turns 3–5 in
-  `docs/eval-runs/2026-07-16-m1b-mediapipe/report.md`) — the LiteRT path
-  streams the stop token instead of consuming it. Plan: filter turn-marker
-  fragments from the streamed chunks in
-  `src/inference/mediapipe-engine.ts#generate` (careful: markers can split
-  across chunk boundaries), regression test with marker-bearing streams.
-  → Verify: unit tests + a real MediaPipe exchange on the dev server whose
-  reply contains no `<`-marker fragments.
+  MediaPipe E2B)** (DONE 2026-07-16, PR #95 + en-route P1 fix PR #94 —
+  both baseline rows filled in the table below; WebLLM-removal
+  recommendation recorded in Decisions and escalated to Blocked on
+  Sharang. Full detail in Ledger.)
+- [ ] 2026-07-16 · **M1c — Strip leaked Gemma turn markers from MediaPipe
+  replies** (confirmed from execute's 2026-07-16 proposal; re-grounded by
+  the planner same day: `mediapipe-engine.ts#generate` (lines ~236–289)
+  yields MediaPipe's callback chunks verbatim with zero filtering, and the
+  M1b transcripts show the leak is NOT one clean token — observed variants
+  in `docs/eval-runs/2026-07-16-m1b-mediapipe/report.md` include
+  `<end_of_turn>`, doubled `<end_of_turn><end_of_turn>`, and malformed
+  `<end{turn>`, `<end{end_of_turn>`, `<end of turn>`, `<end of_turn>` — so
+  an exact-string filter is insufficient). **Decided approach (execute:
+  implement this, not a marker whitelist):** treat any `<`-initiated
+  turn-marker fragment as a STOP — in `generate`, scan the accumulated
+  stream for the first occurrence of `<end` or `<start_of_turn` (these
+  never occur in legit replies; markdown isn't rendered) and stop yielding
+  at that point, trimming trailing whitespace; hold back any chunk-final
+  partial starting with `<` (up to ~16 chars) until the next chunk
+  disambiguates it, flushing it if it turns out benign or the stream ends.
+  Regression tests: each observed variant above, a marker split across two
+  chunks (`"…text<end"` + `"_of_turn>"`), a benign `<` in reply text, and
+  a marker-only final chunk. Not gate-triggering (inference-engine file
+  only; precedent PRs #83/#94). → Verify: unit tests green + a real
+  MediaPipe exchange on `npm run dev` whose rendered reply contains no
+  `<`-fragments.
 - [ ] 2026-07-16 · **M2b — Dataset generator script (mock-teacher
   first)**: write `scripts/generate-m2-dataset.ts` per `DATASET.md` §5 —
   scenario-card sampler (mode/topic/persona/planted-details/arc/length
@@ -284,6 +273,15 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 ## Blocked on Sharang
 
+- **WebLLM removal — go/no-go** (added 2026-07-16): the M1b data is in and
+  the loop's recommendation is **REMOVE** (see Decisions — Gemma 2 2B
+  self-repetition loops from ~turn 5, checkin rubric FAIL, and the
+  fine-tune targets E2B so it can never benefit). Per the 2026-07-12
+  decision this needs Sharang's explicit go; if given, the planner queues
+  it as its own increment (default-engine swap + download-size copy,
+  README, R1b-matrix updates all reference WebLLM). Note the standing
+  caveat: removal does NOT dissolve the unsupported-browser problem unless
+  M5 picks a WASM-loadable quantization.
 - **M2c — teacher API key / cost approval for the real dataset batch**
   (added 2026-07-16): `DATASET.md` §5 names Claude via API as the teacher;
   `.env.local` today holds only `HF_TOKEN` — there is no
