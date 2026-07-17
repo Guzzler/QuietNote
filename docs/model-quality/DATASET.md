@@ -142,11 +142,17 @@ brevity comes from *complete short sentences*, not fragments.
 
 ## 5. Generation plan
 
-- **Teacher:** Claude (Sonnet-class or better) via API from a local script —
-  never from the app. The teacher writes BOTH sides of each dialogue from a
-  scenario card. (An open-weights teacher (Gemma 3 27B / Llama 3.3 70B) is an
-  acceptable fallback if API cost is a constraint — decide at M2 kickoff;
-  quality of the assistant side is the priority.)
+- **Teacher (updated 2026-07-16, Sharang, interactive): HYBRID.** (a) The
+  **loop itself** authors dialogues on the Claude Code subscription via
+  `scripts/m2-loop-teacher.ts` (deal cards → author → ingest through the
+  same filters) — these batches double as gold-standard exemplars; (b) the
+  **Claude API** (`scripts/generate-m2-dataset.ts --teacher=anthropic`,
+  Sonnet-class) generates the volume once Sharang's funded
+  `ANTHROPIC_API_KEY` is in `.env.local`. Both paths write BOTH sides of
+  each dialogue from the same scenario-card deck (fixed count + seed, so
+  card ids never collide) and pass the IDENTICAL §5 filters — the teacher
+  never gets an exemption. Never from the app. (Open-weights fallback
+  remains available if API cost becomes a constraint.)
 - **Scenario cards, not free generation:** a generator script samples
   scenario cards (mode, situation seed from a curated topic list, persona
   register terse/expansive, planted details, emotional arc, dialogue length,

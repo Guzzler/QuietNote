@@ -158,12 +158,20 @@ export function sampleScenarioCards(count: number, seed = 42): ScenarioCard[] {
     });
 
     // Flag budgets within the slice (rounded; callback only on multi-turn).
-    const safetyBudget = Math.round(n * 0.1);
-    const hardEchoBudget = Math.round(n * 0.1);
-    const callbackBudget = Math.round(n * 0.35);
+    // Flags are STRIDED across the eligible cards instead of front-loaded,
+    // so any deck prefix (a generation batch, a review sample) stays
+    // representative of the whole.
+    const stride = (eligible: number[], budget: number): Set<number> => {
+      if (budget <= 0 || eligible.length === 0) return new Set();
+      const step = Math.max(1, Math.floor(eligible.length / budget));
+      return new Set(eligible.filter((_, k) => k % step === 0).slice(0, budget));
+    };
+    const all = bands.map((_, i) => i);
+    const multiTurn = all.filter((i) => bands[i] !== "single");
+    const safetySet = stride(multiTurn, Math.round(n * 0.1));
+    const callbackSet = stride(multiTurn, Math.round(n * 0.35));
+    const hardEchoSet = stride(all.filter((i) => !safetySet.has(i)), Math.round(n * 0.1));
     let safetyUsed = 0;
-    let hardEchoUsed = 0;
-    let callbackUsed = 0;
 
     for (let i = 0; i < n; i++) {
       const band = bands[i];
@@ -176,22 +184,15 @@ export function sampleScenarioCards(count: number, seed = 42): ScenarioCard[] {
       const persona = rng() < 0.5 ? "terse" : "expansive";
 
       const tags = ["anti-echo"];
-      const isCallback = band !== "single" && callbackUsed < callbackBudget;
-      if (isCallback) {
-        tags.push("callback");
-        callbackUsed++;
-      }
+      if (callbackSet.has(i)) tags.push("callback");
       let safetyKind: SafetyKind | null = null;
       // Safety turns replace a mid-dialogue exchange, so multi-turn only.
-      if (band !== "single" && safetyUsed < safetyBudget) {
+      if (safetySet.has(i)) {
         safetyKind = SAFETY_KINDS[safetyUsed % SAFETY_KINDS.length];
         tags.push(`safety-${safetyKind}`);
         safetyUsed++;
       }
-      if (hardEchoUsed < hardEchoBudget && !safetyKind) {
-        tags.push("hard-anti-echo");
-        hardEchoUsed++;
-      }
+      if (hardEchoSet.has(i)) tags.push("hard-anti-echo");
       tags.push(`tone-${persona}`);
 
       cards.push({
@@ -477,6 +478,117 @@ export const mockTeacher: Teacher = async (card, attempt) => {
 
   return turns;
 };
+
+// ----------------------------------------------- loop-as-teacher (M2c)
+
+/**
+ * The full M2 deck: every scenario card the dataset will contain, fixed by
+ * target count + seed so batches authored across many loop runs always
+ * fulfill the SAME cards (Sharang 2026-07-16: the loop itself is the
+ * teacher — no API key; see DATASET.md §5).
+ */
+export const M2_TARGET_COUNT = 2000;
+export const M2_DECK_SEED = 42;
+
+export function buildM2Deck(count = M2_TARGET_COUNT, seed = M2_DECK_SEED): ScenarioCard[] {
+  return sampleScenarioCards(count, seed);
+}
+
+/** Merge lists by ratio: repeatedly take from the list least represented so far. */
+function weaveByRatio<T>(lists: T[][]): T[] {
+  const used = lists.map(() => 0);
+  const out: T[] = [];
+  const total = lists.reduce((a, l) => a + l.length, 0);
+  while (out.length < total) {
+    let best = -1;
+    let bestScore = Infinity;
+    for (let i = 0; i < lists.length; i++) {
+      if (used[i] >= lists[i].length) continue;
+      const score = used[i] / lists[i].length;
+      if (score < bestScore) {
+        bestScore = score;
+        best = i;
+      }
+    }
+    out.push(lists[best][used[best]++]);
+  }
+  return out;
+}
+
+/**
+ * Reorder the deck so any prefix stays representative: length bands are
+ * ratio-woven within each mode, then modes are ratio-woven against the §3
+ * shares — early batches and review samples cover every slice and band.
+ */
+export function interleaveDeck(deck: ScenarioCard[]): ScenarioCard[] {
+  const byMode = new Map<M2Mode, ScenarioCard[]>();
+  for (const card of deck) {
+    const bucket = byMode.get(card.mode) ?? [];
+    bucket.push(card);
+    byMode.set(card.mode, bucket);
+  }
+  const wovenBuckets = [...byMode.values()].map((bucket) =>
+    weaveByRatio(
+      (["single", "medium", "long"] as const).map((band) => bucket.filter((c) => c.lengthBand === band)),
+    ),
+  );
+  return weaveByRatio(wovenBuckets);
+}
+
+export interface AuthoredDialogue {
+  cardId: string;
+  turns: DialogueTurn[];
+}
+
+export interface IngestResult {
+  accepted: DatasetRecord[];
+  rejected: { cardId: string; reasons: string[] }[];
+}
+
+/**
+ * Validates a batch of loop-authored dialogues against their deck cards and
+ * the full §5 filter set. Unknown card ids and already-fulfilled cards are
+ * rejects (never silently dropped); accepted dialogues become §2 records.
+ */
+export function ingestBatch(
+  deck: ScenarioCard[],
+  existingIds: ReadonlySet<string>,
+  batch: AuthoredDialogue[],
+  teacherLabel: string,
+): IngestResult {
+  const byId = new Map(deck.map((c) => [c.id, c]));
+  const accepted: DatasetRecord[] = [];
+  const rejected: { cardId: string; reasons: string[] }[] = [];
+  const seenInBatch = new Set<string>();
+
+  for (const item of batch) {
+    const card = byId.get(item.cardId);
+    if (!card) {
+      rejected.push({ cardId: item.cardId, reasons: ["unknown card id (not in the deck)"] });
+      continue;
+    }
+    if (existingIds.has(item.cardId) || seenInBatch.has(item.cardId)) {
+      rejected.push({ cardId: item.cardId, reasons: ["duplicate: card already fulfilled"] });
+      continue;
+    }
+    const reasons = runFilters(item.turns, card);
+    if (reasons.length > 0) {
+      rejected.push({ cardId: item.cardId, reasons });
+      continue;
+    }
+    seenInBatch.add(item.cardId);
+    accepted.push({
+      id: card.id,
+      mode: card.mode,
+      turns: item.turns,
+      tags: card.tags,
+      teacher: teacherLabel,
+      review: { status: "pending", by: "loop" },
+    });
+  }
+
+  return { accepted, rejected };
+}
 
 // -------------------------------------------------------- generation loop
 

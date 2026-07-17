@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  buildM2Deck,
+  interleaveDeck,
+  ingestBatch,
+  M2_TARGET_COUNT,
   sampleScenarioCards,
   allocateCounts,
   renderTeacherPrompt,
@@ -225,6 +229,53 @@ describe("m2DatasetGenerator (M2b — DATASET.md §5 pipeline)", () => {
 
     it("DOSE_ADVICE_BANS catch the M0 dose-echo shape", () => {
       expect(DOSE_ADVICE_BANS.some((re) => re.test("taking ten milligrams — wait, 10 mg nightly"))).toBe(true);
+    });
+  });
+
+  describe("loop-as-teacher deck + ingest (M2c)", () => {
+    it("the deck is stable across calls and full-size", () => {
+      const deck = buildM2Deck();
+      expect(deck).toHaveLength(M2_TARGET_COUNT);
+      expect(buildM2Deck()).toEqual(deck);
+    });
+
+    it("interleaveDeck round-robins modes and preserves every card", () => {
+      const deck = buildM2Deck(40, 42);
+      const interleaved = interleaveDeck(deck);
+      expect(interleaved).toHaveLength(deck.length);
+      expect(new Set(interleaved.map((c) => c.id)).size).toBe(deck.length);
+      const firstFour = interleaved.slice(0, 4).map((c) => c.mode);
+      expect(new Set(firstFour).size).toBe(4);
+    });
+
+    it("ingestBatch accepts filter-passing dialogues and rejects unknowns, dupes, and filter failures", async () => {
+      const deck = buildM2Deck(8, 42);
+      const good = await mockTeacher(deck[0], 0);
+      const { accepted, rejected } = ingestBatch(
+        deck,
+        new Set([deck[1].id]),
+        [
+          { cardId: deck[0].id, turns: good },
+          { cardId: deck[0].id, turns: good }, // dupe within batch
+          { cardId: deck[1].id, turns: good }, // already fulfilled
+          { cardId: "zz-9999", turns: good }, // unknown card
+          {
+            cardId: deck[2].id,
+            turns: [{ role: "user", content: "hello" }], // fails shape filters
+          },
+        ],
+        "claude (loop-as-teacher, Claude Code session)",
+      );
+      expect(accepted).toHaveLength(1);
+      expect(accepted[0].id).toBe(deck[0].id);
+      expect(accepted[0].teacher).toContain("loop-as-teacher");
+      expect(rejected).toHaveLength(4);
+      expect(rejected.map((r) => r.reasons[0])).toEqual([
+        expect.stringContaining("duplicate"),
+        expect.stringContaining("duplicate"),
+        expect.stringContaining("unknown card"),
+        expect.stringContaining("shape"),
+      ]);
     });
   });
 
