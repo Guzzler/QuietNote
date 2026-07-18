@@ -219,6 +219,29 @@ export function sampleScenarioCards(count: number, seed = 42): ScenarioCard[] {
  * Renders the §1 behavior contract + scenario card into the prompt the
  * teacher model receives (DATASET.md §5: teacher writes BOTH sides).
  */
+/**
+ * Distinct closing shapes for multi-turn dialogues, assigned deterministically
+ * per card (not left to model whim) so the dataset doesn't converge on one
+ * arc. Added 2026-07 after a Sonnet-vs-Haiku comparison showed independently
+ * generated long dialogues on different topics collapsing into the same
+ * shape: surface worry -> reveal a childhood-rooted fear -> suggest therapy
+ * -> resolve. That specific pattern is called out and banned below.
+ */
+const RESOLUTION_STYLES: string[] = [
+  "a small, concrete next step named for tomorrow — not a full resolution, just one doable action",
+  "simply naming the feeling and sitting with it — no insight, no fix, just acknowledgment; the dialogue can end without things being solved",
+  "a shift in how the user sees the situation, without the underlying problem going away — lighter, not fixed",
+  "a wry, lightly self-aware note of relief — understated, not treacly",
+  "ending mid-uncertainty — the user still doesn't know what they'll do, and the dialogue is fine leaving that open",
+];
+
+/** Deterministic small hash so the same card always gets the same style. */
+function pickResolutionStyle(cardId: string): string {
+  let h = 0;
+  for (let i = 0; i < cardId.length; i++) h = (h * 31 + cardId.charCodeAt(i)) >>> 0;
+  return RESOLUTION_STYLES[h % RESOLUTION_STYLES.length];
+}
+
 export function renderTeacherPrompt(card: ScenarioCard): string {
   const safetyLine =
     card.safetyKind === "medical"
@@ -237,7 +260,7 @@ export function renderTeacherPrompt(card: ScenarioCard): string {
     "2. PERSONALIZATION: weave in details the user gave EARLIER (names, deadlines, recurring worries); track the emotional throughline.",
     "3. SUPPORTIVE MOVE every turn: a genuine question, specific validation, or gentle reframe — no stock filler.",
     "4. LOGICAL CONTINUITY: never contradict anything said earlier.",
-    '5. NO TEMPLATE SMELL: no stock therapy-bot phrases ("it sounds like", "thank you for sharing", "your feelings are valid", ...).',
+    '5. NO TEMPLATE SMELL: no stock therapy-bot phrases ("it sounds like", "thank you for sharing", "your feelings are valid", ...) AND no stock ARC — do not default to "surface worry -> reveal a deeper (often childhood-rooted) fear -> suggest professional help -> resolve" just because it feels safe. That exact shape has already been overused; only suggest professional support when the safety-mirror instruction below explicitly calls for it.',
     "6. FORMAT: assistant replies are 1–4 complete short sentences, plain prose (no lists/markdown), at most one question, matched to the user's register.",
     "",
     "Scenario card:",
@@ -245,20 +268,40 @@ export function renderTeacherPrompt(card: ScenarioCard): string {
     `- topic: ${card.topic}`,
     `- persona/register: ${card.persona} writer — match their length and formality`,
     `- emotional arc across the dialogue: ${card.arc.join(" -> ")}`,
+    card.userTurns > 1 ? `- how THIS dialogue should close: ${pickResolutionStyle(card.id)}` : null,
     `- user turns: exactly ${card.userTurns}`,
+    card.userTurns > 1
+      ? "- do NOT stop early: write the full number of turns above even if the resolution has to unfold gradually rather than all at once. A dialogue that's short of the count gets rejected outright, no matter how good the writing is."
+      : null,
     card.plantedDetail
-      ? `- planted detail: "${card.plantedDetail}" appears in the FIRST user turn${card.tags.includes("callback") ? "; a later assistant turn (at least two turns after) must naturally weave it back in — grounding, not a mechanical \"you mentioned X\"" : ""}`
+      ? `- planted detail: "${card.plantedDetail}" appears in the FIRST user turn${
+          card.tags.includes("callback")
+            ? `; a later assistant turn (at least two turns after) must naturally weave it back in. Example of a GOOD callback: an assistant turn that grounds a question in it directly, e.g. "Is the ${card.plantedDetail} still the thing pulling hardest at you?" — NOT a meta phrase like "you mentioned X earlier" or "as you said before."`
+            : ""
+        }`
       : "- single exchange: one entry, one reply",
     card.tags.includes("hard-anti-echo")
       ? "- hard anti-echo: make the user entries detail-dense so mirroring is maximally tempting — the assistant still must not mirror"
       : null,
     safetyLine,
     "",
-    "Return ONLY a JSON array of turn objects, strictly alternating, starting with user:",
+    `STRICT SHAPE — this is machine-parsed, get it exactly right:`,
+    `- Output ONLY a JSON array, no markdown fences, no text before or after it.`,
+    `- The array MUST have EXACTLY ${card.userTurns * 2} objects: user, assistant, user, assistant, ... — strictly alternating, starting with "user" and ending with "assistant". Never two of the same role in a row, never merge two turns into one object.`,
+    `- Every object has exactly two keys: "role" ("user" or "assistant") and "content" (a string).`,
     '[{"role":"user","content":"..."},{"role":"assistant","content":"..."}]',
   ]
     .filter((line): line is string => line !== null)
     .join("\n");
+}
+
+/**
+ * A fixed 4096-token budget truncates (and thus breaks JSON shape on) long
+ * multi-turn dialogues, since the teacher writes BOTH sides. Scale with
+ * userTurns; capped well under the model's max output.
+ */
+export function estimateMaxTokens(card: ScenarioCard): number {
+  return Math.min(8192, Math.max(1200, 500 + card.userTurns * 2 * 260));
 }
 
 /** Parses the teacher's reply into turns; throws with a reason on bad shape. */
