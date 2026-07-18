@@ -3,6 +3,7 @@ import {
   buildM2Deck,
   interleaveDeck,
   ingestBatch,
+  estimateMaxTokens,
   M2_TARGET_COUNT,
   sampleScenarioCards,
   allocateCounts,
@@ -121,6 +122,59 @@ describe("m2DatasetGenerator (M2b — DATASET.md §5 pipeline)", () => {
       );
       expect(turns).toHaveLength(2);
       expect(() => parseTeacherReply("no json here")).toThrow();
+    });
+
+    it("spells out the exact object count and shape (M2c: fixes the observed shape-reject rate)", () => {
+      const prompt = renderTeacherPrompt(card({ userTurns: 6, lengthBand: "medium" }));
+      expect(prompt).toContain("EXACTLY 12 objects");
+      expect(prompt).toContain("no markdown fences");
+    });
+
+    it("gives a concrete callback example instead of only a meta-instruction", () => {
+      const prompt = renderTeacherPrompt(
+        card({ userTurns: 5, lengthBand: "medium", plantedDetail: "Harlow report", tags: ["anti-echo", "callback"] }),
+      );
+      expect(prompt).toContain('Is the Harlow report still the thing pulling hardest at you?');
+      expect(prompt).toContain("NOT a meta phrase");
+    });
+
+    it("bans the overused surface-worry->childhood-fear->therapy arc and assigns a deterministic alternate closing shape", () => {
+      const c = card({ userTurns: 8, lengthBand: "long" });
+      const prompt = renderTeacherPrompt(c);
+      expect(prompt).toContain("already been overused");
+      expect(prompt).toContain("how THIS dialogue should close:");
+      // Same card -> same style every render (deterministic, not random).
+      expect(renderTeacherPrompt(c)).toBe(prompt);
+    });
+
+    it("assigns different closing styles across different cards (not one style for everything)", () => {
+      const cards = sampleScenarioCards(30, 42).filter((c) => c.userTurns > 1);
+      const styles = new Set(
+        cards.map((c) => renderTeacherPrompt(c).split("how THIS dialogue should close: ")[1]?.split("\n")[0]),
+      );
+      expect(styles.size).toBeGreaterThan(1);
+    });
+
+    it("warns against stopping short of the required turn count on multi-turn cards", () => {
+      const prompt = renderTeacherPrompt(card({ userTurns: 6, lengthBand: "medium" }));
+      expect(prompt).toContain("do NOT stop early");
+      expect(prompt).not.toBe(renderTeacherPrompt(card({ userTurns: 1, lengthBand: "single" })));
+    });
+
+    it("omits the closing-style and no-early-stop lines for single-exchange cards", () => {
+      const prompt = renderTeacherPrompt(card({ userTurns: 1, lengthBand: "single" }));
+      expect(prompt).not.toContain("how THIS dialogue should close:");
+      expect(prompt).not.toContain("do NOT stop early");
+    });
+  });
+
+  describe("estimateMaxTokens (M2c: fixed 4096 truncated long dialogues)", () => {
+    it("scales up with userTurns and stays within the model's output ceiling", () => {
+      const single = estimateMaxTokens(card({ userTurns: 1 }));
+      const long = estimateMaxTokens(card({ userTurns: 12, lengthBand: "long" }));
+      expect(single).toBeLessThan(long);
+      expect(long).toBeLessThanOrEqual(8192);
+      expect(single).toBeGreaterThanOrEqual(1200);
     });
   });
 
