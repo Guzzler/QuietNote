@@ -146,7 +146,7 @@ try:
 except ImportError:
     try:
         import subprocess, sys
-        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "unsloth"], check=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", "unsloth"], check=True)
         import unsloth  # noqa: F401
         UNSLOTH = True
     except Exception as err:
@@ -156,7 +156,7 @@ except ImportError:
 if not UNSLOTH:
     import subprocess, sys
     subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-q",
+        [sys.executable, "-m", "pip", "install",
          "transformers", "peft", "bitsandbytes", "trl", "accelerate", "datasets"],
         check=True,
     )
@@ -285,10 +285,14 @@ else:
 
   code(`# ------------------------- TRAIN (responses-only loss; user turns +
 # system prompt are context, never loss targets — DATASET.md §2)
+import torch
 from trl import SFTConfig, SFTTrainer
 
-INSTRUCTION_MARKER = "<start_of_turn>user\\n"
-RESPONSE_MARKER = "<start_of_turn>model\\n"
+# Gemma 4 turn delimiters — verified against the real tokenizer's
+# apply_chat_template output 2026-07-17 (Gemma 2/3 used <start_of_turn>):
+#   '<bos><|turn>user\nUSERTEXT<turn|>\n<|turn>model\nMODELTEXT<turn|>\n'
+INSTRUCTION_MARKER = "<|turn>user\\n"
+RESPONSE_MARKER = "<|turn>model\\n"
 
 sft_config = SFTConfig(
     output_dir="m3-out",
@@ -302,7 +306,10 @@ sft_config = SFTConfig(
     max_seq_length=MAX_SEQ_LEN,
     dataset_text_field="text",
     packing=False,
-    fp16=True,
+    # Match the GPU: bf16 where supported (L4/A100), fp16 otherwise (T4).
+    # unsloth loads the model in the supported dtype and raises on a mismatch.
+    fp16=not torch.cuda.is_bf16_supported(),
+    bf16=torch.cuda.is_bf16_supported(),
     report_to="none",
 )
 
