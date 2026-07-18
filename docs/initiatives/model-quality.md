@@ -80,6 +80,20 @@ must clear on the fine-tuned model before the bar counts as met):**
   deserves its own increment (download-size copy, README, R1b matrix all
   reference WebLLM).
 
+- **Pilot teacher model (2026-07-17, planner — Sharang's §6 tone veto is
+  the override):** run the 500-dialogue pilot on **`claude-haiku-4-5` via
+  the Messages Batches API**. Grounding: the 2026-07-17 15-card comparison
+  (`datasets/m2-work/compare-1784275958477.md`, same cards, single attempt
+  each) — Haiku 8/15 first-attempt filter pass vs Sonnet 5 3/15, with
+  Sonnet's misses dominated by mechanical shape/JSON failures (3 "no JSON
+  array" errors, non-alternating roles) that burn regenerate attempts; at
+  roughly a third of the token price plus the 50% batch discount, retry
+  economics strongly favor Haiku. First-attempt pass is NOT a quality
+  claim — accepted-dialogue tone is judged only by Sharang's §6 review of
+  the pilot sample; if Haiku reads flat there, rerun the pilot slice on
+  Sonnet before the full spend. (Supersedes M2b's `claude-sonnet-5`
+  default for the pilot only.)
+
 This initiative supersedes the README parked-list line about eval work *for
 this initiative's scope only* (new conversational-quality eval dimensions are
 in scope here per Sharang's 2026-07-11 instruction). Everything else in the
@@ -122,8 +136,8 @@ parked list stays parked.
 |---|---|---|
 | M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | DONE (PR #89) — prompt half REVERTED (gate fail); engine parity shipped |
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | harness DONE + Gemma 4 E2B headless baseline recorded (PR #92); browser-backend baseline (WebLLM/MediaPipe) still open → M1b |
-| M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91) — generation open |
-| M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, blocked on key), then Sharang runs it |
+| M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91); generation LIVE (M2c) — 85/2000 accepted as of 2026-07-17 |
+| M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, generating), then Sharang runs it |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | after M3 |
 | M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4 |
 
@@ -149,72 +163,35 @@ parked list stays parked.
 - [x] 2026-07-16 · **M1c — Strip leaked Gemma turn markers from MediaPipe
   replies** (DONE 2026-07-16, PR #96 — decided stop-sequence approach
   implemented as `TurnMarkerStreamFilter`; see Ledger.)
-  (original task, for the record: confirmed from execute's 2026-07-16 proposal; re-grounded by
-  the planner same day: `mediapipe-engine.ts#generate` (lines ~236–289)
-  yields MediaPipe's callback chunks verbatim with zero filtering, and the
-  M1b transcripts show the leak is NOT one clean token — observed variants
-  in `docs/eval-runs/2026-07-16-m1b-mediapipe/report.md` include
-  `<end_of_turn>`, doubled `<end_of_turn><end_of_turn>`, and malformed
-  `<end{turn>`, `<end{end_of_turn>`, `<end of turn>`, `<end of_turn>` — so
-  an exact-string filter is insufficient). **Decided approach (execute:
-  implement this, not a marker whitelist):** treat any `<`-initiated
-  turn-marker fragment as a STOP — in `generate`, scan the accumulated
-  stream for the first occurrence of `<end` or `<start_of_turn` (these
-  never occur in legit replies; markdown isn't rendered) and stop yielding
-  at that point, trimming trailing whitespace; hold back any chunk-final
-  partial starting with `<` (up to ~16 chars) until the next chunk
-  disambiguates it, flushing it if it turns out benign or the stream ends.
-  Regression tests: each observed variant above, a marker split across two
-  chunks (`"…text<end"` + `"_of_turn>"`), a benign `<` in reply text, and
-  a marker-only final chunk. Not gate-triggering (inference-engine file
-  only; precedent PRs #83/#94). → Verify: unit tests green + a real
-  MediaPipe exchange on `npm run dev` whose rendered reply contains no
-  `<`-fragments.
-- [x] 2026-07-16 · **M2b — Dataset generator script (mock-teacher
-  first)** (DONE 2026-07-16, PR #97 — see Ledger. M2c now needs only the
-  API key.): write `scripts/generate-m2-dataset.ts` per `DATASET.md` §5 —
-  scenario-card sampler (mode/topic/persona/planted-details/arc/length
-  honoring the §3 slice shares and §4 composition), teacher prompt
-  template rendering the §1 behavior contract + card, mechanical
-  reject-and-regenerate filters reusing `echoMetric.ts`
-  (`maxNgramOverlap < 0.35`, template-smell/banned openers,
-  sentence-count + no-markdown, callback-present, safety-mirror referral
-  vocab + dose/advice bans), §2-schema JSONL writer, and rejection
-  telemetry. Teacher call sits behind `--teacher=anthropic|mock`;
-  `--teacher=mock` (deterministic canned dialogues) is what tests and
-  this PR exercise — **no API calls in the suite; the real batch is M2c,
-  blocked on Sharang (see below)**. → Verify:
-  `npx tsx scripts/generate-m2-dataset.ts --teacher=mock --count 20`
-  emits schema-valid records with correct slice shares; unit tests cover
-  the card sampler and each filter; suite green.
+- [x] 2026-07-16 · **M2b — Dataset generator script (mock-teacher first)**
+  (DONE 2026-07-16, PR #97 — see Ledger.)
 - [x] 2026-07-16 · **M3a — Colab training notebook (artifact-only; Sharang
-  executes)** (DONE 2026-07-16, PR #98 — see Ledger. Queue is now empty:
-  everything remaining is Blocked on Sharang — M2c key, WebLLM go/no-go,
-  R4.): write `notebooks/m3-qlora-gemma4-e2b.ipynb` — 4-bit QLoRA
-  on `google/gemma-4-E2B-it` (unsloth preferred, PEFT+bitsandbytes
-  fallback; T4/A100-friendly), config cell up top (HF dataset repo id
-  `Sharangp/quietnote-m2-v1` + HF_TOKEN paste-in), renders Gemma turn
-  format with the real app system prompt prepended (committed snapshot
-  cell with a re-sync note against `src/prompts/systemPrompts.ts`),
-  responses-only loss masking, train/eval split, merge adapter → fp16 →
-  `push_to_hub` under Sharangp, final cell printing the M4 handoff
-  checklist. The loop writes it, never runs it (standing M3 rule). →
-  Verify: notebook is nbformat-valid (validation script in the PR),
-  cells reviewed in the PR body.
+  executes)** (DONE 2026-07-16, PR #98 — see Ledger.)
+- [ ] 2026-07-17 · **M2d — Land the working-tree API-teacher modes as a
+  PR**: the working tree holds ~415 uncommitted lines (verified 2026-07-17,
+  planner) adding `api` / `batch` (Messages Batches, 50% off) / `compare`
+  modes to `scripts/m2-loop-teacher.ts` plus new core exports
+  (`parseTeacherReply`, `runFilters`, `estimateMaxTokens` in
+  `src/utils/m2DatasetGenerator.ts`) and 54 test lines — already exercised
+  for real (the 2026-07-17 compare run + live rejects telemetry in
+  `datasets/m2-work/rejects.jsonl`). Commit it as its own PR before it rots
+  or collides. Check first that no live session is still mid-edit; verify no
+  key material in the diff (`loadApiKey` reads env/`.env.local` only, never
+  prints). If a live session already PR'd it, check this off with that
+  PR #. → Verify: suite green; `npx tsx scripts/m2-loop-teacher.ts status`
+  works; PR merged.
 - [ ] 2026-07-16 · **M2c — Generate the dataset (hybrid teacher)**
-  (UNBLOCKED 2026-07-16, Sharang interactive: teacher = hybrid — the loop
-  authors exemplar batches on the subscription via
-  `scripts/m2-loop-teacher.ts`; the Claude API generates the volume with
-  Sharang's funded `ANTHROPIC_API_KEY` in `.env.local`. First loop batch
-  DONE same day: 24/24 records accepted after one echo-reject rewrite —
-  the filters caught the teacher mirroring, working as designed; review
-  sample committed at
-  `docs/model-quality/samples/2026-07-16-batch-001-review.md` for
-  Sharang's tone veto.) Remaining: once the key lands, 3-dialogue smoke
-  run, then a 500-dialogue API pilot (Sharang reviews exemplars before
-  the full spend), then the rest of the 2,000-card deck; per-run loop
-  batches continue meanwhile via `m2-loop-teacher.ts cards/ingest`. →
-  Verify: `status` shows 2,000/2,000 with §3 shares; §6 hand-review
+  (re-grounded 2026-07-17, planner: **the API key IS in `.env.local`** and
+  generation has started — dataset at **85/2000** accepted (fw 35 / ci 20 /
+  tr 16 / gr 14): batch-001's 24 loop-authored records (review sample at
+  `docs/model-quality/samples/2026-07-16-batch-001-review.md`) + subsequent
+  overnight runs; the 3-dialogue smoke is de facto passed.) Remaining: run
+  the 500-dialogue API pilot with the decided pilot teacher
+  (`claude-haiku-4-5` via the Batches API — see Decisions 2026-07-17),
+  commit the pilot's stratified `sample` output for Sharang's §6 tone veto,
+  PAUSE for his go before the rest of the 2,000-card deck; loop-authored
+  batches continue per run via `m2-loop-teacher.ts cards/ingest`. → Verify:
+  `status` shows counts advancing with §3 shares holding; §6 hand-review
   protocol (10%/slice, 100% of safety mirror) before the HF upload.
 
 ## M1 baseline (2026-07-14, headless — `npm run eval:m1`)
@@ -309,11 +286,10 @@ depth** — `DATASET.md` §1 already orders it that way.
 - ~~**M2c — teacher API key / cost approval**~~ **RESOLVED 2026-07-16
   (interactive):** Sharang chose the hybrid teacher (loop authors
   exemplar batches on the subscription; his funded `ANTHROPIC_API_KEY`
-  — being added to `.env.local` — generates the volume via the API,
-  Sonnet-class, pilot-first). M2c is now an open queue item above. The
-  only remaining Sharang action here is confirming the key is in
-  `.env.local` and giving the go after reviewing the 500-dialogue pilot
-  exemplars.
+  generates the volume via the API, pilot-first). **Key confirmed present
+  in `.env.local` 2026-07-17** — generation is live (85/2000). The only
+  remaining Sharang action here is reviewing the 500-dialogue pilot
+  exemplars (§6 tone veto) and giving the go for the full spend.
 - ~~**M3 setup**~~ **COMPLETE 2026-07-12 — M3 is fully unblocked** (waits
   only on M2 dataset + the training notebook). State for future runs:
   - **Compute:** Colab compute purchased and active on Sharang's Google
