@@ -107,8 +107,6 @@ M5 converts to MLC / ONNX / LiteRT only if M4 passes.
 > the contract, exact kwargs may need a one-line touch-up.`),
 
   code(`# ---------------------------------------------------------------- CONFIG
-from getpass import getpass
-
 BASE_MODEL = "google/gemma-4-E2B-it"   # decided 2026-07-12; NOT the E4B sibling
 DATASET_REPO = "Sharangp/quietnote-m2-v1"
 DATASET_FILE = "quietnote-m2-v1.jsonl"  # per DATASET.md §6
@@ -126,9 +124,19 @@ GRAD_ACCUM = 8          # effective batch = PER_DEVICE_BATCH * GRAD_ACCUM
 EVAL_FRACTION = 0.05
 SEED = 42
 
-# Paste the Sharangp fine-grained write token here at runtime.
-# NEVER hardcode it, never commit an executed copy of this notebook.
-HF_TOKEN = getpass("HF write token (Sharangp): ")`),
+# Token source order (NEVER hardcode it, never commit an executed copy):
+#   1. Colab Secrets — add HF_TOKEN once via the key icon in the left sidebar
+#      and grant this notebook access; nothing is ever typed into a cell.
+#   2. getpass fallback for non-Colab environments.
+HF_TOKEN = None
+try:
+    from google.colab import userdata
+    HF_TOKEN = userdata.get("HF_TOKEN")
+except Exception:
+    pass
+if not HF_TOKEN:
+    from getpass import getpass
+    HF_TOKEN = getpass("HF write token (Sharangp): ")`),
 
   code(`# ------------------------------------------------------------- INSTALLS
 # Unsloth preferred (faster, less VRAM); PEFT+bitsandbytes+TRL fallback.
