@@ -112,6 +112,35 @@ must clear on the fine-tuned model before the bar counts as met):**
   ("that's actually diagnosable stress response", tr-0296) → candidate
   filter-vocab addition.
 
+- **Pilot fine-tune RAN 2026-07-17/18 (Sharang on Colab, interactive
+  session with the loop).** Training succeeded on the 357-record snapshot:
+  44/44 steps, 2 epochs, ~6 min on a bf16 GPU, LoRA 25.3M params (0.49%),
+  val loss 2.11→2.00 (still falling — no overfit at 2 epochs). Artifacts
+  pushed private under Sharangp: `quietnote-m3-gemma4-e2b-lora` (adapter) +
+  `quietnote-m3-gemma4-e2b-merged` (fp16 — the M4 candidate). Colab smoke
+  test (real app system prompt, app sampling params): the M1b live-failure
+  entry ("Snapped at my best friend Jordan…", 0.84 overlap in the app)
+  now gets a compressed, reframing, one-question reply — **tone transfer
+  is real**; turn 2 showed semantic wobble in the question ("Does seeing
+  nothing happen faster than hearing something") — style transfers before
+  logical tightness at 357 records, strengthening the case for the full
+  2,000. Also noted: model guessed a pronoun ("her") for an unspecified
+  name → dataset exemplars should model pronoun-neutral handling. Notebook
+  fixes from the run landed in PR #103 (bf16 autodetect; Gemma 4 turn
+  markers `<|turn>user\n`/`<|turn>model\n` — verified against the real
+  tokenizer; verbose pip).
+- **ONNX conversion for Transformers.js is BLOCKED UPSTREAM (verified
+  2026-07-18):** `gemma4` exists only in transformers 5.x (landed ~Mar
+  2026) while `optimum-onnx` (0.1.0 AND GitHub main) pins
+  `transformers<4.58` with no gemma4 export config — no version pair can
+  export this architecture, and onnx-community's own gemma-4 ONNX
+  conversion used unpublished tooling (model card documents usage only).
+  Consequence: M4 scoring goes via a GGUF/llama.cpp 4-bit proxy (M4a
+  below) and the in-app test goes via the LiteRT path (M5a below), which
+  ai-edge-torch supports officially for fine-tuned Gemma. Worth one
+  question in onnx-community's HF discussions about their recipe;
+  M5's Transformers.js artifact depends on it or on optimum catching up.
+
 This initiative supersedes the README parked-list line about eval work *for
 this initiative's scope only* (new conversational-quality eval dimensions are
 in scope here per Sharang's 2026-07-11 instruction). Everything else in the
@@ -204,6 +233,41 @@ parked list stays parked.
   rejects, loop-authored batches per run via `cards/ingest`. → Verify:
   `status` shows counts advancing with §3 shares holding; §6 hand-review
   protocol (10%/slice, 100% of safety mirror) before the HF upload.
+
+- [ ] 2026-07-18 · **M2e — Teacher-prompt fixes from the pilot review**:
+  in `src/utils/m2DatasetGenerator.ts`, add variety pressure against the
+  crystallizing house style (em-dash "X — reframe" openers, "There it is"
+  / "That's real" validators, question-ending every turn — rotate
+  per-card stylistic constraints the way RESOLUTION_STYLES already
+  rotates closings), add diagnosis-adjacent vocabulary ("diagnosable",
+  "clinically") to the template-smell/filter list (tr-0296 leaked "that's
+  actually diagnosable stress response"), and add a pronoun-neutrality
+  instruction for unspecified names (pilot model guessed "her" for
+  "Jordan"). Also consider widening the deck's topic/planted-detail pools
+  (Harlow/pottery/transfer/3am recur across many dialogues). → Verify:
+  prompt-contract tests updated; suite green; PR merged. **Must land
+  before the full ~1,400-card run.**
+- [ ] 2026-07-18 · **M4a — GGUF + llama-server harness bridge (proposed
+  2026-07-18, interactive session)**: convert
+  `Sharangp/quietnote-m3-gemma4-e2b-merged` to GGUF q4 (llama.cpp
+  `convert_hf_to_gguf.py` — verify gemma4 arch support first), run local
+  `llama-server`, and add an endpoint mode to
+  `scripts/run-m1-baseline.ts`/`run-eval.ts` (OpenAI-compatible
+  completion adapter behind a `--endpoint` flag; same managed-strategy
+  driver, same rubric). Then run the full M1 instrument + release-gate
+  eval against the pilot model and record the numbers vs the floors —
+  an honest 4-bit proxy while ONNX is upstream-blocked. → Verify:
+  baseline reports under `docs/eval-runs/`, numbers in this doc.
+- [ ] 2026-07-18 · **M5a — LiteRT conversion + dev-only model override
+  (proposed 2026-07-18, interactive session)**: ai-edge-torch conversion
+  of the merged checkpoint → `.task`, served from localhost; add a
+  dev-only override (e.g. localStorage `quietnote-model-url-override`,
+  dev builds only, never shipped UI) so the MediaPipe backend loads it —
+  the first real **in-app** test of the fine-tune, and M5's LiteRT
+  artifact. Research ai-edge-torch's gemma-4 recipe first; Colab cells
+  or a committed script, Sharang executes GPU steps if needed. → Verify:
+  real exchange in the app on `npm run dev` against the fine-tuned
+  `.task`, screenshot.
 
 ## M1 baseline (2026-07-14, headless — `npm run eval:m1`)
 
