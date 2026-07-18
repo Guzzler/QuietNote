@@ -136,7 +136,7 @@ parked list stays parked.
 |---|---|---|
 | M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | DONE (PR #89) — prompt half REVERTED (gate fail); engine parity shipped |
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | harness DONE + Gemma 4 E2B headless baseline recorded (PR #92); browser-backend baseline (WebLLM/MediaPipe) still open → M1b |
-| M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91); generation LIVE (M2c) — 85/2000 accepted as of 2026-07-17 |
+| M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91); generation PAUSED at 357/2000 — Haiku pilot done 2026-07-17, awaiting Sharang's §6 tone veto before the full spend |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, generating), then Sharang runs it |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | after M3 |
 | M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4 |
@@ -172,16 +172,18 @@ parked list stays parked.
   (`loadApiKey` reads env/`.env.local` only, never prints); no live
   session mid-edit; suite 1033 green; `status` verified: 85/2000.)
 - [ ] 2026-07-16 · **M2c — Generate the dataset (hybrid teacher)**
-  (re-grounded 2026-07-17, planner: **the API key IS in `.env.local`** and
-  generation has started — dataset at **85/2000** accepted (fw 35 / ci 20 /
-  tr 16 / gr 14): batch-001's 24 loop-authored records (review sample at
-  `docs/model-quality/samples/2026-07-16-batch-001-review.md`) + subsequent
-  overnight runs; the 3-dialogue smoke is de facto passed.) Remaining: run
-  the 500-dialogue API pilot with the decided pilot teacher
-  (`claude-haiku-4-5` via the Batches API — see Decisions 2026-07-17),
-  commit the pilot's stratified `sample` output for Sharang's §6 tone veto,
-  PAUSE for his go before the rest of the 2,000-card deck; loop-authored
-  batches continue per run via `m2-loop-teacher.ts cards/ingest`. → Verify:
+  (pilot DONE 2026-07-17, execute: the 500-card Haiku pilot ran via the
+  Batches API (`msgbatch_01XyaopfpryubM5XFvrMAv8i`) — **272/500 accepted
+  first-attempt (54%)**, dataset at **357/2000** (fw 135 / ci 94 / tr 70 /
+  gr 58, §3 shares holding); 228 rejects stay pending in the deck (top
+  reasons in last-300 telemetry: shape 195, callback 71, template-smell 58
+  — a retry pass recovers them). Stratified 37-dialogue review sample
+  (100% of safety mirrors) committed at
+  `docs/model-quality/samples/2026-07-17-pilot-500-review.md`.
+  **GENERATION IS NOW PAUSED per the task's pilot-first rule** — waiting
+  on Sharang's §6 tone veto before the remaining ~1,400 cards + retries.)
+  Remaining after his go: fire the rest of the deck via `batch`, retry
+  rejects, loop-authored batches per run via `cards/ingest`. → Verify:
   `status` shows counts advancing with §3 shares holding; §6 hand-review
   protocol (10%/slice, 100% of safety mirror) before the HF upload.
 
@@ -254,6 +256,7 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-17 | M2c — 500-card Haiku pilot (Batches API) | #101 | Pilot ran per the 2026-07-17 teacher decision: `batch --count 500 --model claude-haiku-4-5` (batch `msgbatch_01XyaopfpryubM5XFvrMAv8i`, 50% batch pricing, ~50 min wall clock, 500/500 succeeded at the API level). Filters accepted **272/500 first-attempt (54%)** — well above the compare run's 8/15, consistent with the M2d prompt hardening helping; dataset now **357/2000** (fw 135 / ci 94 / tr 70 / gr 58 — §3 shares holding). 228 rejected cards remain pending in the deck (one-attempt-per-card rule; recoverable by a retry pass). Reject telemetry (last 300 rows): shape 195, callback 71, template-smell 58, format 30, echo 20, teacher-error 17, banned-opener 10 — shape is still the dominant loss even after hardening. Stratified 37-dialogue sample (all safety mirrors + strided slices) committed for Sharang's §6 tone veto: `docs/model-quality/samples/2026-07-17-pilot-500-review.md`. **Generation PAUSED pending his go** (pilot-first rule); no further API spend this run. Loop-authored batch deliberately skipped this run — the pilot had claimed the next 500 deck ids at submit time, so hand-authoring concurrently would have collided. |
 | 2026-07-17 | M2d — API-teacher modes landed from the working tree | #100 | The ~415 uncommitted lines committed as their own PR, verbatim (no rewrites — already exercised for real by the 2026-07-17 compare run and the live rejects telemetry). `scripts/m2-loop-teacher.ts` gains `api` (live calls, filter-reason-fed retries), `batch` (Messages Batches API, 50% off, one attempt per card, polls to completion, re-run retries pending), and `compare` (same cards through N models, single attempt, markdown report, never ingested) — all fulfilling the same fixed deck through the same `ingestBatch` filters as loop-authored batches. Core additions in `m2DatasetGenerator.ts`: `estimateMaxTokens` (scales output budget with userTurns — fixed 4096 was truncating long dialogues mid-JSON), teacher-prompt hardening from observed reject telemetry (exact object count + no-fences shape contract, concrete callback example instead of a meta-instruction, deterministic per-card closing-style assignment + explicit ban on the overused worry→childhood-fear→therapy arc, no-early-stop warning). Key hygiene verified: `loadApiKey` reads env/`.env.local` only, never prints; no key material in the diff. 10 new tests; suite 1033 green; `status` works (85/2000). |
 | 2026-07-17 | M2c (in progress) — loop-teacher workflow + first authored batch | #99 | Sharang's interactive decisions recorded: teacher = HYBRID (loop authors exemplar batches on the subscription — no API spend; his funded key generates the volume, pilot-first). Shipped `scripts/m2-loop-teacher.ts` (deal cards / ingest / status / sample against a FIXED 2,000-card deck) + core additions (`buildM2Deck`, ratio-woven `interleaveDeck`, `ingestBatch` with dupe/unknown rejection; sampler flags now STRIDED so any deck prefix is representative — was front-loaded). First real batch authored by the loop: **24/24 accepted** across all modes/bands (5 safety mirrors, 8 callbacks, hard-anti-echo singles) — 1 initial reject (`tr-0281`: the loop mirrored "more of me, in whatever form" pronoun-swapped; overlap 0.35 caught it — the filters police the teacher too) rewritten and re-ingested. 12-dialogue review sample committed (`docs/model-quality/samples/2026-07-16-batch-001-review.md`) for Sharang's §6 tone veto. 3 new tests (deck stability, interleave coverage, ingest rejection taxonomy); suite 1026 green. Dataset file stays git-ignored (24/2000). |
 | 2026-07-16 | M3a — Colab training notebook (artifact-only) | #98 | `notebooks/m3-qlora-gemma4-e2b.ipynb` (11 cells) generated by a new builder, `scripts/build-m3-notebook.ts`, which imports the REAL prompt constants from `src/prompts/systemPrompts.ts` and embeds them as a verbatim snapshot cell (byte-identity verified by the builder's validator; re-sync = re-run the builder — the notebook's markdown carries this rule). Notebook: config cell up top (`Sharangp/quietnote-m2-v1`, HF_TOKEN via `getpass` paste-in, T4-friendly hyperparams), unsloth-preferred / PEFT+bitsandbytes-fallback installs, dataset load + §2 schema check, rendering via `tokenizer.apply_chat_template` with system role (fold-into-first-user-turn fallback) exactly like `transformersjs-engine.ts`, checkin pinned to the evening variant per the eval convention, §7 tokenize-under-4096 assertion, responses-only masking (unsloth `train_on_responses_only` / TRL `DataCollatorForCompletionOnlyLM` on the Gemma turn markers), 5% eval split, adapter push + merge→fp16 `push_to_hub` (both private, Sharangp), final M4 handoff checklist cell with the exact gate floors. Validated by the builder's nbformat-4 checks AND `python -c "nbformat.validate(...)"` (OK, 11 cells). The loop never runs it — Sharang executes on Colab (standing M3 rule). Build green, 1023 tests. |
@@ -279,9 +282,12 @@ depth** — `DATASET.md` §1 already orders it that way.
   (interactive):** Sharang chose the hybrid teacher (loop authors
   exemplar batches on the subscription; his funded `ANTHROPIC_API_KEY`
   generates the volume via the API, pilot-first). **Key confirmed present
-  in `.env.local` 2026-07-17** — generation is live (85/2000). The only
-  remaining Sharang action here is reviewing the 500-dialogue pilot
-  exemplars (§6 tone veto) and giving the go for the full spend.
+  in `.env.local` 2026-07-17** — and the 500-card Haiku pilot has now RUN
+  (272 accepted, dataset 357/2000; PR #101). **The ball is with Sharang:**
+  review `docs/model-quality/samples/2026-07-17-pilot-500-review.md` (§6
+  tone veto — if Haiku reads flat, the decided fallback is rerunning the
+  pilot slice on Sonnet) and give the go for the remaining ~1,400 cards +
+  reject retries. Generation stays paused until then.
 - ~~**M3 setup**~~ **COMPLETE 2026-07-12 — M3 is fully unblocked** (waits
   only on M2 dataset + the training notebook). State for future runs:
   - **Compute:** Colab compute purchased and active on Sharang's Google
