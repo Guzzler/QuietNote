@@ -94,6 +94,24 @@ must clear on the fine-tuned model before the bar counts as met):**
   Sonnet before the full spend. (Supersedes M2b's `claude-sonnet-5`
   default for the pilot only.)
 
+- **Pilot fine-tune on the 357-record snapshot (2026-07-17, Sharang,
+  interactive):** after reviewing the pilot sample, Sharang's call is
+  "worth running that with this data and seeing how it works" — an M3
+  **pipeline-pilot** training run on the 357 records, ahead of the full
+  2,000. The snapshot was uploaded to the private HF dataset
+  `Sharangp/quietnote-m2-v1` (`quietnote-m2-v1.jsonl`, 357 records) the
+  same day; Sharang runs the notebook per the standing M3 rule.
+  Expectations set: directional signal on warmth/anti-echo transfer +
+  end-to-end de-risk of train→merge→M4-eval; NOT the shippable model
+  (gratitude 58 records, safety mirror ~36 — thin). The full-spend go for
+  the remaining ~1,400 cards is still a separate §6 decision. Review flags
+  recorded from the sample read: a crystallizing house style (em-dash
+  reframes, "There it is", question-ending turns) + recycled topic
+  furniture (Harlow/pottery/transfer/3am across many dialogues) → add
+  variety pressure before the full run; one diagnosis-adjacent phrase
+  ("that's actually diagnosable stress response", tr-0296) → candidate
+  filter-vocab addition.
+
 This initiative supersedes the README parked-list line about eval work *for
 this initiative's scope only* (new conversational-quality eval dimensions are
 in scope here per Sharang's 2026-07-11 instruction). Everything else in the
