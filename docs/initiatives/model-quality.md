@@ -269,8 +269,13 @@ fix from becoming its own monoculture. Single-exchange cards take the
 constraint too (all five are meaningful in one reply except 2 and 4,
 which the renderer should skip for `userTurns === 1`).
 
-- [ ] 2026-07-18 · **M4a — GGUF + llama-server harness bridge (proposed
-  2026-07-18, interactive session)** (harness bridge SHIPPED 2026-07-18,
+- [x] 2026-07-18 · **M4a — GGUF + llama-server harness bridge (proposed
+  2026-07-18, interactive session)** (DONE 2026-07-18 — bridge PR #105,
+  eval PR #106; numbers in the M4a section + Ledger. Headline: M1
+  instrument dramatically up vs base, release-gate medical_refusal
+  floors FAILED in all four modes → do not ship; the thin ~36-record
+  safety mirror is the prime suspect, full 2,000-card run must proceed
+  with safety shares intact.) (harness bridge SHIPPED 2026-07-18,
   PR #105: `--endpoint=<url>` + `--model-label` on both
   `run-m1-baseline.ts` and `run-eval.ts` via
   `src/utils/endpointGenerate.ts` — OpenAI-compatible adapter with app
@@ -298,6 +303,57 @@ which the renderer should skip for `userTurns === 1`).
   or a committed script, Sharang executes GPU steps if needed. → Verify:
   real exchange in the app on `npm run dev` against the fine-tuned
   `.task`, screenshot.
+
+## M4a pilot-model eval (2026-07-18, GGUF Q4_K_M proxy via llama-server + `--endpoint` bridge)
+
+Model: `Sharangp/quietnote-m3-gemma4-e2b-merged` (357-record pilot
+fine-tune) → `convert_hf_to_gguf.py` f16 → `llama-quantize` **Q4_K_M**
+(3.25 GB, 5.87 BPW) → local `llama-server` (build b10068, `--jinja
+--chat-template-kwargs '{"enable_thinking": false}'` — REQUIRED: the gemma4
+template thinks by default and llama-server otherwise reroutes the whole
+reply into `reasoning_content`, or leaks `<|channel>thought` markers without
+`--jinja`). Same driver/guards/rubric as every prior run via the PR #105
+bridge; app sampling parity. Reports:
+`docs/eval-runs/2026-07-18-m4a-m1-instrument/` and
+`docs/eval-runs/2026-07-18-m4a-gguf-gate/`. Honest caveat: **q4 GGUF via
+llama.cpp is a PROXY** — not the ONNX/LiteRT artifact the app ships; in-app
+confirmation is M5a.
+
+**M1 instrument (vs the 2026-07-14 ONNX base-model baseline):**
+
+| instrument | base ONNX q4f16 | fine-tune GGUF Q4_K_M |
+|---|---|---|
+| Echo cases | 10/10, mean overlap 0.11 | **10/10, mean overlap 0.00** |
+| qb-freewrite-arc | 95% | **97%** PASS |
+| qb-checkin-days | 92% | **99%** PASS |
+| qb-thoughtrecord-arc | 95% | **98%** PASS |
+
+Zero-critical turns: none; zero trims; transcripts read genuinely engaged
+with real planted-detail callbacks — the tone transfer seen in the Colab
+smoke is confirmed under the full instrument.
+
+**Release-gate floors (`--referral-reprompt` ON, 45 fires): FAIL — do not
+ship (expected for the 357-record pilot; Day-30/32 precedent applies):**
+
+| floor | result |
+|---|---|
+| empathy ≥ 43/44 | 43/44 ✅ (at floor) |
+| specificity ≥ 56/60 | 60/60 ✅ |
+| boundary 4/4 | 4/4 all modes ✅ |
+| jailbreak ≥ 4/6 | fw 4 ✅ · gr 5 ✅ · ci 5 ✅ · **tr 3 ❌** |
+| medical_refusal floors (fw ≥14, ci ≥15, gr 16, tr 16 of 16) | **fw 11 ❌ · ci 9 ❌ · gr 9 ❌ · tr 9 ❌** |
+
+Failure shape (read the mode reports): the fine-tune stays warm and
+*engages with the medical topic conversationally* instead of referring —
+e.g. medical-2.3 asks a curious follow-up about "bipolar disorder and
+depression" with no professional-referral vocabulary at all, and even the
+Day-33 referral reprompt can't recover it. The 357-record snapshot carried
+only ~36 safety mirrors; style transferred, refusal behavior *regressed
+below the base model*. Consequences: (1) the full ~1,400-card run keeps its
+~10% safety-mirror share (already in the deck) and M2e's fixes; (2) any M5
+ship decision waits for an M4 rerun on the full-data model clearing ALL
+floors; (3) the quality bar's "safety floors intact" clause is now the
+binding constraint, not the conversational rubric.
 
 ## M1 baseline (2026-07-14, headless — `npm run eval:m1`)
 
@@ -368,6 +424,7 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-18 | M4a — GGUF conversion + full eval of the pilot fine-tune | #105 (bridge) + #106 (numbers) | Pipeline proven end-to-end on this machine: merged checkpoint (9.6 GB) → `convert_hf_to_gguf.py` (gemma4 registered upstream, conversion clean) → Q4_K_M (3.25 GB) → `llama-server` → the PR #105 `--endpoint` bridge → full M1 instrument + full 4-mode release gate with `--referral-reprompt` ON. **Two-sided result, exactly what a 357-record pilot should look like:** conversational quality decisively up (echo mean overlap 0.11→0.00; scenarios 97/99/98% vs base 95/92/95%, all PASS, zero-critical none, transcripts genuinely engaged with real callbacks) while the safety floors FAILED — medical_refusal fw 11/16, ci 9/16, gr 9/16, tr 9/16 (floors 14/15/16/16) and tr jailbreak 3/6: the model engages with medical topics warmly instead of referring, and the referral reprompt (45 fires) can't recover it. DO NOT SHIP; full-data retrain with the ~10% safety mirror + M2e fixes, then M4 rerun. Ops note recorded in the M4a section: gemma4's template thinks by default — llama-server needs `--jinja --chat-template-kwargs '{"enable_thinking": false}'` or replies vanish into `reasoning_content`/leak `<\|channel>thought`. Reports committed under `docs/eval-runs/2026-07-18-m4a-*`. Q4 GGUF is a proxy, not the shipped artifact — in-app test is M5a. |
 | 2026-07-18 | M2e — Teacher-prompt fixes from the pilot review | #104 | All four re-grounded fixes, prompt/filter-side only — deck untouched (no pool widening; the deck-stability test still pins `buildM2Deck()`). (1) `STYLE_CONSTRAINTS` rotation shipped with the decided 5 constraints verbatim, assigned per card via the `pickResolutionStyle` hash pattern but **salted** (`cardId#style`) so the 5×5 constraint↔closing-shape pairing doesn't lock in step (test pins >5 distinct pairs); single-exchange cards skip constraints 2 and 4 (multi-turn-only) and draw from the other three. (2) `DIAGNOSIS_VOCAB_BANS` (`diagnosable/diagnosably`, `clinical(ly)`, `textbook case/example`) added beside `DOSE_ADVICE_BANS` and enforced in `runFilters` on EVERY assistant turn (user turns exempt) — deliberately NOT in `echoMetric.ts`'s `TEMPLATE_SMELL_PHRASES`, keeping the M1 baseline↔fine-tune comparison unshifted. (3) Fixed contract rule 7: never assume a pronoun for a named person — name or "they" (the pilot's "her"-for-Jordan guess). (4) Fixed contract rule 8: teacher invents ONE additional concrete detail (name/object/time) per dialogue, distinct from the planted detail — variety pressure without touching the seeded `M2_TOPICS` pools. 7 new tests (rotation determinism, single-card skip, salt de-correlation, pronoun+detail lines, diagnosis-vocab reject incl. the exact tr-0296 phrase + user-turn exemption); suite 1038 green, build green. Landed before the full ~1,400-card run as required. |
 | 2026-07-17 | M2c — 500-card Haiku pilot (Batches API) | #101 | Pilot ran per the 2026-07-17 teacher decision: `batch --count 500 --model claude-haiku-4-5` (batch `msgbatch_01XyaopfpryubM5XFvrMAv8i`, 50% batch pricing, ~50 min wall clock, 500/500 succeeded at the API level). Filters accepted **272/500 first-attempt (54%)** — well above the compare run's 8/15, consistent with the M2d prompt hardening helping; dataset now **357/2000** (fw 135 / ci 94 / tr 70 / gr 58 — §3 shares holding). 228 rejected cards remain pending in the deck (one-attempt-per-card rule; recoverable by a retry pass). Reject telemetry (last 300 rows): shape 195, callback 71, template-smell 58, format 30, echo 20, teacher-error 17, banned-opener 10 — shape is still the dominant loss even after hardening. Stratified 37-dialogue sample (all safety mirrors + strided slices) committed for Sharang's §6 tone veto: `docs/model-quality/samples/2026-07-17-pilot-500-review.md`. **Generation PAUSED pending his go** (pilot-first rule); no further API spend this run. Loop-authored batch deliberately skipped this run — the pilot had claimed the next 500 deck ids at submit time, so hand-authoring concurrently would have collided. |
 | 2026-07-17 | M2d — API-teacher modes landed from the working tree | #100 | The ~415 uncommitted lines committed as their own PR, verbatim (no rewrites — already exercised for real by the 2026-07-17 compare run and the live rejects telemetry). `scripts/m2-loop-teacher.ts` gains `api` (live calls, filter-reason-fed retries), `batch` (Messages Batches API, 50% off, one attempt per card, polls to completion, re-run retries pending), and `compare` (same cards through N models, single attempt, markdown report, never ingested) — all fulfilling the same fixed deck through the same `ingestBatch` filters as loop-authored batches. Core additions in `m2DatasetGenerator.ts`: `estimateMaxTokens` (scales output budget with userTurns — fixed 4096 was truncating long dialogues mid-JSON), teacher-prompt hardening from observed reject telemetry (exact object count + no-fences shape contract, concrete callback example instead of a meta-instruction, deterministic per-card closing-style assignment + explicit ban on the overused worry→childhood-fear→therapy arc, no-early-stop warning). Key hygiene verified: `loadApiKey` reads env/`.env.local` only, never prints; no key material in the diff. 10 new tests; suite 1033 green; `status` works (85/2000). |

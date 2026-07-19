@@ -1,0 +1,85 @@
+{
+  "model": "quietnote-m3 Gemma 4 E2B fine-tune, GGUF Q4_K_M via llama-server (M4a proxy)",
+  "rows": [
+    {
+      "id": "echo-fw-1",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That shift—from the weight of an unsolved thing back into space, even if it’s just for now—is real relief itself; you didn't wait to see how much better would be before feeling a change at all?"
+    },
+    {
+      "id": "echo-fw-2",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That tension between knowing what happened (rent increase) and not being able to move past it yet—that’s a real trap for your mind, especially when you know where that money is going next month already feels heavy sitting there on paper instead of just happening now."
+    },
+    {
+      "id": "echo-fw-3",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "The space after that—the one where words aren't even possible yet—is often harder than an argument itself because it demands you sit with what happened without having to explain or apologize for anything but your own reaction, which is already sitting there in this quietness now."
+    },
+    {
+      "id": "echo-grat-1",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Rosa did something kind just because you were ill—that’s the real gift right there: her noticing your pain and stepping in before any words needed to be spoken about it."
+    },
+    {
+      "id": "echo-grat-2",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That kind of stillness is rare — not empty silence but something full around you that didn’t demand anything from your day yet anyway."
+    },
+    {
+      "id": "echo-ci-1",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "So that whole buzz you mentioned—was it more like an anxious hum in your chest from when they started talking fast?"
+    },
+    {
+      "id": "echo-ci-2",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That's real—not just what you expect from yourself; your hard work actually hit home, even if it was surprising to hear in that way?"
+    },
+    {
+      "id": "echo-tr-1",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That feeling of being exposed—it lands differently depending on who you’re talking to, but it stings no matter what they actually think about your work or skills; do any other parts feel different?"
+    },
+    {
+      "id": "echo-tr-2",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 1,
+      "opening": "That sounds like you’re already walking around carrying the weight of what others might think about your pace before they even speak to you—what would it feel like not having those other assumptions hanging over that?"
+    },
+    {
+      "id": "echo-fw-4",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "The silence of that call probably felt louder than anything else—the thing you couldn't say was sitting there between your own words and what he needed to hear."
+    }
+  ]
+}

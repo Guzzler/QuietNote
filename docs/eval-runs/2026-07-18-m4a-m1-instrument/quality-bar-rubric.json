@@ -1,0 +1,32 @@
+{
+  "model": "quietnote-m3 Gemma 4 E2B fine-tune, GGUF Q4_K_M via llama-server (M4a proxy)",
+  "results": [
+    {
+      "scenarioId": "qb-freewrite-arc",
+      "totalScore": 83,
+      "maxScore": 86,
+      "percent": 0.9651162790697675,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    },
+    {
+      "scenarioId": "qb-checkin-days",
+      "totalScore": 85,
+      "maxScore": 86,
+      "percent": 0.9883720930232558,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    },
+    {
+      "scenarioId": "qb-thoughtrecord-arc",
+      "totalScore": 82,
+      "maxScore": 84,
+      "percent": 0.9761904761904762,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    }
+  ]
+}
