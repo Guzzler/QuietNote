@@ -190,34 +190,22 @@ parked list stays parked.
 
 ## Task queue
 
-- [x] 2026-07-11 · **M0 — Echo mitigation in prompts + engine sampling
-  parity** (DONE 2026-07-13, PR #89 — prompt half REVERTED on a 4-floor
-  release-gate FAIL, engine parity shipped; full numbers + lesson in Ledger
-  and `docs/eval-runs/2026-07-13-m0-gate/NOTE.md`. Do NOT retry prompt-side
-  echo caps — anti-echo belongs to M2/M3.)
+- [x] 2026-07-11 · **M0 — Echo mitigation + engine sampling parity** (DONE
+  2026-07-13, PR #89 — prompt half REVERTED on a 4-floor gate FAIL, engine
+  parity shipped; see Ledger. Do NOT retry prompt-side echo caps.)
 - [x] 2026-07-11 · **M1 — Echo metric + conversational baseline** (DONE
-  2026-07-14 as the honest smaller version, PR #92 — harness + rubric +
-  three 10-turn scenarios shipped; headless Gemma 4 E2B baseline in the
-  table below; WebLLM/MediaPipe browser baselines NOT run → M1b. See
-  Ledger.)
-- [x] 2026-07-11 · **M2a — Dataset spec (doc-only)** (DONE 2026-07-14, PR
-  #91 — `docs/model-quality/DATASET.md`; see Ledger. Unblocks M2b.)
-- [x] 2026-07-16 · **M1b — Browser-backend baseline (WebLLM Gemma 2 2B +
-  MediaPipe E2B)** (DONE 2026-07-16, PR #95 + en-route P1 fix PR #94 —
-  both baseline rows filled in the table below; WebLLM-removal
-  recommendation recorded in Decisions and escalated to Blocked on
-  Sharang. Full detail in Ledger.)
-- [x] 2026-07-16 · **M1c — Strip leaked Gemma turn markers from MediaPipe
-  replies** (DONE 2026-07-16, PR #96 — decided stop-sequence approach
-  implemented as `TurnMarkerStreamFilter`; see Ledger.)
-- [x] 2026-07-16 · **M2b — Dataset generator script (mock-teacher first)**
-  (DONE 2026-07-16, PR #97 — see Ledger.)
-- [x] 2026-07-16 · **M3a — Colab training notebook (artifact-only; Sharang
-  executes)** (DONE 2026-07-16, PR #98 — see Ledger.)
-- [x] 2026-07-17 · **M2d — Land the working-tree API-teacher modes as a
-  PR** (DONE 2026-07-17, execute — see Ledger. Diff verified key-free
-  (`loadApiKey` reads env/`.env.local` only, never prints); no live
-  session mid-edit; suite 1033 green; `status` verified: 85/2000.)
+  2026-07-14, PR #92 — see Ledger and the baseline table.)
+- [x] 2026-07-11 · **M2a — Dataset spec** (DONE 2026-07-14, PR #91.)
+- [x] 2026-07-16 · **M1b — Browser-backend baseline** (DONE 2026-07-16,
+  PR #95 + fix PR #94 — see Ledger and the M1b table.)
+- [x] 2026-07-16 · **M1c — Strip leaked turn markers** (DONE 2026-07-16,
+  PR #96 — see Ledger.)
+- [x] 2026-07-16 · **M2b — Dataset generator script** (DONE 2026-07-16,
+  PR #97 — see Ledger.)
+- [x] 2026-07-16 · **M3a — Colab training notebook** (DONE 2026-07-16,
+  PR #98 — see Ledger.)
+- [x] 2026-07-17 · **M2d — API-teacher modes landed** (DONE 2026-07-17 —
+  see Ledger.)
 - [ ] 2026-07-16 · **M2c — Generate the dataset (hybrid teacher)**
   (pilot DONE 2026-07-17, execute: the 500-card Haiku pilot ran via the
   Batches API (`msgbatch_01XyaopfpryubM5XFvrMAv8i`) — **272/500 accepted
@@ -234,19 +222,52 @@ parked list stays parked.
   `status` shows counts advancing with §3 shares holding; §6 hand-review
   protocol (10%/slice, 100% of safety mirror) before the HF upload.
 
-- [ ] 2026-07-18 · **M2e — Teacher-prompt fixes from the pilot review**:
-  in `src/utils/m2DatasetGenerator.ts`, add variety pressure against the
-  crystallizing house style (em-dash "X — reframe" openers, "There it is"
-  / "That's real" validators, question-ending every turn — rotate
-  per-card stylistic constraints the way RESOLUTION_STYLES already
-  rotates closings), add diagnosis-adjacent vocabulary ("diagnosable",
-  "clinically") to the template-smell/filter list (tr-0296 leaked "that's
-  actually diagnosable stress response"), and add a pronoun-neutrality
-  instruction for unspecified names (pilot model guessed "her" for
-  "Jordan"). Also consider widening the deck's topic/planted-detail pools
-  (Harlow/pottery/transfer/3am recur across many dialogues). → Verify:
-  prompt-contract tests updated; suite green; PR merged. **Must land
-  before the full ~1,400-card run.**
+- [ ] 2026-07-18 · **M2e — Teacher-prompt fixes from the pilot review**
+  (re-grounded 2026-07-18, planner — read the constraints, they changed
+  the shape of this item): in `src/utils/m2DatasetGenerator.ts`:
+  (1) add a `STYLE_CONSTRAINTS` rotation assigned deterministically
+  per card exactly the way `RESOLUTION_STYLES`/`pickResolutionStyle`
+  (lines 230–243) already work — use the decided list below verbatim;
+  (2) add diagnosis-adjacent vocabulary ("diagnosable", "clinically",
+  "textbook case") to a **dataset-side ban list in the generator** (e.g.
+  beside `DOSE_ADVICE_BANS`), NOT to `TEMPLATE_SMELL_PHRASES` — that
+  list lives in `src/utils/echoMetric.ts:98` and the M1 rubric scores
+  with it, so touching it would shift the baseline↔fine-tune comparison
+  (tr-0296 leaked "that's actually diagnosable stress response");
+  (3) add a fixed prompt instruction: never assume a pronoun for a named
+  person unless the user used one — refer by name or "they" (pilot model
+  guessed "her" for "Jordan");
+  (4) **do NOT widen `M2_TOPICS`/detail pools** — verified 2026-07-18:
+  the sampler draws topics via a shared seeded RNG stream
+  (`m2DatasetGenerator.ts:180-181`), so any pool change reshuffles every
+  card in the fixed deck (228 rejects + ~1,143 undealt pending, deck
+  pinned by the stability test). Instead add a prompt line telling the
+  teacher to invent ONE additional concrete, specific detail of its own
+  per dialogue (a name, object, or time — distinct from the planted
+  detail, which the callback filter checks). → Verify: prompt-contract
+  tests updated; suite green; PR merged. **Must land before the full
+  ~1,400-card run.**
+**Decided (2026-07-18, planner) — M2e `STYLE_CONSTRAINTS` rotation
+(execute: use verbatim; one per card via the `pickResolutionStyle` hash
+pattern, rendered as a card line like "stylistic constraint for THIS
+dialogue: ..."):**
+1. "no em-dash constructions in assistant turns — where you'd reach for
+   'X — reframe', write the reframe as its own plain sentence"
+2. "at least half the assistant turns end on a statement, not a
+   question — sit with what the user said instead of always advancing"
+3. "no short standalone validation sentences ('There it is.', 'That's
+   real.', 'That's the thing.') — fold any validation into a longer,
+   specific sentence"
+4. "no two assistant turns may open with the same first word"
+5. "one assistant turn somewhere in the middle is a single short
+   sentence — brevity as warmth, not a validation catchphrase"
+Rationale: these five directly counter the pilot sample's crystallizing
+house style (em-dash reframes, "There it is" validators, question-ending
+every turn) without constraining content; rotating them prevents the
+fix from becoming its own monoculture. Single-exchange cards take the
+constraint too (all five are meaningful in one reply except 2 and 4,
+which the renderer should skip for `userTurns === 1`).
+
 - [ ] 2026-07-18 · **M4a — GGUF + llama-server harness bridge (proposed
   2026-07-18, interactive session)**: convert
   `Sharangp/quietnote-m3-gemma4-e2b-merged` to GGUF q4 (llama.cpp
