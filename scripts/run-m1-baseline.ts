@@ -18,6 +18,11 @@
  *   npm run eval:m1            # full baseline
  *   npm run eval:m1 -- --scenarios-only
  *   npm run eval:m1 -- --echo-only
+ *
+ * M4a (2026-07-18): `--endpoint=<url>` targets any OpenAI-compatible
+ * /v1/chat/completions server (llama-server for the GGUF-converted
+ * fine-tune) instead of the local ONNX model — same driver, same send-path
+ * guards, same rubric. `--model-label="..."` names the model in reports.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -40,9 +45,9 @@ import {
   type ScenarioRubricResult,
 } from "../src/utils/qualityBarRubric.ts";
 import { runConversationScript } from "../src/utils/conversationDriver.ts";
+import { createEndpointGenerateOnce } from "../src/utils/endpointGenerate.ts";
 
 const MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX"; // mirrors transformersjs-engine.ts:16
-const MODEL_LABEL = "Gemma 4 E2B ONNX q4f16 (Node onnxruntime-node CPU)";
 // Mirrors generation defaults in transformersjs-engine.ts:123-126
 const GEN_DEFAULTS = {
   max_new_tokens: 200,
@@ -54,32 +59,56 @@ const GEN_DEFAULTS = {
 const args = process.argv.slice(2);
 const RUN_ECHO = !args.includes("--scenarios-only");
 const RUN_SCENARIOS = !args.includes("--echo-only");
+const endpointArg = args.find((a) => a.startsWith("--endpoint="));
+const ENDPOINT = endpointArg ? endpointArg.split("=")[1] : null;
+const labelArg = args.find((a) => a.startsWith("--model-label="));
+const MODEL_LABEL =
+  labelArg?.split("=").slice(1).join("=") ??
+  (ENDPOINT
+    ? `OpenAI-compatible endpoint (${ENDPOINT})`
+    : "Gemma 4 E2B ONNX q4f16 (Node onnxruntime-node CPU)");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TODAY = new Date().toISOString().slice(0, 10);
-const OUT_DIR = join(__dirname, "..", "docs", "eval-runs", `${TODAY}-m1-baseline`);
+const OUT_DIR = join(
+  __dirname,
+  "..",
+  "docs",
+  "eval-runs",
+  `${TODAY}-m1-baseline${ENDPOINT ? "-endpoint" : ""}`,
+);
 
 async function main() {
-  console.log(`[m1] Loading ${MODEL_ID}…`);
-  const { AutoTokenizer, AutoModelForCausalLM } = await import("@huggingface/transformers");
-  const tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID);
-  const model = await AutoModelForCausalLM.from_pretrained(MODEL_ID, { dtype: "q4f16" });
-  console.log(`[m1] Model loaded.`);
+  let generateOnce: (messages: { role: string; content: string }[]) => Promise<string>;
+  if (ENDPOINT) {
+    console.log(`[m1] Targeting endpoint ${ENDPOINT} (${MODEL_LABEL})`);
+    generateOnce = createEndpointGenerateOnce(ENDPOINT, {
+      maxTokens: GEN_DEFAULTS.max_new_tokens,
+      temperature: GEN_DEFAULTS.temperature,
+      repetitionPenalty: GEN_DEFAULTS.repetition_penalty,
+    });
+  } else {
+    console.log(`[m1] Loading ${MODEL_ID}…`);
+    const { AutoTokenizer, AutoModelForCausalLM } = await import("@huggingface/transformers");
+    const tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID);
+    const model = await AutoModelForCausalLM.from_pretrained(MODEL_ID, { dtype: "q4f16" });
+    console.log(`[m1] Model loaded.`);
 
-  async function generateOnce(messages: { role: string; content: string }[]): Promise<string> {
-    const inputs = (tokenizer as any).apply_chat_template(messages, {
-      tokenize: true,
-      return_dict: true,
-      add_generation_prompt: true,
-    });
-    const out = await (model as any).generate({ ...inputs, ...GEN_DEFAULTS });
-    const inputIdsLen = inputs.input_ids?.dims?.at(-1) ?? 0;
-    const outIds: number[][] =
-      typeof (out as any).tolist === "function" ? (out as any).tolist() : (out as any);
-    const text = (tokenizer as any).decode(outIds[0].slice(inputIdsLen), {
-      skip_special_tokens: true,
-    });
-    return typeof text === "string" ? text.trim() : String(text).trim();
+    generateOnce = async (messages) => {
+      const inputs = (tokenizer as any).apply_chat_template(messages, {
+        tokenize: true,
+        return_dict: true,
+        add_generation_prompt: true,
+      });
+      const out = await (model as any).generate({ ...inputs, ...GEN_DEFAULTS });
+      const inputIdsLen = inputs.input_ids?.dims?.at(-1) ?? 0;
+      const outIds: number[][] =
+        typeof (out as any).tolist === "function" ? (out as any).tolist() : (out as any);
+      const text = (tokenizer as any).decode(outIds[0].slice(inputIdsLen), {
+        skip_special_tokens: true,
+      });
+      return typeof text === "string" ? text.trim() : String(text).trim();
+    };
   }
 
   // App-faithful send path (deflection guard only; the scenarios contain no
