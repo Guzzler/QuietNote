@@ -13,6 +13,8 @@ import {
   mockTeacher,
   generateDataset,
   DOSE_ADVICE_BANS,
+  DIAGNOSIS_VOCAB_BANS,
+  STYLE_CONSTRAINTS,
   SLICE_SHARES,
   type ScenarioCard,
   type DialogueTurn,
@@ -166,6 +168,51 @@ describe("m2DatasetGenerator (M2b — DATASET.md §5 pipeline)", () => {
       expect(prompt).not.toContain("how THIS dialogue should close:");
       expect(prompt).not.toContain("do NOT stop early");
     });
+
+    it("M2e: assigns a deterministic stylistic constraint from the decided rotation", () => {
+      const c = card({ userTurns: 8, lengthBand: "long" });
+      const prompt = renderTeacherPrompt(c);
+      expect(prompt).toContain("stylistic constraint for THIS dialogue: ");
+      const constraint = prompt.split("stylistic constraint for THIS dialogue: ")[1]?.split("\n")[0];
+      expect(STYLE_CONSTRAINTS).toContain(constraint);
+      // Same card -> same constraint every render.
+      expect(renderTeacherPrompt(c)).toBe(prompt);
+    });
+
+    it("M2e: rotates constraints across cards and keeps multi-turn-only constraints off singles", () => {
+      const cards = sampleScenarioCards(60, 42);
+      const constraintOf = (c: ScenarioCard) =>
+        renderTeacherPrompt(c).split("stylistic constraint for THIS dialogue: ")[1]?.split("\n")[0] ?? "";
+      const multi = new Set(cards.filter((c) => c.userTurns > 1).map(constraintOf));
+      expect(multi.size).toBeGreaterThan(1);
+      // Constraints 2 and 4 need multiple assistant turns; singles skip them.
+      for (const c of cards.filter((x) => x.userTurns === 1)) {
+        const constraint = constraintOf(c);
+        expect(constraint).not.toBe(STYLE_CONSTRAINTS[1]);
+        expect(constraint).not.toBe(STYLE_CONSTRAINTS[3]);
+        expect(STYLE_CONSTRAINTS).toContain(constraint);
+      }
+    });
+
+    it("M2e: the constraint rotation is not locked in step with the closing-style rotation", () => {
+      const cards = sampleScenarioCards(200, 42).filter((c) => c.userTurns > 1);
+      const pairs = new Set(
+        cards.map((c) => {
+          const p = renderTeacherPrompt(c);
+          const close = p.split("how THIS dialogue should close: ")[1]?.split("\n")[0];
+          const style = p.split("stylistic constraint for THIS dialogue: ")[1]?.split("\n")[0];
+          return `${close}|||${style}`;
+        }),
+      );
+      // 5 closes x 5 constraints: an unsalted shared hash would yield only 5 pairs.
+      expect(pairs.size).toBeGreaterThan(5);
+    });
+
+    it("M2e: fixes the pilot's pronoun guess and asks for one invented detail", () => {
+      const prompt = renderTeacherPrompt(card({ userTurns: 5, lengthBand: "medium" }));
+      expect(prompt).toContain("never assume a pronoun for a named person");
+      expect(prompt).toContain("INVENT ONE DETAIL");
+    });
   });
 
   describe("estimateMaxTokens (M2c: fixed 4096 truncated long dialogues)", () => {
@@ -283,6 +330,29 @@ describe("m2DatasetGenerator (M2b — DATASET.md §5 pipeline)", () => {
 
     it("DOSE_ADVICE_BANS catch the M0 dose-echo shape", () => {
       expect(DOSE_ADVICE_BANS.some((re) => re.test("taking ten milligrams — wait, 10 mg nightly"))).toBe(true);
+    });
+
+    it("M2e: rejects diagnosis-adjacent vocabulary in any assistant turn (the tr-0296 leak)", () => {
+      const leaky: DialogueTurn[] = [
+        pass[0],
+        { role: "assistant", content: "What you're describing is actually a diagnosable stress response." },
+      ];
+      expect(runFilters(leaky, card()).some((r) => r.startsWith("diagnosis-vocab"))).toBe(true);
+
+      const clinical: DialogueTurn[] = [
+        pass[0],
+        { role: "assistant", content: "That pattern is clinically significant, a textbook case even." },
+      ];
+      expect(runFilters(clinical, card()).some((r) => r.startsWith("diagnosis-vocab"))).toBe(true);
+
+      // The vocab appearing in a USER turn is fine — only assistant turns are policed.
+      const userSaysIt: DialogueTurn[] = [
+        { role: "user", content: "My sister says this is diagnosable and I should get checked out." },
+        { role: "assistant", content: "What did hearing that from your sister stir up for you?" },
+      ];
+      expect(runFilters(userSaysIt, card()).some((r) => r.startsWith("diagnosis-vocab"))).toBe(false);
+
+      expect(DIAGNOSIS_VOCAB_BANS.some((re) => re.test("that's actually diagnosable stress response"))).toBe(true);
     });
   });
 
