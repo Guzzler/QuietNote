@@ -144,6 +144,16 @@ for (const s of RUN_STRATEGIES) {
 const REFERRAL_REPROMPT = args.includes("--referral-reprompt");
 let referralRepromptFires = 0;
 
+// M4a (2026-07-18): --endpoint=<url> targets an OpenAI-compatible
+// /v1/chat/completions server (llama-server for the GGUF fine-tune proxy)
+// instead of loading the local ONNX model. Same guards, cases, and floors.
+const endpointArg = args.find((a) => a.startsWith("--endpoint="));
+const ENDPOINT = endpointArg ? endpointArg.split("=")[1] : null;
+const modelLabelArg = args.find((a) => a.startsWith("--model-label="));
+const MODEL_LABEL =
+  modelLabelArg?.split("=").slice(1).join("=") ??
+  (ENDPOINT ? `OpenAI-compatible endpoint (${ENDPOINT})` : "Gemma 4 E2B (Node onnxruntime-node)");
+
 const outdirArg = args.find((a) => a.startsWith("--outdir="));
 const OUTDIR_NAME = outdirArg ? outdirArg.split("=")[1] : undefined;
 const suffixArg = args.find((a) => a.startsWith("--outfile-suffix="));
@@ -156,25 +166,56 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const OUT_DIR = join(REPO_ROOT, "docs", "eval-runs", resolveOutDirName(OUTDIR_NAME, TODAY));
 
 async function main() {
-  console.log(`[run-eval] Loading ${MODEL_ID} via @huggingface/transformers (Node)…`);
-  const { AutoTokenizer, AutoModelForCausalLM } = await import("@huggingface/transformers");
+  let generateOnce: (messages: { role: string; content: string }[]) => Promise<string>;
+  if (ENDPOINT) {
+    console.log(`[run-eval] Targeting endpoint ${ENDPOINT} (${MODEL_LABEL})`);
+    const { createEndpointGenerateOnce } = await import("../src/utils/endpointGenerate.ts");
+    generateOnce = createEndpointGenerateOnce(ENDPOINT, {
+      maxTokens: GEN_DEFAULTS.max_new_tokens,
+      temperature: GEN_DEFAULTS.temperature,
+      repetitionPenalty: GEN_DEFAULTS.repetition_penalty,
+    });
+  } else {
+    console.log(`[run-eval] Loading ${MODEL_ID} via @huggingface/transformers (Node)…`);
+    const { AutoTokenizer, AutoModelForCausalLM } = await import("@huggingface/transformers");
 
-  const tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID);
-  console.log(`[run-eval] Tokenizer loaded.`);
+    const tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID);
+    console.log(`[run-eval] Tokenizer loaded.`);
 
-  const model = await AutoModelForCausalLM.from_pretrained(MODEL_ID, {
-    dtype: "q4f16", // mirrors transformersjs-engine.ts:64
-    // No `device` set — Node falls back to onnxruntime-node CPU automatically
-    progress_callback: (event: { status?: string; loaded?: number; total?: number }) => {
-      if (event.status === "progress" && event.total) {
-        const pct = Math.round(((event.loaded ?? 0) / event.total) * 100);
-        if (pct % 20 === 0) {
-          process.stdout.write(`[run-eval] download ${pct}%\r`);
+    const model = await AutoModelForCausalLM.from_pretrained(MODEL_ID, {
+      dtype: "q4f16", // mirrors transformersjs-engine.ts:64
+      // No `device` set — Node falls back to onnxruntime-node CPU automatically
+      progress_callback: (event: { status?: string; loaded?: number; total?: number }) => {
+        if (event.status === "progress" && event.total) {
+          const pct = Math.round(((event.loaded ?? 0) / event.total) * 100);
+          if (pct % 20 === 0) {
+            process.stdout.write(`[run-eval] download ${pct}%\r`);
+          }
         }
-      }
-    },
-  });
-  console.log(`\n[run-eval] Model loaded — ready to generate.`);
+      },
+    });
+    console.log(`\n[run-eval] Model loaded — ready to generate.`);
+
+    generateOnce = async (messages) => {
+      const inputs = (tokenizer as any).apply_chat_template(messages, {
+        tokenize: true,
+        return_dict: true,
+        add_generation_prompt: true,
+      });
+      const out = await (model as any).generate({
+        ...inputs,
+        ...GEN_DEFAULTS,
+      });
+      // `out` is a Tensor of shape [batch, seq]. Convert to a JS array, then
+      // slice off the prompt tokens and decode just the generated portion.
+      const inputIdsLen = inputs.input_ids?.dims?.at(-1) ?? 0;
+      const outIds: number[][] =
+        typeof (out as any).tolist === "function" ? (out as any).tolist() : (out as any);
+      const generated = outIds[0].slice(inputIdsLen);
+      const text = (tokenizer as any).decode(generated, { skip_special_tokens: true });
+      return typeof text === "string" ? text.trim() : String(text).trim();
+    };
+  }
 
   // Build a stateless `generate` matching evalDriver's signature.
   // Mirrors the app's send path (src/App.tsx): if the first pass is a bare
@@ -210,26 +251,6 @@ async function main() {
       }
     }
     return response;
-  }
-
-  async function generateOnce(messages: { role: string; content: string }[]): Promise<string> {
-    const inputs = (tokenizer as any).apply_chat_template(messages, {
-      tokenize: true,
-      return_dict: true,
-      add_generation_prompt: true,
-    });
-    const out = await (model as any).generate({
-      ...inputs,
-      ...GEN_DEFAULTS,
-    });
-    // `out` is a Tensor of shape [batch, seq]. Convert to a JS array, then
-    // slice off the prompt tokens and decode just the generated portion.
-    const inputIdsLen = inputs.input_ids?.dims?.at(-1) ?? 0;
-    const outIds: number[][] =
-      typeof (out as any).tolist === "function" ? (out as any).tolist() : (out as any);
-    const generated = outIds[0].slice(inputIdsLen);
-    const text = (tokenizer as any).decode(generated, { skip_special_tokens: true });
-    return typeof text === "string" ? text.trim() : String(text).trim();
   }
 
   mkdirSync(OUT_DIR, { recursive: true });
@@ -272,7 +293,7 @@ async function main() {
     try {
       const report = await runEvalSuite(
         { systemInstruction, generate, dimensions, onProgress: progress(mode) },
-        `Gemma 4 E2B (Node onnxruntime-node)`
+        MODEL_LABEL
       );
       writeMarkdown(mode, report);
       allReports.push({ mode, report });
@@ -452,7 +473,7 @@ function toolRecordsToMarkdown(records: ToolCaseRecord[]): string {
   const lines: string[] = [];
   lines.push(`# D1 Tool-Call Spike — per-case results`);
   lines.push("");
-  lines.push(`Model: Gemma 4 E2B (Node onnxruntime-node, q4f16). Generated ${new Date().toISOString()}.`);
+  lines.push(`Model: ${MODEL_LABEL}. Generated ${new Date().toISOString()}.`);
   lines.push("");
   lines.push(`## Headline rates`);
   lines.push("");

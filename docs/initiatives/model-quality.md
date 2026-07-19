@@ -270,7 +270,15 @@ constraint too (all five are meaningful in one reply except 2 and 4,
 which the renderer should skip for `userTurns === 1`).
 
 - [ ] 2026-07-18 · **M4a — GGUF + llama-server harness bridge (proposed
-  2026-07-18, interactive session)**: convert
+  2026-07-18, interactive session)** (harness bridge SHIPPED 2026-07-18,
+  PR #105: `--endpoint=<url>` + `--model-label` on both
+  `run-m1-baseline.ts` and `run-eval.ts` via
+  `src/utils/endpointGenerate.ts` — OpenAI-compatible adapter with app
+  sampling parity (`max_new_tokens`→`max_tokens`,
+  `repetition_penalty`→`repeat_penalty`), fail-loud on HTTP errors/empty
+  replies; 4 unit tests + both runners smoke-verified end-to-end against a
+  mock server. Remaining: GGUF conversion + llama-server run + the actual
+  eval numbers.): convert
   `Sharangp/quietnote-m3-gemma4-e2b-merged` to GGUF q4 (llama.cpp
   `convert_hf_to_gguf.py` — verify gemma4 arch support first), run local
   `llama-server`, and add an endpoint mode to
