@@ -136,10 +136,17 @@ must clear on the fine-tuned model before the bar counts as met):**
   export this architecture, and onnx-community's own gemma-4 ONNX
   conversion used unpublished tooling (model card documents usage only).
   Consequence: M4 scoring goes via a GGUF/llama.cpp 4-bit proxy (M4a
-  below) and the in-app test goes via the LiteRT path (M5a below), which
-  ai-edge-torch supports officially for fine-tuned Gemma. Worth one
-  question in onnx-community's HF discussions about their recipe;
-  M5's Transformers.js artifact depends on it or on optimum catching up.
+  below) and the in-app test goes via the LiteRT path (M5a below).
+  **Correction (2026-07-19, execute's re-grounding, independently
+  verified by the planner the same day): "ai-edge-torch supports
+  fine-tuned Gemma officially" was overstated for gemma-4** — the
+  tooling is now `litert-torch` (`export_hf`, nightly only), it emits
+  `.litertlm` rather than the web `.task` the app loads (that recipe is
+  unpublished, like the ONNX one), and gemma-4 export has open upstream
+  bugs (litert-torch #998/#1001) — whether tasks-genai 0.10.27 loads a
+  gemma4 `.litertlm` is exactly the M5a experiment. Worth one question
+  in onnx-community's HF discussions about their recipe; M5's
+  Transformers.js artifact depends on it or on optimum catching up.
 
 This initiative supersedes the README parked-list line about eval work *for
 this initiative's scope only* (new conversational-quality eval dimensions are
@@ -185,8 +192,8 @@ parked list stays parked.
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | harness DONE + Gemma 4 E2B headless baseline recorded (PR #92); browser-backend baseline (WebLLM/MediaPipe) still open → M1b |
 | M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91); generation PAUSED at 357/2000 — Haiku pilot done 2026-07-17, awaiting Sharang's §6 tone veto before the full spend |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, generating), then Sharang runs it |
-| M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | after M3 |
-| M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4 |
+| M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | M4a GGUF proxy ran 2026-07-18 on the pilot model: quality up, safety floors FAIL → full-data retrain, then rerun |
+| M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4; ONNX export upstream-blocked, LiteRT path uncertain (see 07-19 correction) — M5a probes it |
 
 ## Task queue
 
@@ -223,100 +230,34 @@ parked list stays parked.
   protocol (10%/slice, 100% of safety mirror) before the HF upload.
 
 - [x] 2026-07-18 · **M2e — Teacher-prompt fixes from the pilot review**
-  (DONE 2026-07-18, PR #104 — see Ledger.)
-  (re-grounded 2026-07-18, planner — read the constraints, they changed
-  the shape of this item): in `src/utils/m2DatasetGenerator.ts`:
-  (1) add a `STYLE_CONSTRAINTS` rotation assigned deterministically
-  per card exactly the way `RESOLUTION_STYLES`/`pickResolutionStyle`
-  (lines 230–243) already work — use the decided list below verbatim;
-  (2) add diagnosis-adjacent vocabulary ("diagnosable", "clinically",
-  "textbook case") to a **dataset-side ban list in the generator** (e.g.
-  beside `DOSE_ADVICE_BANS`), NOT to `TEMPLATE_SMELL_PHRASES` — that
-  list lives in `src/utils/echoMetric.ts:98` and the M1 rubric scores
-  with it, so touching it would shift the baseline↔fine-tune comparison
-  (tr-0296 leaked "that's actually diagnosable stress response");
-  (3) add a fixed prompt instruction: never assume a pronoun for a named
-  person unless the user used one — refer by name or "they" (pilot model
-  guessed "her" for "Jordan");
-  (4) **do NOT widen `M2_TOPICS`/detail pools** — verified 2026-07-18:
-  the sampler draws topics via a shared seeded RNG stream
-  (`m2DatasetGenerator.ts:180-181`), so any pool change reshuffles every
-  card in the fixed deck (228 rejects + ~1,143 undealt pending, deck
-  pinned by the stability test). Instead add a prompt line telling the
-  teacher to invent ONE additional concrete, specific detail of its own
-  per dialogue (a name, object, or time — distinct from the planted
-  detail, which the callback filter checks). → Verify: prompt-contract
-  tests updated; suite green; PR merged. **Must land before the full
-  ~1,400-card run.**
-**Decided (2026-07-18, planner) — M2e `STYLE_CONSTRAINTS` rotation
-(execute: use verbatim; one per card via the `pickResolutionStyle` hash
-pattern, rendered as a card line like "stylistic constraint for THIS
-dialogue: ..."):**
-1. "no em-dash constructions in assistant turns — where you'd reach for
-   'X — reframe', write the reframe as its own plain sentence"
-2. "at least half the assistant turns end on a statement, not a
-   question — sit with what the user said instead of always advancing"
-3. "no short standalone validation sentences ('There it is.', 'That's
-   real.', 'That's the thing.') — fold any validation into a longer,
-   specific sentence"
-4. "no two assistant turns may open with the same first word"
-5. "one assistant turn somewhere in the middle is a single short
-   sentence — brevity as warmth, not a validation catchphrase"
-Rationale: these five directly counter the pilot sample's crystallizing
-house style (em-dash reframes, "There it is" validators, question-ending
-every turn) without constraining content; rotating them prevents the
-fix from becoming its own monoculture. Single-exchange cards take the
-constraint too (all five are meaningful in one reply except 2 and 4,
-which the renderer should skip for `userTurns === 1`).
+  (DONE 2026-07-18, PR #104 — see Ledger. `STYLE_CONSTRAINTS` rotation
+  shipped with the decided five constraints verbatim, salted; diagnosis
+  bans dataset-side only, `echoMetric.ts` untouched; pronoun rule;
+  invent-one-detail line; deck untouched. Landed before the full
+  ~1,400-card run as required.)
+- [x] 2026-07-18 · **M4a — GGUF + llama-server bridge + pilot-model
+  eval** (DONE 2026-07-18, PRs #105 + #106 — numbers in the M4a section,
+  full detail in Ledger. Headline: M1 instrument decisively up vs base;
+  release-gate medical_refusal floors FAILED in all four modes → do not
+  ship; the thin ~36-record safety mirror is the prime suspect; the path
+  is the full-data retrain then an M4 rerun.)
+- [x] 2026-07-18 · **M5a — Dev-only model override + LiteRT conversion
+  notebook** (loop half DONE 2026-07-19, PR #107 — see Ledger. Shipped:
+  `quietnote-model-url-override` localStorage override in
+  `mediapipe-engine.ts` (DEV builds only, prod-safety pinned by test,
+  verified live via Playwright against a localhost model server) +
+  `notebooks/m5a-litert-convert-gemma4-e2b.ipynb`. Grounding correction
+  recorded in Decisions: tooling is now `litert-torch`, gemma-4
+  `export_hf` emits `.litertlm` not `.task`, open upstream bugs — the
+  planner independently verified this 2026-07-19 via the upstream
+  issues/tutorials. **Remaining half is Sharang's Colab run + the
+  in-app exchange test — moved to Blocked on Sharang.**)
 
-- [x] 2026-07-18 · **M4a — GGUF + llama-server harness bridge (proposed
-  2026-07-18, interactive session)** (DONE 2026-07-18 — bridge PR #105,
-  eval PR #106; numbers in the M4a section + Ledger. Headline: M1
-  instrument dramatically up vs base, release-gate medical_refusal
-  floors FAILED in all four modes → do not ship; the thin ~36-record
-  safety mirror is the prime suspect, full 2,000-card run must proceed
-  with safety shares intact.) (harness bridge SHIPPED 2026-07-18,
-  PR #105: `--endpoint=<url>` + `--model-label` on both
-  `run-m1-baseline.ts` and `run-eval.ts` via
-  `src/utils/endpointGenerate.ts` — OpenAI-compatible adapter with app
-  sampling parity (`max_new_tokens`→`max_tokens`,
-  `repetition_penalty`→`repeat_penalty`), fail-loud on HTTP errors/empty
-  replies; 4 unit tests + both runners smoke-verified end-to-end against a
-  mock server. Remaining: GGUF conversion + llama-server run + the actual
-  eval numbers.): convert
-  `Sharangp/quietnote-m3-gemma4-e2b-merged` to GGUF q4 (llama.cpp
-  `convert_hf_to_gguf.py` — verify gemma4 arch support first), run local
-  `llama-server`, and add an endpoint mode to
-  `scripts/run-m1-baseline.ts`/`run-eval.ts` (OpenAI-compatible
-  completion adapter behind a `--endpoint` flag; same managed-strategy
-  driver, same rubric). Then run the full M1 instrument + release-gate
-  eval against the pilot model and record the numbers vs the floors —
-  an honest 4-bit proxy while ONNX is upstream-blocked. → Verify:
-  baseline reports under `docs/eval-runs/`, numbers in this doc.
-- [ ] 2026-07-18 · **M5a — LiteRT conversion + dev-only model override
-  (proposed 2026-07-18, interactive session)** (loop half SHIPPED
-  2026-07-19, PR #107 — see Ledger; **re-grounded 2026-07-19, execute**:
-  the tool is now `litert-torch` (ai-edge-torch renamed) and its
-  documented gemma-4 export emits **`.litertlm`**, not `.task` — the
-  recipe behind the official web `.task` the app loads is unpublished,
-  same story as the ONNX conversion. Whether tasks-genai 0.10.27 in the
-  browser accepts a gemma4 `.litertlm` is exactly what the dev override
-  will answer. Shipped: dev-only localStorage override
-  `quietnote-model-url-override` in `mediapipe-engine.ts` (dev builds
-  only, cache-keyed by URL, warns loudly, prod-safety pinned by test) +
-  `notebooks/m5a-litert-convert-gemma4-e2b.ipynb` (litert-torch-nightly
-  `export_hf` with the jinja-template override, python-API fallback for
-  upstream bug #1001, HF push, in-app test protocol + fallback ladder).
-  Remaining: **Sharang runs the notebook on Colab (High-RAM CPU)**, then
-  the in-app exchange test per the notebook's final cell.): ai-edge-torch conversion
-  of the merged checkpoint → `.task`, served from localhost; add a
-  dev-only override (e.g. localStorage `quietnote-model-url-override`,
-  dev builds only, never shipped UI) so the MediaPipe backend loads it —
-  the first real **in-app** test of the fine-tune, and M5's LiteRT
-  artifact. Research ai-edge-torch's gemma-4 recipe first; Colab cells
-  or a committed script, Sharang executes GPU steps if needed. → Verify:
-  real exchange in the app on `npm run dev` against the fine-tuned
-  `.task`, screenshot.
+**Queue status (2026-07-19, planner): every non-gated item is DONE.**
+The only open item (M2c, above) is paused on Sharang's §6 tone veto, and
+M5a's remaining half is his Colab run. This initiative invents no
+further work until one of the Sharang-gated decisions lands (§6 go,
+M5a notebook run, WebLLM go/no-go) or the gate/humans report an issue.
 
 ## M4a pilot-model eval (2026-07-18, GGUF Q4_K_M proxy via llama-server + `--endpoint` bridge)
 
