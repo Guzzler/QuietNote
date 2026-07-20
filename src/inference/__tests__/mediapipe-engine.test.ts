@@ -26,6 +26,8 @@ import {
   MediaPipeEngine,
   MEDIAPIPE_MODEL_REF,
   MEDIAPIPE_CACHE_NAME,
+  MODEL_URL_OVERRIDE_KEY,
+  resolveMediaPipeModelUrl,
   TurnMarkerStreamFilter,
 } from "../mediapipe-engine";
 import { MODEL_CONTEXT_LIMIT } from "../../utils/tokenEstimator";
@@ -377,6 +379,63 @@ describe("MediaPipeEngine", () => {
         out.push(t);
       }
       expect(out.join("")).toBe("Thanks for writing that down.");
+    });
+  });
+
+  describe("dev-only model URL override (M5a)", () => {
+    const OVERRIDE_URL = "http://localhost:8080/quietnote-m3.litertlm";
+
+    // This suite runs in a node environment — provide a minimal localStorage
+    // (vi.stubGlobal is undone by the outer afterEach's unstubAllGlobals).
+    beforeEach(() => {
+      const store = new Map<string, string>();
+      vi.stubGlobal("localStorage", {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+        removeItem: (k: string) => void store.delete(k),
+      });
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("returns the default model URL when no override is set", () => {
+      expect(resolveMediaPipeModelUrl()).toBe(MEDIAPIPE_MODEL_REF.modelUrl);
+    });
+
+    it("returns the override URL in dev builds when set", () => {
+      // vitest runs with import.meta.env.DEV === true, same as `npm run dev`
+      localStorage.setItem(MODEL_URL_OVERRIDE_KEY, OVERRIDE_URL);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        expect(resolveMediaPipeModelUrl()).toBe(OVERRIDE_URL);
+        // The override must announce itself — silent model swaps are not ok
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining("model override active"),
+        );
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("NEVER honors the override outside dev builds (production safety)", () => {
+      localStorage.setItem(MODEL_URL_OVERRIDE_KEY, OVERRIDE_URL);
+      vi.stubEnv("DEV", false);
+      expect(resolveMediaPipeModelUrl()).toBe(MEDIAPIPE_MODEL_REF.modelUrl);
+    });
+
+    it("load() fetches and caches under the override URL, not the default", async () => {
+      localStorage.setItem(MODEL_URL_OVERRIDE_KEY, OVERRIDE_URL);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        await engine.load();
+        expect(fetchMock).toHaveBeenCalledWith(OVERRIDE_URL);
+        expect(fakeCaches.store.has(OVERRIDE_URL)).toBe(true);
+        expect(fakeCaches.store.has(MEDIAPIPE_MODEL_REF.modelUrl)).toBe(false);
+      } finally {
+        warn.mockRestore();
+      }
     });
   });
 

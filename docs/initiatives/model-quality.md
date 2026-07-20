@@ -294,7 +294,21 @@ which the renderer should skip for `userTurns === 1`).
   an honest 4-bit proxy while ONNX is upstream-blocked. → Verify:
   baseline reports under `docs/eval-runs/`, numbers in this doc.
 - [ ] 2026-07-18 · **M5a — LiteRT conversion + dev-only model override
-  (proposed 2026-07-18, interactive session)**: ai-edge-torch conversion
+  (proposed 2026-07-18, interactive session)** (loop half SHIPPED
+  2026-07-19, PR #107 — see Ledger; **re-grounded 2026-07-19, execute**:
+  the tool is now `litert-torch` (ai-edge-torch renamed) and its
+  documented gemma-4 export emits **`.litertlm`**, not `.task` — the
+  recipe behind the official web `.task` the app loads is unpublished,
+  same story as the ONNX conversion. Whether tasks-genai 0.10.27 in the
+  browser accepts a gemma4 `.litertlm` is exactly what the dev override
+  will answer. Shipped: dev-only localStorage override
+  `quietnote-model-url-override` in `mediapipe-engine.ts` (dev builds
+  only, cache-keyed by URL, warns loudly, prod-safety pinned by test) +
+  `notebooks/m5a-litert-convert-gemma4-e2b.ipynb` (litert-torch-nightly
+  `export_hf` with the jinja-template override, python-API fallback for
+  upstream bug #1001, HF push, in-app test protocol + fallback ladder).
+  Remaining: **Sharang runs the notebook on Colab (High-RAM CPU)**, then
+  the in-app exchange test per the notebook's final cell.): ai-edge-torch conversion
   of the merged checkpoint → `.task`, served from localhost; add a
   dev-only override (e.g. localStorage `quietnote-model-url-override`,
   dev builds only, never shipped UI) so the MediaPipe backend loads it —
@@ -424,6 +438,7 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-19 | M5a (loop half) — dev-only model override + LiteRT conversion notebook | #107 | Dev override shipped in `mediapipe-engine.ts`: localStorage `quietnote-model-url-override` read ONLY when `import.meta.env.DEV` (the EvalPanel pattern), console-warns loudly when active, and keys the `mediapipe-cache` entry by the resolved URL so an overridden model never collides with the default. 4 new tests incl. a production-safety pin (`vi.stubEnv("DEV", false)` → override ignored). Verified live on `npm run dev` via Playwright: override set → warn logged, model fetched from `localhost:8080` (zero huggingface requests), dummy bytes rejected by MediaPipe with "No model format matched" surfaced as the calm error card + Retry (screenshot `docs/screenshots/2026-07-19/`). Conversion notebook `notebooks/m5a-litert-convert-gemma4-e2b.ipynb` (8 cells, nbformat-validated) written from fresh research — **grounding correction: ai-edge-torch is now `litert-torch`; its documented gemma-4 `export_hf` (nightly only) emits `.litertlm`, not the web `.task` the app loads (that recipe is unpublished, like the ONNX one); open upstream bugs #998/#1001/#2078 noted in the notebook with the python-API fallback and a fallback ladder if tasks-genai 0.10.27 won't load a gemma4 `.litertlm`.** Safety framing pinned in the notebook: the pilot model FAILED the M4a gate floors — this is a dev-only pipeline test, nothing ships. Remaining half is Sharang's Colab run + the in-app exchange. Build green, 1046 tests. |
 | 2026-07-18 | M4a — GGUF conversion + full eval of the pilot fine-tune | #105 (bridge) + #106 (numbers) | Pipeline proven end-to-end on this machine: merged checkpoint (9.6 GB) → `convert_hf_to_gguf.py` (gemma4 registered upstream, conversion clean) → Q4_K_M (3.25 GB) → `llama-server` → the PR #105 `--endpoint` bridge → full M1 instrument + full 4-mode release gate with `--referral-reprompt` ON. **Two-sided result, exactly what a 357-record pilot should look like:** conversational quality decisively up (echo mean overlap 0.11→0.00; scenarios 97/99/98% vs base 95/92/95%, all PASS, zero-critical none, transcripts genuinely engaged with real callbacks) while the safety floors FAILED — medical_refusal fw 11/16, ci 9/16, gr 9/16, tr 9/16 (floors 14/15/16/16) and tr jailbreak 3/6: the model engages with medical topics warmly instead of referring, and the referral reprompt (45 fires) can't recover it. DO NOT SHIP; full-data retrain with the ~10% safety mirror + M2e fixes, then M4 rerun. Ops note recorded in the M4a section: gemma4's template thinks by default — llama-server needs `--jinja --chat-template-kwargs '{"enable_thinking": false}'` or replies vanish into `reasoning_content`/leak `<\|channel>thought`. Reports committed under `docs/eval-runs/2026-07-18-m4a-*`. Q4 GGUF is a proxy, not the shipped artifact — in-app test is M5a. |
 | 2026-07-18 | M2e — Teacher-prompt fixes from the pilot review | #104 | All four re-grounded fixes, prompt/filter-side only — deck untouched (no pool widening; the deck-stability test still pins `buildM2Deck()`). (1) `STYLE_CONSTRAINTS` rotation shipped with the decided 5 constraints verbatim, assigned per card via the `pickResolutionStyle` hash pattern but **salted** (`cardId#style`) so the 5×5 constraint↔closing-shape pairing doesn't lock in step (test pins >5 distinct pairs); single-exchange cards skip constraints 2 and 4 (multi-turn-only) and draw from the other three. (2) `DIAGNOSIS_VOCAB_BANS` (`diagnosable/diagnosably`, `clinical(ly)`, `textbook case/example`) added beside `DOSE_ADVICE_BANS` and enforced in `runFilters` on EVERY assistant turn (user turns exempt) — deliberately NOT in `echoMetric.ts`'s `TEMPLATE_SMELL_PHRASES`, keeping the M1 baseline↔fine-tune comparison unshifted. (3) Fixed contract rule 7: never assume a pronoun for a named person — name or "they" (the pilot's "her"-for-Jordan guess). (4) Fixed contract rule 8: teacher invents ONE additional concrete detail (name/object/time) per dialogue, distinct from the planted detail — variety pressure without touching the seeded `M2_TOPICS` pools. 7 new tests (rotation determinism, single-card skip, salt de-correlation, pronoun+detail lines, diagnosis-vocab reject incl. the exact tr-0296 phrase + user-turn exemption); suite 1038 green, build green. Landed before the full ~1,400-card run as required. |
 | 2026-07-17 | M2c — 500-card Haiku pilot (Batches API) | #101 | Pilot ran per the 2026-07-17 teacher decision: `batch --count 500 --model claude-haiku-4-5` (batch `msgbatch_01XyaopfpryubM5XFvrMAv8i`, 50% batch pricing, ~50 min wall clock, 500/500 succeeded at the API level). Filters accepted **272/500 first-attempt (54%)** — well above the compare run's 8/15, consistent with the M2d prompt hardening helping; dataset now **357/2000** (fw 135 / ci 94 / tr 70 / gr 58 — §3 shares holding). 228 rejected cards remain pending in the deck (one-attempt-per-card rule; recoverable by a retry pass). Reject telemetry (last 300 rows): shape 195, callback 71, template-smell 58, format 30, echo 20, teacher-error 17, banned-opener 10 — shape is still the dominant loss even after hardening. Stratified 37-dialogue sample (all safety mirrors + strided slices) committed for Sharang's §6 tone veto: `docs/model-quality/samples/2026-07-17-pilot-500-review.md`. **Generation PAUSED pending his go** (pilot-first rule); no further API spend this run. Loop-authored batch deliberately skipped this run — the pilot had claimed the next 500 deck ids at submit time, so hand-authoring concurrently would have collided. |
@@ -439,6 +454,13 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 ## Blocked on Sharang
 
+- **M5a conversion run** (added 2026-07-19): run
+  `notebooks/m5a-litert-convert-gemma4-e2b.ipynb` on Colab (**High-RAM
+  CPU runtime** — the exporter is CPU-only and the fp16 checkpoint is
+  ~9.6 GB), then the in-app test per its final cell (the loop can drive
+  that part once the `.litertlm` exists). Read the notebook's tooling-
+  status cell first — gemma-4 export has open upstream bugs and the
+  web-loadability question is the experiment.
 - **WebLLM removal — go/no-go** (added 2026-07-16): the M1b data is in and
   the loop's recommendation is **REMOVE** (see Decisions — Gemma 2 2B
   self-repetition loops from ~turn 5, checkin rubric FAIL, and the

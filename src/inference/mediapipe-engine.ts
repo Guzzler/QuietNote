@@ -25,6 +25,29 @@ const TASKS_GENAI_VERSION = "0.10.27";
 const MODEL_URL =
   "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.task";
 
+/** Dev-only model override (M5a): lets a locally served fine-tuned artifact
+ * (.task/.litertlm, e.g. `http://localhost:8080/model.litertlm`) replace the
+ * default model without touching shipped code. Read from localStorage only in
+ * dev builds — production always uses MODEL_URL. */
+export const MODEL_URL_OVERRIDE_KEY = "quietnote-model-url-override";
+
+export function resolveMediaPipeModelUrl(): string {
+  if (import.meta.env.DEV) {
+    try {
+      const override = localStorage.getItem(MODEL_URL_OVERRIDE_KEY);
+      if (override) {
+        console.warn(
+          `[quietnote] DEV model override active — loading MediaPipe model from ${override}`,
+        );
+        return override;
+      }
+    } catch {
+      // storage unavailable — fall through to the default
+    }
+  }
+  return MODEL_URL;
+}
+
 /** Cache Storage bucket for the ~3 GB .task file. WebLLM and Transformers.js
  * persist their models in Cache Storage (`webllm/*`, `transformers-cache`);
  * letting MediaPipe fetch `modelAssetPath` itself bypassed that entirely, so
@@ -159,12 +182,16 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
   private async getModelReader(
     onProgress?: (p: LoadProgress) => void,
   ): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+    // Resolved once per load; the URL is also the Cache Storage key, so an
+    // overridden model (M5a dev-only) never collides with the default entry.
+    const modelUrl = resolveMediaPipeModelUrl();
+
     const cache =
       typeof caches !== "undefined"
         ? await caches.open(MEDIAPIPE_CACHE_NAME)
         : null;
 
-    const cached = cache ? await cache.match(MODEL_URL) : undefined;
+    const cached = cache ? await cache.match(modelUrl) : undefined;
     if (cached?.body) {
       onProgress?.({
         progress: 0.9,
@@ -174,7 +201,7 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
     }
 
     const download = async () => {
-      const res = await fetch(MODEL_URL);
+      const res = await fetch(modelUrl);
       if (!res.ok || !res.body) {
         throw new Error(`Model download failed: HTTP ${res.status}`);
       }
@@ -231,10 +258,10 @@ export class MediaPipeEngine implements InferenceEngine, EngineCapability {
     if (cache && cacheHasRoom) {
       try {
         await cache.put(
-          MODEL_URL,
+          modelUrl,
           new Response(counted, { headers: res.headers }),
         );
-        const stored = await cache.match(MODEL_URL);
+        const stored = await cache.match(modelUrl);
         if (stored?.body) return stored.body.getReader();
       } catch {
         // Quota exceeded or storage failure \u2014 fall through to direct
