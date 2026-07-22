@@ -131,6 +131,19 @@ export const SLICE_SHARES: { mode: M2Mode; share: number }[] = [
 /** §4 length mix: 30% single, 40% 3–6 turns, 30% 8–12 turns. */
 export const LENGTH_SHARES = { single: 0.3, medium: 0.4, long: 0.3 } as const;
 
+/**
+ * Classifies a produced user-turn count into a length band (M2f, 2026-07-22).
+ * Mirrors the deck's band boundaries (single = 1, medium = 3–6, long = 8–12),
+ * filling the 2 and 7 gaps toward the nearer multi-turn band so a coherent
+ * 7-turn arc still counts as long. Used by {@link runFilters} to accept a
+ * dialogue by BAND rather than exact count — see the shape check.
+ */
+export function classifyLengthBand(userTurns: number): "single" | "medium" | "long" {
+  if (userTurns <= 1) return "single";
+  if (userTurns <= 6) return "medium";
+  return "long";
+}
+
 const SAFETY_KINDS: SafetyKind[] = ["medical", "boundary", "jailbreak", "distress"];
 
 // ------------------------------------------------------------- the sampler
@@ -339,14 +352,53 @@ export function estimateMaxTokens(card: ScenarioCard): number {
   return Math.min(8192, Math.max(1200, 500 + card.userTurns * 2 * 260));
 }
 
-/** Parses the teacher's reply into turns; throws with a reason on bad shape. */
+/**
+ * Merges consecutive same-role objects into one turn (M2f, 2026-07-22).
+ *
+ * The teacher occasionally splits a single logical turn across two JSON
+ * objects (`{user}, {user}, {assistant}…`), which the shape filter rejects as
+ * non-alternating — a failure that compounds with length, so long dialogues
+ * paid for it ~3× more than single exchanges (28% vs 89% pilot pass rate).
+ * This is pure input NORMALIZATION run before filtering: content is joined
+ * with a blank line and preserved verbatim; the full §5 filter set still runs
+ * on the result, so a merge that yields a genuinely too-long or multi-question
+ * turn is still correctly rejected. Structural errors the merge can't explain
+ * (a non-adjacent extra turn) still fail the user-count check honestly.
+ */
+export function repairTurns(turns: DialogueTurn[]): DialogueTurn[] {
+  const out: DialogueTurn[] = [];
+  for (const turn of turns) {
+    const prev = out[out.length - 1];
+    if (prev && prev.role === turn.role) {
+      prev.content = `${prev.content}\n\n${turn.content}`.trim();
+    } else {
+      out.push({ role: turn.role, content: turn.content });
+    }
+  }
+  return out;
+}
+
+/**
+ * Parses the teacher's reply into turns; throws with a reason on bad shape.
+ * The bracket-slice already tolerates ```json fences and prose around the
+ * array; a trailing-comma fallback (M2f) is attempted only when the first
+ * parse fails, so well-formed JSON is never touched. Consecutive same-role
+ * objects are merged via {@link repairTurns} before returning.
+ */
 export function parseTeacherReply(text: string): DialogueTurn[] {
   const start = text.indexOf("[");
   const end = text.lastIndexOf("]");
   if (start === -1 || end <= start) throw new Error("no JSON array in teacher reply");
-  const parsed = JSON.parse(text.slice(start, end + 1)) as DialogueTurn[];
+  const slice = text.slice(start, end + 1);
+  let parsed: DialogueTurn[];
+  try {
+    parsed = JSON.parse(slice) as DialogueTurn[];
+  } catch {
+    // Fallback only on failure: strip trailing commas before ] or }.
+    parsed = JSON.parse(slice.replace(/,(\s*[\]}])/g, "$1")) as DialogueTurn[];
+  }
   if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("empty turns");
-  return parsed.map((t) => ({ role: t.role, content: String(t.content) }));
+  return repairTurns(parsed.map((t) => ({ role: t.role, content: String(t.content) })));
 }
 
 // ---------------------------------------------------------------- filters
@@ -399,9 +451,17 @@ export function runFilters(turns: DialogueTurn[], card: ScenarioCard): string[] 
       break;
     }
   }
+  // M2f: accept by length BAND, not exact user-turn count. The teacher often
+  // writes a coherent arc a turn or two short of the exact ask (wanted 11, got
+  // 9); requiring the exact number discarded the majority of long dialogues
+  // (66 long arcs in the 500-card pilot) and fought the deck's 30/40/30
+  // composition. Band membership keeps genuine long arcs while still rejecting
+  // severe early-stops that fall out of band (wanted long, got a 5-turn arc).
   const userCount = turns.filter((t) => t.role === "user").length;
-  if (userCount !== card.userTurns)
-    reasons.push(`shape: ${userCount} user turns, card wants ${card.userTurns}`);
+  if (classifyLengthBand(userCount) !== card.lengthBand)
+    reasons.push(
+      `shape: ${userCount} user turns falls outside the card's ${card.lengthBand} band`,
+    );
 
   turns.forEach((turn, i) => {
     if (turn.role !== "assistant") return;
@@ -666,7 +726,8 @@ export function ingestBatch(
       rejected.push({ cardId: item.cardId, reasons: ["duplicate: card already fulfilled"] });
       continue;
     }
-    const reasons = runFilters(item.turns, card);
+    const turns = repairTurns(item.turns);
+    const reasons = runFilters(turns, card);
     if (reasons.length > 0) {
       rejected.push({ cardId: item.cardId, reasons });
       continue;
@@ -675,7 +736,7 @@ export function ingestBatch(
     accepted.push({
       id: card.id,
       mode: card.mode,
-      turns: item.turns,
+      turns,
       tags: card.tags,
       teacher: teacherLabel,
       review: { status: "pending", by: "loop" },
@@ -724,7 +785,7 @@ export async function generateDataset(opts: {
     for (let attempt = 0; attempt < maxAttempts && !accepted; attempt++) {
       let turns: DialogueTurn[];
       try {
-        turns = await teacher(card, attempt);
+        turns = repairTurns(await teacher(card, attempt));
       } catch (err) {
         rejects.push({
           cardId: card.id,
