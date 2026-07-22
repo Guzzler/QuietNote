@@ -54,6 +54,16 @@ decisions, release gate, queue format).
   release day (see R4). Production behavior is verified locally via
   `npm run build` + `npx vite preview` (serves `dist/` at the configured
   `base`).
+- **Deploy-gate re-verified against the live file 2026-07-21:**
+  `.github/workflows/deploy.yml`'s `deploy` job carries
+  `if: ${{ !github.event.repository.private }}`, so it skips cleanly while
+  private and flips to running automatically the moment Sharang makes the
+  repo public at R4 — **no workflow edit is needed on release day**. The
+  `build` job runs on every push (build + `upload-pages-artifact`) with
+  `configure-pages` set `continue-on-error`, so doc-only pushes to `main`
+  don't fail CI while Pages is disabled. R4's Pages-enable command
+  (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`)
+  is still the correct current-API invocation for the Actions build type.
 - `README.md` today is the **stock Vite template** (React+TS+Vite boilerplate,
   ESLint config advice) — R3a is a from-scratch write, not an edit.
 - No LICENSE file (see Blocked).
