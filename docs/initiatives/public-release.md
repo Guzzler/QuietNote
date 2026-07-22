@@ -114,6 +114,25 @@ increment. After it ships, this initiative is release-ready and everything
 remaining (R4, LICENSE) is Sharang-gated — do not invent further items here;
 model-quality (M1/M2a) is where open work lives.
 
+**Queue-empty audit (2026-07-21, execute — `npm run build` + `npx vite
+preview` on `:4173`, WebLLM default, Chromium via Playwright):** every
+non-gated item across all three initiatives is DONE and only Sharang-gated
+work remains (R4/LICENSE here, F2, M2c §6 veto, M5a Colab run, WebLLM
+go/no-go), so per the queue-empty rule an audit walk ran instead of inventing
+work. Walked load → writing surface → first exchange → reload persistence:
+loading card shows the R2b "~1.5 GB" size line + real % progress; a fresh
+free-write exchange returned a supportive, non-parroting single-question
+reply ("It sounds like you've been juggling a lot this week. What's making it
+feel extra hard to handle?") with the AI-limitations disclaimer + Crisis
+resources button present; the session persisted through a full reload
+(sidebar entry + restored transcript). **0 console errors** (one benign
+Chromium `powerPreference`-ignored WebGPU warning, crbug.com/369219127).
+**No defects found — nothing to file.** Scope caveat: the Playwright profile
+was persistent (prior 07-13 sessions present), so this was a returning-user
+walk, not a true fresh-profile cold start — the fresh-profile matrix stays
+the 2026-07-12 R2 read, to be re-run on the live URL at R4. Screenshots:
+`docs/screenshots/2026-07-21/`.
+
 **R2 cold-start audit matrix (2026-07-12, `npm run build` + `npx vite
 preview`, Chromium via Playwright; screenshots in
 `docs/screenshots/2026-07-12/`):**
