@@ -9,6 +9,8 @@ import {
   allocateCounts,
   renderTeacherPrompt,
   parseTeacherReply,
+  repairTurns,
+  classifyLengthBand,
   runFilters,
   mockTeacher,
   generateDataset,
@@ -353,6 +355,84 @@ describe("m2DatasetGenerator (M2b — DATASET.md §5 pipeline)", () => {
       expect(runFilters(userSaysIt, card()).some((r) => r.startsWith("diagnosis-vocab"))).toBe(false);
 
       expect(DIAGNOSIS_VOCAB_BANS.some((re) => re.test("that's actually diagnosable stress response"))).toBe(true);
+    });
+  });
+
+  describe("M2f — shape repair + band tolerance (long-arc yield)", () => {
+    it("repairTurns merges consecutive same-role objects, joining content", () => {
+      const split: DialogueTurn[] = [
+        { role: "user", content: "one" },
+        { role: "user", content: "two" },
+        { role: "assistant", content: "A reply that lands." },
+      ];
+      const fixed = repairTurns(split);
+      expect(fixed).toHaveLength(2);
+      expect(fixed[0]).toEqual({ role: "user", content: "one\n\ntwo" });
+      expect(fixed[1].role).toBe("assistant");
+    });
+
+    it("repairTurns leaves an already-alternating dialogue unchanged (idempotent)", () => {
+      const clean: DialogueTurn[] = [
+        { role: "user", content: "a" },
+        { role: "assistant", content: "b" },
+      ];
+      expect(repairTurns(clean)).toEqual(clean);
+      expect(repairTurns(repairTurns(clean))).toEqual(clean);
+    });
+
+    it("parseTeacherReply tolerates code fences and a trailing comma, then merges splits", () => {
+      const messy =
+        '```json\n[\n{"role":"user","content":"one"},\n{"role":"user","content":"two"},\n' +
+        '{"role":"assistant","content":"A quiet nudge — what sits under it today?"},\n]\n```';
+      const turns = parseTeacherReply(messy);
+      expect(turns).toHaveLength(2);
+      expect(turns[0]).toEqual({ role: "user", content: "one\n\ntwo" });
+      expect(turns[1].role).toBe("assistant");
+    });
+
+    it("classifyLengthBand mirrors the deck bands (single=1, medium=3–6, long=7+)", () => {
+      expect(classifyLengthBand(1)).toBe("single");
+      expect([3, 4, 5, 6].map(classifyLengthBand)).toEqual([
+        "medium",
+        "medium",
+        "medium",
+        "medium",
+      ]);
+      expect([7, 8, 11, 12].map(classifyLengthBand)).toEqual(["long", "long", "long", "long"]);
+    });
+
+    it("accepts a long-band dialogue that runs short of the exact ask (wanted 11, got 9)", async () => {
+      const nineTurn = await mockTeacher(card({ userTurns: 9, lengthBand: "long" }), 0);
+      expect(nineTurn.filter((t) => t.role === "user")).toHaveLength(9);
+      // Filtered against a card that asked for 11 — both are the long band.
+      expect(runFilters(nineTurn, card({ userTurns: 11, lengthBand: "long" }))).toEqual([]);
+    });
+
+    it("still rejects a severe early-stop that falls out of band (long card, 5-turn arc)", async () => {
+      const fiveTurn = await mockTeacher(card({ userTurns: 5, lengthBand: "medium" }), 0);
+      const reasons = runFilters(fiveTurn, card({ userTurns: 11, lengthBand: "long" }));
+      expect(reasons.some((r) => r.startsWith("shape:") && r.includes("band"))).toBe(true);
+    });
+
+    it("ingestBatch repairs a split-turn authored dialogue and stores the merged turns", async () => {
+      const deck = buildM2Deck(8, 42);
+      const target = deck.find((c) => c.lengthBand === "single")!;
+      const good = await mockTeacher(target, 0);
+      // Artificially split the single user entry into two consecutive objects.
+      const splitTurns: DialogueTurn[] = [
+        { role: "user", content: good[0].content.slice(0, 20) },
+        { role: "user", content: good[0].content.slice(20) },
+        good[1],
+      ];
+      const { accepted, rejected } = ingestBatch(
+        deck,
+        new Set<string>(),
+        [{ cardId: target.id, turns: splitTurns }],
+        "test",
+      );
+      expect(rejected).toHaveLength(0);
+      expect(accepted).toHaveLength(1);
+      expect(accepted[0].turns.filter((t) => t.role === "user")).toHaveLength(1);
     });
   });
 

@@ -191,6 +191,7 @@ parked list stays parked.
 | M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | DONE (PR #89) — prompt half REVERTED (gate fail); engine parity shipped |
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | harness DONE + Gemma 4 E2B headless baseline recorded (PR #92); browser-backend baseline (WebLLM/MediaPipe) still open → M1b |
 | M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91); generation PAUSED at 357/2000 — Haiku pilot done 2026-07-17, awaiting Sharang's §6 tone veto before the full spend |
+| M2f | Long-arc yield calibration: the 357-record pilot came out 13.7% long vs the deck's 30% target because the exact-turn-count filter discarded most long dialogues; harvester now repairs shape slips + accepts by length band | DONE (this PR) — filter/parser only, deck untouched; the severe early-stop residual is a teacher-prompt lever, not queued |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, generating), then Sharang runs it |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | M4a GGUF proxy ran 2026-07-18 on the pilot model: quality up, safety floors FAIL → full-data retrain, then rerun |
 | M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4; ONNX export upstream-blocked, LiteRT path uncertain (see 07-19 correction) — M5a probes it |
@@ -252,12 +253,86 @@ parked list stays parked.
   planner independently verified this 2026-07-19 via the upstream
   issues/tutorials. **Remaining half is Sharang's Colab run + the
   in-app exchange test — moved to Blocked on Sharang.**)
+- [x] 2026-07-22 · **M2f — Long-arc yield calibration** (DONE 2026-07-22,
+  this PR — see Ledger and the calibration section below. Sharang, interactive:
+  picked the root-cause yield-lift over deck counter-weighting. Measurement
+  redirected the fix — see the discrepancy note. Filter/parser only, deck and
+  every echo/safety/callback gate untouched.)
 
-**Queue status (2026-07-19, planner): every non-gated item is DONE.**
-The only open item (M2c, above) is paused on Sharang's §6 tone veto, and
-M5a's remaining half is his Colab run. This initiative invents no
-further work until one of the Sharang-gated decisions lands (§6 go,
-M5a notebook run, WebLLM go/no-go) or the gate/humans report an issue.
+**Queue status (2026-07-22, execute): every non-gated item is DONE.**
+The open item (M2c, above) is paused on Sharang's §6 tone veto, and
+M5a's remaining half is his Colab run. **M2f pre-loads the full run: when
+the §6 go lands, the remaining ~1,415 cards harvest with band tolerance so
+the accepted set holds the deck's 30/40/30 length mix instead of skewing
+short.** This initiative invents no further work until one of the
+Sharang-gated decisions lands (§6 go, M5a notebook run, WebLLM go/no-go)
+or the gate/humans report an issue.
+
+## M2f long-arc yield calibration (2026-07-22, execute — Sharang interactive)
+
+**Trigger:** reviewing the pilot for the §6 veto, Sharang asked whether the
+dataset carries enough long-form use. Measured the full 357-record snapshot:
+opening entries are healthy (median 41 words, 27% are >80-word "unloads"),
+but the **8–12-turn conversation** arcs — the 10-turn quality-bar regime —
+came out at **13.7%** against the deck's **30%** target. Persona skewed
+58% terse / 42% expansive vs the deck's 50/50.
+
+**Root cause (not the deck — the filter):** the deck builds correctly
+(600 single / 800 medium / 600 long; 996 expansive / 1004 terse). The skew is
+differential filter survival measured across the 698 attempted pilot cards:
+
+| band | pilot pass rate |
+|---|---|
+| single (1 turn) | 89.2% |
+| medium (3–6) | 64.5% |
+| long (8–12) | **28.0%** |
+| terse persona | 73.0% |
+| expansive persona | **49.7%** |
+
+Rejection is whole-dialogue, so a 12-turn dialogue has 12 assistant turns that
+each must clear every gate; one slip discards the lot. Breaking down the 341
+pilot rejects by what each repair recovers (shape-only rejects; the raw
+dialogues weren't persisted, so this is a reason-based estimate):
+
+- **Merge/parser repair** (consecutive same-role objects, ```json fences,
+  trailing commas): **13 cards, 1 long.** Small — double-role splits are rare.
+- **Band tolerance** (undercount that still lands in the target band, e.g.
+  wanted 11, got 9): **82 cards, 66 long.** The dominant lever.
+- **Severe early-stop** (wanted long, got a 5-turn arc — out of band):
+  **103 cards, 87 long-card.** A teacher-prompt problem, NOT a filter one.
+
+**Discrepancy from the chosen option (honest note):** Sharang picked "lift
+long-arc yield (root cause)" framed around *parser repair + per-turn regen*.
+That framing was my pre-measurement hypothesis. The measurement showed the
+real root cause is **exact-turn-count strictness**, not double-role splits,
+so the shipped fix is dominated by **band tolerance** (accept a long-band
+dialogue by band membership, not exact count). Per-turn regen was not built:
+it only helps the live `api` path, and the pilot/full run use the one-shot
+`batch` path where the failure is missing turns, not one fixable turn.
+
+**What shipped** (`src/utils/m2DatasetGenerator.ts`, filter/parser only):
+1. `repairTurns()` — merges consecutive same-role objects (content joined,
+   verbatim) before filtering; applied in `parseTeacherReply`, `ingestBatch`,
+   and `generateDataset` so every teacher path (batch/api/loop/mock) and the
+   stored record get the repaired turns. Idempotent on clean input.
+2. `parseTeacherReply` — trailing-comma fallback attempted only when the first
+   `JSON.parse` fails (well-formed JSON is never touched).
+3. `classifyLengthBand()` + the shape check now accepts by band (single=1,
+   medium=3–6, long=7+) instead of `userCount !== card.userTurns`. Severe
+   out-of-band early-stops still reject. **No echo/safety-mirror/callback/
+   format/diagnosis-vocab gate was touched — this is a composition filter,
+   not a safety one.** 7 new tests; deck-stability test still green.
+
+**Projected effect (retrospective on the pilot rejects, not a re-run):**
+recovering ~67 long arcs lifts the accepted long share from 13.7% toward
+~25%+. The true number comes from the next batch run.
+
+**Residual for the full run (recommend, not queued):** the 87 severe-
+early-stop long losses are the teacher wrapping up a 6-turn conversation when
+asked for 11. That's the next lever if long share is still short after M2f —
+a teacher-prompt push (stronger exact-length insistence / a "keep going, the
+user has more to say" mid-dialogue beat), which is teacher-side (M2e-style),
+distinct from this filter change. Left for Sharang's call with the §6 go.
 
 ## M4a pilot-model eval (2026-07-18, GGUF Q4_K_M proxy via llama-server + `--endpoint` bridge)
 
@@ -379,6 +454,7 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-22 | M2f — Long-arc yield calibration (shape repair + band tolerance) | this PR | Sharang interactive, reviewing the pilot for the §6 veto, asked whether long-form use is represented. Measured the full 357-record snapshot: entries are fine (opening median 41 words, 27% >80-word unloads) but 8–12-turn **conversation** arcs — the 10-turn quality-bar regime — came out 13.7% vs the deck's 30% target (persona 58/42 terse vs 50/50). Root cause is NOT the deck (it builds 600/800/600, 996 expansive/1004 terse) — it's differential filter survival: pilot pass rates single 89.2% / medium 64.5% / long **28.0%**; terse 73.0% / expansive **49.7%**, because whole-dialogue rejection compounds with turn count. Sharang picked the root-cause yield-lift over deck counter-weighting; the measurement then **redirected the fix** (honest discrepancy noted in the M2f section): the dominant lever is exact-turn-count strictness, not the double-role splits I'd hypothesized. Shipped filter/parser-only in `m2DatasetGenerator.ts`: (1) `repairTurns()` merges consecutive same-role objects (verbatim join) before filtering, wired into `parseTeacherReply`/`ingestBatch`/`generateDataset` so batch+api+loop+mock paths and the stored record all get repaired turns, idempotent on clean input; (2) `parseTeacherReply` trailing-comma fallback, attempted only when the first parse fails; (3) `classifyLengthBand()` + the shape check accepts by band (single=1/medium=3–6/long=7+) not exact count — severe out-of-band early-stops still reject. **No echo/safety-mirror/callback/format/diagnosis-vocab gate touched — composition filter, not safety; deck untouched, stability test green.** Reason-based recovery estimate on the 341 pilot rejects: merge 13 (1 long) + band tolerance 82 (66 long); 103 severe early-stops (87 long) remain a teacher-prompt lever, flagged as the next step, not queued. 7 new tests; build green, 1053 tests. Pre-loads the full ~1,415-card run for when the §6 go lands. |
 | 2026-07-19 | M5a (loop half) — dev-only model override + LiteRT conversion notebook | #107 | Dev override shipped in `mediapipe-engine.ts`: localStorage `quietnote-model-url-override` read ONLY when `import.meta.env.DEV` (the EvalPanel pattern), console-warns loudly when active, and keys the `mediapipe-cache` entry by the resolved URL so an overridden model never collides with the default. 4 new tests incl. a production-safety pin (`vi.stubEnv("DEV", false)` → override ignored). Verified live on `npm run dev` via Playwright: override set → warn logged, model fetched from `localhost:8080` (zero huggingface requests), dummy bytes rejected by MediaPipe with "No model format matched" surfaced as the calm error card + Retry (screenshot `docs/screenshots/2026-07-19/`). Conversion notebook `notebooks/m5a-litert-convert-gemma4-e2b.ipynb` (8 cells, nbformat-validated) written from fresh research — **grounding correction: ai-edge-torch is now `litert-torch`; its documented gemma-4 `export_hf` (nightly only) emits `.litertlm`, not the web `.task` the app loads (that recipe is unpublished, like the ONNX one); open upstream bugs #998/#1001/#2078 noted in the notebook with the python-API fallback and a fallback ladder if tasks-genai 0.10.27 won't load a gemma4 `.litertlm`.** Safety framing pinned in the notebook: the pilot model FAILED the M4a gate floors — this is a dev-only pipeline test, nothing ships. Remaining half is Sharang's Colab run + the in-app exchange. Build green, 1046 tests. |
 | 2026-07-18 | M4a — GGUF conversion + full eval of the pilot fine-tune | #105 (bridge) + #106 (numbers) | Pipeline proven end-to-end on this machine: merged checkpoint (9.6 GB) → `convert_hf_to_gguf.py` (gemma4 registered upstream, conversion clean) → Q4_K_M (3.25 GB) → `llama-server` → the PR #105 `--endpoint` bridge → full M1 instrument + full 4-mode release gate with `--referral-reprompt` ON. **Two-sided result, exactly what a 357-record pilot should look like:** conversational quality decisively up (echo mean overlap 0.11→0.00; scenarios 97/99/98% vs base 95/92/95%, all PASS, zero-critical none, transcripts genuinely engaged with real callbacks) while the safety floors FAILED — medical_refusal fw 11/16, ci 9/16, gr 9/16, tr 9/16 (floors 14/15/16/16) and tr jailbreak 3/6: the model engages with medical topics warmly instead of referring, and the referral reprompt (45 fires) can't recover it. DO NOT SHIP; full-data retrain with the ~10% safety mirror + M2e fixes, then M4 rerun. Ops note recorded in the M4a section: gemma4's template thinks by default — llama-server needs `--jinja --chat-template-kwargs '{"enable_thinking": false}'` or replies vanish into `reasoning_content`/leak `<\|channel>thought`. Reports committed under `docs/eval-runs/2026-07-18-m4a-*`. Q4 GGUF is a proxy, not the shipped artifact — in-app test is M5a. |
 | 2026-07-18 | M2e — Teacher-prompt fixes from the pilot review | #104 | All four re-grounded fixes, prompt/filter-side only — deck untouched (no pool widening; the deck-stability test still pins `buildM2Deck()`). (1) `STYLE_CONSTRAINTS` rotation shipped with the decided 5 constraints verbatim, assigned per card via the `pickResolutionStyle` hash pattern but **salted** (`cardId#style`) so the 5×5 constraint↔closing-shape pairing doesn't lock in step (test pins >5 distinct pairs); single-exchange cards skip constraints 2 and 4 (multi-turn-only) and draw from the other three. (2) `DIAGNOSIS_VOCAB_BANS` (`diagnosable/diagnosably`, `clinical(ly)`, `textbook case/example`) added beside `DOSE_ADVICE_BANS` and enforced in `runFilters` on EVERY assistant turn (user turns exempt) — deliberately NOT in `echoMetric.ts`'s `TEMPLATE_SMELL_PHRASES`, keeping the M1 baseline↔fine-tune comparison unshifted. (3) Fixed contract rule 7: never assume a pronoun for a named person — name or "they" (the pilot's "her"-for-Jordan guess). (4) Fixed contract rule 8: teacher invents ONE additional concrete detail (name/object/time) per dialogue, distinct from the planted detail — variety pressure without touching the seeded `M2_TOPICS` pools. 7 new tests (rotation determinism, single-card skip, salt de-correlation, pronoun+detail lines, diagnosis-vocab reject incl. the exact tr-0296 phrase + user-turn exemption); suite 1038 green, build green. Landed before the full ~1,400-card run as required. |
