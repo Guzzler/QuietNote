@@ -327,6 +327,13 @@ it only helps the live `api` path, and the pilot/full run use the one-shot
 recovering ~67 long arcs lifts the accepted long share from 13.7% toward
 ~25%+. The true number comes from the next batch run.
 
+**Planner grounding-confirmation (2026-07-22):** independently re-read the
+shipped code — `classifyLengthBand` (single=1 / medium=≤6 / long=7+, the 2
+and 7 gaps folded toward the nearer multi-turn band) and the `repairTurns`
+wiring into `parseTeacherReply`/`ingestBatch`/`generateDataset` match this
+section exactly; no echo/safety-mirror/callback/format/diagnosis-vocab gate
+was touched. Doc↔code in sync, no correction needed.
+
 **Residual for the full run (recommend, not queued):** the 87 severe-
 early-stop long losses are the teacher wrapping up a 6-turn conversation when
 asked for 11. That's the next lever if long share is still short after M2f —
