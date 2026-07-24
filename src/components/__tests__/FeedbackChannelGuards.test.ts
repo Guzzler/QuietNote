@@ -87,4 +87,31 @@ describe("Feedback channel guards (F1)", () => {
       );
     });
   });
+
+  // F1a (2026-07-23): the templates used to say "Settings → engine", but
+  // Settings has no engine control — the picker is the "Inference Engine"
+  // section inside the Privacy dashboard, reached via Settings →
+  // "Privacy & your data". Pin the path so it can't drift from the UI again.
+  describe("issue templates name the real engine-picker path (F1a)", () => {
+    const label =
+      "Which AI engine were you using (Settings → Privacy & your data → Inference Engine)?";
+
+    for (const template of ["feedback.yml", "bug.yml"]) {
+      it(`${template} points at the Privacy dashboard picker`, () => {
+        const source = read(`../../../.github/ISSUE_TEMPLATE/${template}`);
+        expect(source).toContain(label);
+        expect(source).not.toContain("(Settings → engine)");
+      });
+    }
+
+    it("the Privacy dashboard is where the picker actually lives", () => {
+      expect(read("../PrivacyDashboard.tsx")).toContain("Inference Engine");
+    });
+
+    it("Settings only routes there — it has no engine control of its own", () => {
+      const settings = read("../SettingsPanel.tsx");
+      expect(settings).toContain("Privacy &amp; your data");
+      expect(settings).not.toContain("Inference Engine");
+    });
+  });
 });
