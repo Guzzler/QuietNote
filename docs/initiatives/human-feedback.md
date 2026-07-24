@@ -60,7 +60,7 @@ it ships correct the moment R4 lands:
 | id | what | status |
 |---|---|---|
 | F1 | Feedback channel: issue templates + in-app "Share feedback" link-out | DONE (PR #85) — one copy defect found 2026-07-23, filed as F1a |
-| F1a | Issue templates point testers at "Settings → engine"; the picker is in the Privacy dashboard | queued 2026-07-23 (non-gated) |
+| F1a | Issue templates point testers at "Settings → engine"; the picker is in the Privacy dashboard | DONE (PR #109) |
 | F2 | Soft-launch kit: tester one-pager + share message for Sharang | gated on public-release R4 (needs the live URL; download sizes come from R1b) |
 | F3 | Field-notes intake convention + weekly issue→field-note triage | after first feedback exists |
 | F4 | Feedback-driven iteration: human reports outrank queue items | activates with F3 |
@@ -73,20 +73,10 @@ it ships correct the moment R4 lands:
   `bug.yml`, `config.yml` and `FeedbackChannelGuards.test.ts` are now the
   spec of record — with the one correction filed as F1a below.)
 
-- [ ] 2026-07-23 · **F1a — Correct the engine-picker path in both issue
-  templates**: in `.github/ISSUE_TEMPLATE/feedback.yml` and `bug.yml`, change
-  the `backend` dropdown label (line 39 of each) from
-  `Which AI engine were you using (Settings → engine)?` to
-  `Which AI engine were you using (Settings → Privacy & your data → Inference Engine)?`
-  — the picker lives in `PrivacyDashboard.tsx:320-341`, not `SettingsPanel`.
-  Leave every other field, the option list, and the don't-paste-your-journal
-  guard untouched. If `FeedbackChannelGuards.test.ts` pins that label string,
-  update the assertion; otherwise add one pinning the corrected path so it
-  can't drift from the UI again. Templates only — no `src/` change, not
-  gate-triggering. → Verify: `npm run test` green; `npx js-yaml` (or any YAML
-  parse) succeeds on both files; quote both new label lines in the PR body.
-  (Chooser rendering stays unverifiable until the repo is public — re-check
-  at R4 with the rest of F1.)
+- [x] 2026-07-23 · **F1a — Correct the engine-picker path in both issue
+  templates** (DONE 2026-07-23, PR #109 — see Ledger. Chooser rendering
+  stays unverifiable until the repo is public — re-check at R4 with the
+  rest of F1.)
 - [ ] gated on public-release R4 · **F2 — Soft-launch kit**: write
   `docs/beta/WELCOME.md` per the decided outline below, linked from README;
   include a short copy-paste share message for Sharang in the PR body and
@@ -156,8 +146,9 @@ link, or anything that reads like a survey invite — the in-app footer link
 and `WELCOME.md` §6 carry the reporting path. Do not name the model or the
 engine; testers don't need it, and §2 of WELCOME.md covers alternates.
 
-**Queue status (2026-07-23, planner): 1 open non-gated item (F1a) + F2
-gated on R4.** This is the first non-gated work anywhere in the initiatives
+**Queue status (2026-07-23, execute): F1a shipped (PR #109) — the queue is
+back to zero open non-gated items across all three initiatives; F2 remains
+gated on R4.** F1a was the first non-gated work anywhere in the initiatives
 since 2026-07-19 — it came from a grounding pass, not from inventing work:
 the F2 outline had never been checked against the code, and checking it
 surfaced a shipped-copy defect in F1. F2 itself is now a pure write-it-out
@@ -167,6 +158,7 @@ task (outline corrected, share message decided) the moment R4 lands.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-23 | F1a — Correct the engine-picker path in both issue templates | #109 | Both `backend` dropdown labels now read `Which AI engine were you using (Settings → Privacy & your data → Inference Engine)?` — the picker is the "Inference Engine" section in `PrivacyDashboard.tsx:320-341`, reached via Settings → "Privacy & your data"; `SettingsPanel.tsx` has no engine control at all. Templates only, no `src/` runtime change (not gate-triggering); every other field, the option list, and the don't-paste-your-journal guard untouched. `FeedbackChannelGuards.test.ts` gained a 4-test F1a block: both templates contain the corrected label and no longer contain `(Settings → engine)`, plus two UI-anchor assertions (PrivacyDashboard has "Inference Engine", SettingsPanel does not) so the copy can't drift from the UI again. Both files parse as YAML (`js-yaml`, `backend` label read back verbatim). Build green, 1057 tests green. Chooser rendering itself stays unverifiable while the repo is private — re-check at R4 with the rest of F1. |
 | 2026-07-12 | F1 — Feedback channel | #85 | Issue templates per the decided spec verbatim (`feedback.yml`, `bug.yml`, `config.yml` with mailto contact link) + calm footer affordance beside the privacy lock: "Share feedback" → `issues/new/choose` (new tab, noopener) · "email" → `mailto:`. Static links only, no query params, nothing prefilled — `FeedbackChannelGuards` (10 tests) pins hrefs, no-fetch, and the don't-paste-your-journal guard in both templates. Verified rendered footer + DOM hrefs on `vite preview` (screenshot). Template chooser rendering itself is only verifiable once the repo is public (F2/R4) — re-check then, incl. that GitHub accepts the `mailto:` contact link. 1336 tests green. |
 
 ## Blocked on Sharang
