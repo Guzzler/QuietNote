@@ -290,7 +290,7 @@ from trl import SFTConfig, SFTTrainer
 
 # Gemma 4 turn delimiters — verified against the real tokenizer's
 # apply_chat_template output 2026-07-17 (Gemma 2/3 used <start_of_turn>):
-#   '<bos><|turn>user\nUSERTEXT<turn|>\n<|turn>model\nMODELTEXT<turn|>\n'
+#   '<bos><|turn>user\\nUSERTEXT<turn|>\\n<|turn>model\\nMODELTEXT<turn|>\\n'
 INSTRUCTION_MARKER = "<|turn>user\\n"
 RESPONSE_MARKER = "<|turn>model\\n"
 
@@ -402,6 +402,66 @@ writeFileSync(OUT, JSON.stringify(notebook, null, 1) + "\n");
 
 // -------------------------------------------------- nbformat-4 validation
 
+/**
+ * Catches the class of bug that shipped in PR #103 and broke the TRAIN cell:
+ * this file writes Python inside JS template literals, where a single-escaped
+ * `\n` becomes a REAL newline. That split a one-line `# '<bos>...\n...'`
+ * comment across four lines, so only the first kept its `#` and the trailing
+ * lone quote was an unterminated string literal — nbformat-valid, but Python
+ * that cannot parse. Scans a code cell the way Python's lexer would (strings,
+ * triple-quotes, escapes, `#` comments outside strings) and reports if the
+ * cell ends inside a string, or a single-quoted string spans a newline.
+ */
+function unterminatedString(src: string): string | null {
+  let i = 0;
+  let line = 1;
+  let quote: string | null = null;
+  let openedAt = 0;
+  while (i < src.length) {
+    const c = src[i];
+    if (quote) {
+      if (c === "\\") {
+        if (src[i + 1] === "\n") line++;
+        i += 2;
+        continue;
+      }
+      if (c === "\n") {
+        line++;
+        // A 1-char quote may not span a newline — this is the PR #103 shape.
+        if (quote.length === 1) return `unterminated string opened on line ${openedAt}`;
+        i++;
+        continue;
+      }
+      if (src.startsWith(quote, i)) {
+        i += quote.length;
+        quote = null;
+        continue;
+      }
+      i++;
+      continue;
+    }
+    if (c === "#") {
+      while (i < src.length && src[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "\n") {
+      line++;
+      i++;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      const triple = c.repeat(3);
+      const isTriple = src.startsWith(triple, i);
+      quote = isTriple ? triple : c;
+      openedAt = line;
+      i += isTriple ? 3 : 1;
+      continue;
+    }
+    i++;
+  }
+  return quote ? `unterminated string opened on line ${openedAt}` : null;
+}
+
 function validate(path: string): string[] {
   const problems: string[] = [];
   const nb = JSON.parse(readFileSync(path, "utf-8"));
@@ -421,6 +481,10 @@ function validate(path: string): string[] {
     if (cell.cell_type === "code") {
       if (!Array.isArray(cell.outputs)) problems.push(`cell ${i}: code cell needs outputs[]`);
       if (cell.execution_count !== null) problems.push(`cell ${i}: execution_count must be null`);
+      if (Array.isArray(cell.source)) {
+        const broken = unterminatedString(cell.source.join(""));
+        if (broken) problems.push(`cell ${i}: ${broken} — Python would not parse`);
+      }
     }
   }
   // The snapshot must be byte-identical to the live prompt constants.
