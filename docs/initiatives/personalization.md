@@ -21,6 +21,24 @@ register — with every byte of that memory in IndexedDB. The unique claim:
 cloud journals must read your entries to personalize; QuietNote personalizes
 *because* everything stays local.
 
+## Grounding corrections (2026-07-24, verified in code while drafting P0)
+
+Two assumptions in this doc were wrong; the P0 design corrects both:
+
+1. **P1a is not greenfield.** `src/utils/sessionContext.ts` already builds and
+   injects a cross-session context block (themes, emotions, last-session
+   summary, journal days, mood trend) via
+   `getSystemInstruction(mode, contextBlock)` — App.tsx:381-382 and 576-577.
+   P1a is an *upgrade* of that to an LLM-distilled memo. **Consequence:
+   `sessionContext.ts` is a load-bearing safety surface, so P1a is
+   gate-triggering** and must carry a full 4-mode eval read.
+2. **There is no persisted crisis flag** to filter retrieval on. `detectCrisis()`
+   runs in-flight in App.tsx and feeds the referral guard; neither `Session` nor
+   the IndexedDB schema (v4) stores the result. P0 decides: re-run
+   `detectCrisis()` at index time rather than adding a stored flag, so the
+   current detector always governs eligibility and improvements apply
+   retroactively.
+
 ## Feasibility gate (answered by model-quality M1 — no work here before it)
 
 The "does prompt injection work on 2B-class models" question is exactly what
@@ -34,7 +52,7 @@ not a build.
 
 | id | what | status |
 |---|---|---|
-| P0 | Design doc: memory schema (what gets stored/distilled), retrieval trigger, context budget split (~150–250 tokens for the profile memo inside `MODEL_CONTEXT_LIMIT` 4096), safety rules below | gated on model-quality bar |
+| P0 | Design doc: memory schema (what gets stored/distilled), retrieval trigger, context budget split (~150–250 tokens for the profile memo inside `MODEL_CONTEXT_LIMIT` 4096), safety rules below | **DRAFTED 2026-07-24** — [`docs/personalization/MEMORY-DESIGN.md`](../personalization/MEMORY-DESIGN.md); still gated, becomes the P1 spec when the bar is met |
 | P1a | Profile memo: local LLM periodically distills recent entries → compact "about you" memo in IndexedDB, injected into the system prompt; user can view/edit/delete it (it's THEIR profile) | after P0 |
 | P1b | Entry retrieval: small embedding model in-browser (MiniLM-class via Transformers.js, ~25 MB), embed entries at write time → IndexedDB vectors; retrieve top 2–3 relevant past moments into the prompt | after P0; can land before or after P1a |
 | P2 | Adapter selection (future, NOT committed): differently-flavored LoRA adapters (tone/depth/mode) swapped on-device via MediaPipe runtime loading, chosen from the local profile | idea only — revisit after P1 ships and M5's conversion pipeline exists |
