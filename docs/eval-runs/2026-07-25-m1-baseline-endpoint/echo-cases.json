@@ -1,0 +1,85 @@
+{
+  "model": "quietnote-m3-full (1892 rec) GGUF Q4_K_M",
+  "rows": [
+    {
+      "id": "echo-fw-1",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That weight lifting must be real—not just the satisfaction of closing it, but how much mental space opens up once something you're actually holding onto is gone; what does your day look like now?"
+    },
+    {
+      "id": "echo-fw-2",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Two-hundred bucks hits different when it comes from someone who already lives there—you get that extra pinch right where you sleep, not just somewhere abstract like a market shift would feel on some other apartment bills."
+    },
+    {
+      "id": "echo-fw-3",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That gap after snapping—it tells me this isn't really about what happened but that it matters enough for both of you right now, which is harder than just moving on quickly would be if one person was fine with a small pause instead."
+    },
+    {
+      "id": "echo-grat-1",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That kind of care lands different than you might expect—it means someone saw something in your situation they could help smooth out directly instead of just offering words about it."
+    },
+    {
+      "id": "echo-grat-2",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That stillness matters—you were in your own space when you first noticed it; what made this one especially restorative?"
+    },
+    {
+      "id": "echo-ci-1",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That buzz from work is real—your brain was already running on fumes before you even sat down for it this afternoon; what did that make hard to focus?"
+    },
+    {
+      "id": "echo-ci-2",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That's real weight lift—hearing it from her directly matters differently than just knowing you did okay yourself, doesn't it?"
+    },
+    {
+      "id": "echo-tr-1",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "What specifically happened—what did you say when it came up?"
+    },
+    {
+      "id": "echo-tr-2",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That jump from delay to worthlessness is real—you didn't just miss the deadline; you felt like someone was already judging who lets things slide by slowly in a corporate world where speed matters more than careful thinking or breath-taking time for yourself first, which might be why five minutes feels so small."
+    },
+    {
+      "id": "echo-fw-4",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "The silence between those two was louder than any word either of us could say at that moment—what did you notice while he was on line?"
+    }
+  ]
+}
