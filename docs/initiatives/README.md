@@ -82,6 +82,13 @@ push, **and in any PR touching** `src/prompts/`, the App send path,
 
 Gate failure outranks every queued item.
 
+**Runnability grounded 2026-07-24 (planner)** — the gate is executable
+exactly as written: `package.json` carries `build` (`tsc -b && vite build`)
+and `test` (`vitest run`); the eval read is `npm run eval -- --referral-reprompt`
+(`scripts/run-eval.ts:144` parses the flag; `:77` runs all four modes
+freewrite/gratitude/checkin/thoughtrecord). No wrapper or edit is needed at
+R4 — verified against the current scripts, not assumed.
+
 ## Parked while in RELEASE (do not queue)
 
 - Eval micro-tuning (checkin declarative padding, opener monotony, freewrite
