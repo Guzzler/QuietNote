@@ -395,22 +395,59 @@ corroborated independently by the M1 rubric dropping 97/99/98 → 90/92/90. A
 model that can't finish a clean sentence fails keyword-matched safety
 assertions even when its intent is right.
 
-Two candidate causes, **untested — do not act on either without evidence**:
+### Root cause found (2026-07-25, Sharang supplied the loss curve)
 
-1. **Over-training (most likely, and cheapest to test).** Hyperparameters were
-   unchanged from the pilot: `EPOCHS = 2`, `LEARNING_RATE = 2e-4`. On 5.3× the
-   data that is ~5.3× the optimizer steps (~44 → ~230). The pilot's val loss was
-   *still falling* at 2 epochs (i.e. undertrained); the same recipe on 1892
-   records plausibly overshoots. **Next step: read the full-run loss curve from
-   the Colab output — if val loss turned up, retrain at 1 epoch (or LR 1e-4).**
-2. **M2f band tolerance diluting shape discipline.** M2f (PR #108) relaxed the
-   accept rule from exact turn count to length band immediately before this run,
-   and deliberately left the 87 severe early-stops unaddressed. More data of
-   slightly looser shape may have traded crispness for mush. Testable by
-   retraining on the band-tolerant subset excluded.
+**Over-training is DISCONFIRMED.** Val loss **fell 1.76 → 1.70** and is far
+below the pilot's 2.00 — the model fit the data *better* than the pilot and
+still scored worse. That inverts the question: if the fit improved and the
+behavior degraded, the training distribution is the problem, not the optimizer.
 
-Cause 1 is the first thing to check because it costs one Colab run and no
-regeneration.
+Measured the dataset directly (`datasets/quietnote-m2-v1.jsonl`, 1892 records):
+
+**1. The "5× thicker safety mirror" is not 5× more medical refusal.** The 193
+mirrors are split four ways — safety-boundary 51, safety-distress 48,
+**safety-medical 47**, safety-jailbreak 47. So the behavior that failed every
+floor is trained by **47 dialogues = 2.5% of the corpus**, against ~90% teaching
+warm conversational reflection.
+
+**2. Those 47 exemplars are not the problem — they are excellent:**
+
+| mirror check | result |
+|---|---|
+| contains referral vocab | **47/47 = 100%** |
+| referral lands at sentence # | **median 1** (immediate, not buried) |
+| repeats a dose the user stated | **0/47** |
+| mentions any dose/mg term at all | 2/47 |
+
+So the model is being taught the right behavior, crisply — just far too rarely
+to beat the conversational prior it learned very well (val loss 1.70, M1 90-92%).
+**This is signal dilution, not bad data.** It also explains the jailbreak
+regression: more conversational data made warm engagement a stronger prior, and
+boundary-holding lost ground.
+
+**3. Secondary — general fluency drift.** Comparing the pilot's 357 records
+against the 1535 generated after M2e/M2f: words per sentence rose **16.3 → 19.6
+(+21%)**, longest-sentence-per-turn p90 rose 31 → 36. That explains the mushy
+prose and the M1 dip, and it compounds the vocab misses (the model rambles past
+the point where it would land a referral term). Note M2e's anti-em-dash
+constraint had **no measurable effect**: em-dash turn rate 69.1% → 69.0% —
+the one-constraint-per-card rotation is too dilute to move a house style.
+
+### Next step (cheapest decisive test)
+
+**Oversample the safety mirrors in training** — repeat the 193 safety records
+~5–8× in the training split so medical/jailbreak refusal reaches ~10–15% of
+gradient signal instead of 2.5%. This is a notebook-side change and one Colab
+run: **no regeneration, no new API spend.** If the floors move, dilution was the
+cause and the fix is a permanent dataset-share change (DATASET.md §3/§4c).
+
+Do NOT regenerate data first — the exemplars audit above shows the data is
+correct; only its proportion is wrong.
+
+Independently, and regardless of outcome: the fluency drift (+21% sentence
+length) and the failed em-dash constraint are teacher-side issues for a future
+M2e-style pass — the style rotation needs to apply to every card, not one in
+five.
 
 ### Actions
 
