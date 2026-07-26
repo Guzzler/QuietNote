@@ -195,8 +195,8 @@ parked list stays parked.
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, generating), then Sharang runs it |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | M4a GGUF proxy ran 2026-07-18 on the pilot model: quality up, safety floors FAIL → full-data retrain, then rerun |
 | M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4; ONNX export upstream-blocked, LiteRT path uncertain (see 07-19 correction) — M5a probes it |
-| M6 | Safety-mirror **oversampling in the training split** (notebook-side, no regeneration, no API spend): repeat the 193 `safety-*` records ~6× in the TRAIN split ONLY so medical/jailbreak refusal reaches ~10% of gradient signal (was 2.5%) — the cheapest decisive test of the 2026-07-25 signal-dilution root cause; gate-fail-triggered | queued 2026-07-25 |
-| M7 | Teacher-side **fluency + style pass** (generator only; effective on the NEXT data build, which is Sharang's $-gated call — this does not regenerate): STYLE_CONSTRAINTS rotation on EVERY card (1-in-5 had zero effect: em-dash 69.1%→69.0%) + sentence-length pressure (+21% drift) + a "never repeat the dose figure" line in the safety-medical exemplar | queued 2026-07-25 |
+| M6 | Safety-mirror **oversampling in the training split** (notebook-side, no regeneration, no API spend): repeat the 193 `safety-*` records ~6× in the TRAIN split ONLY so medical/jailbreak refusal reaches ~10% of gradient signal (was 2.5%) — the cheapest decisive test of the 2026-07-25 signal-dilution root cause; gate-fail-triggered | DONE (this PR) — builder writes the oversample; Sharang's Colab rerun on the existing 1892 dataset → M4 rerun |
+| M7 | Teacher-side **fluency + style pass** (generator only; effective on the NEXT data build, which is Sharang's $-gated call — this does not regenerate): STYLE_CONSTRAINTS rotation on EVERY card (1-in-5 had zero effect: em-dash 69.1%→69.0%) + sentence-length pressure (+21% drift) + a "never repeat the dose figure" line in the safety-medical exemplar | DONE (this PR) — all three shipped generator-side; bites on the next data build |
 
 ## Task queue
 
@@ -251,7 +251,16 @@ parked list stays parked.
   redirected the fix — see the discrepancy note. Filter/parser only, deck and
   every echo/safety/callback gate untouched.)
 
-- [ ] 2026-07-25 · **M6 — Safety-mirror oversampling in the training split**
+- [x] 2026-07-25 · **M6 — Safety-mirror oversampling in the training split**
+  (DONE 2026-07-25, this PR — see Ledger. Builder-only: `SAFETY_OVERSAMPLE = 6`
+  in CONFIG, `render()` returns `is_safety` so the routing key survives
+  `remove_columns`, and the TRAIN split is rebuilt with the mirrors repeated
+  6× while `split["test"]` is left exactly as produced — eval measures the
+  natural distribution. Notebook regenerated + nbformat-validated; 5-test
+  builder pin added. Not gate-triggering. Now Blocked on Sharang for the
+  Colab rerun → M4 rerun on the 1892 dataset.)
+  <details><summary>original task</summary>
+
   (the cheapest decisive test of the 2026-07-25 signal-dilution root cause —
   **gate-fail-triggered**, so in scope despite RELEASE's parked-tuning rule).
   Edit `scripts/build-m3-notebook.ts` (NOT the `.ipynb` by hand — the builder
@@ -275,8 +284,18 @@ parked list stays parked.
   invariant. Notebook + builder only — no `src/`, **NOT gate-triggering**. Then
   it moves to Blocked on Sharang for his Colab run → M4 rerun on the **current
   1892 dataset** (no regeneration, no API spend).
+  </details>
 
-- [ ] 2026-07-25 · **M7 — Teacher-side fluency + style pass** (generator only;
+- [x] 2026-07-25 · **M7 — Teacher-side fluency + style pass** (DONE 2026-07-25,
+  this PR — see Ledger. `styleConstraintsFor()` now emits ALL applicable
+  constraints on every card (anti-em-dash reaches 100%, was ~1/5); contract
+  rule 6 gained a short-sentence/no-run-on line backed by a `MAX_SENTENCE_WORDS
+  = 32` run-on filter; the medical safety exemplar now forbids echoing the
+  user's dose figure. Deck + `echoMetric.ts` untouched; generator-only, not
+  gate-triggering. Bites on the NEXT data build — no regeneration this PR.)
+  <details><summary>original task</summary>
+
+  (generator only;
   effective on the NEXT data build — Sharang's $-gated call — **this PR does
   NOT regenerate or spend**, per the diagnosis's "do not regenerate first").
   In `src/utils/m2DatasetGenerator.ts`: (1) apply the `STYLE_CONSTRAINTS`
@@ -293,6 +312,14 @@ parked list stays parked.
   Verify: new unit tests (every card gets a constraint; the dose-echo line
   present; the length rule present); `npm run build` + `npm run test` green.
   Not gate-triggering (dataset generator, not the app send path).
+  </details>
+
+**Queue status (2026-07-25, execute): M6 + M7 both SHIPPED this run** (this PR).
+The model-quality queue is back to zero open non-gated items; everything
+remaining is Sharang-gated (M6 Colab rerun → M4 rerun on the 1892 dataset,
+M5a Colab run, WebLLM go/no-go, R4+LICENSE). M7's fluency/style fixes are
+generator-only and bite on the NEXT data build (Sharang's $-gated regeneration
+call), not the existing dataset. Original planner note preserved below.
 
 **Queue status (2026-07-25, planner): the M4 full-data gate FAIL (2026-07-25)
 reopened non-gated work — the gate failing is exactly the exception RELEASE's
@@ -593,6 +620,8 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-07-25 | M7 — Teacher-side fluency + style pass | this PR | The M4 diagnosis flagged three generator issues "regardless of outcome"; all three shipped in `src/utils/m2DatasetGenerator.ts`, **generator-only, deck + `echoMetric.ts` untouched, no regeneration/no spend — bites on the NEXT data build**. (1) **Style rotation → every card.** M2e rotated ONE constraint per card, so the anti-em-dash rule reached only ~1/5 of cards (measured zero effect: em-dash turn rate 69.1%→69.0%). Replaced `pickStyleConstraint` (one pick) with `styleConstraintsFor()` (the WHOLE applicable set, so the anti-em-dash rule is on 100% of cards); the salted `${id}#style` hash is kept but now rotates the constraint ORDER so the block isn't a static monoculture and doesn't lock in step with the closing-shape rotation; single-exchange cards still drop the two multi-turn-only constraints (indices 1, 3). (2) **Sentence-length pressure.** Post-M2e records drifted +21% words/sentence (16.3→19.6; p90 longest 31→36); added a hard "keep every sentence short, no run-ons" line to contract rule 6 AND a `MAX_SENTENCE_WORDS = 32` run-on filter (`longestSentenceWords()` over `splitSentences()`) — a generous ceiling that catches genuine run-ons without rejecting the 1–4-short-sentence replies the filter already accepts (clean baseline still passes, pinned by test). (3) **Dose-echo line.** The medical safety exemplar now instructs the assistant to "never repeat back any dose, number, or medication name the user stated" — the M4 8-case dose-echo cluster. 7 new/updated tests (all-constraints per card, anti-em-dash on 60/60 sampled cards, single-turn drops indices 1/3, salted order varies, short-sentence contract line, run-on filter reject+clean-pass, medical dose-echo line). Build green, 1066 tests. Not gate-triggering. |
+| 2026-07-25 | M6 — Safety-mirror oversampling in the training split | this PR | The 2026-07-25 M4 root cause is signal dilution: the 47 safety-medical exemplars are excellent (47/47 referral vocab, median sentence 1, 0/47 dose echo) but only 2.5% of gradient signal against ~90% warm reflection, so no floor moved. Fix is notebook-side reweighting of the **existing 1892 dataset** — no regeneration, no API spend. Edited `scripts/build-m3-notebook.ts` (the builder — the `.ipynb` is regenerated, never hand-edited): (1) `SAFETY_OVERSAMPLE = 6` in CONFIG (6× lifts medical 47→282 ≈ 10% of the enlarged train signal, low end of the 10–15% target, conservative for the first corrective run — bump toward 8 on the rerun if floors are still short); (2) `render()` now returns `is_safety = any(t.startswith("safety-") for t in example["tags"])` — the gotcha is that `remove_columns=[… if c != "text"]` strips `tags` before the split, but a key RETURNED by the map fn survives `remove_columns`, so the routing key rides through; (3) after `train_test_split`, the TRAIN split is rebuilt `concatenate_datasets([train] + [safety]*(SAFETY_OVERSAMPLE-1)).shuffle(seed=SEED)` while `split["test"]` is left **exactly as produced** — eval must measure the natural distribution and duplicating records across the split would leak; `is_safety` dropped from both before training; prints the resulting safety share + row counts. Regenerated with `npx tsx scripts/build-m3-notebook.ts` (exit 0, "nbformat-4 valid, prompt snapshot verified") and cross-validated `python -c "nbformat.validate(...)"` (OK). New `scripts/build-m3-notebook.test.ts` (5 tests) pins the CONFIG factor, the surviving-key render contract, the train-only / eval-clean invariant (asserts the eval split is never concatenated), and the key-drop. Notebook + builder only, no `src/` — **NOT gate-triggering**. Build green, 1062 tests. Now Blocked on Sharang: his Colab rerun → M4 rerun on the 1892 dataset. |
 | 2026-07-24 | M2c — Full dataset generation (Sharang's §6 go, interactive) | no PR (dataset git-ignored) | Sharang gave the §6 go and asked to run the full batch + confirm trainability. Fired the remaining deck through the Batches API (`claude-haiku-4-5`, 50% off) in 6 auto-retry rounds via a driver that re-fires still-pending cards each round and stops on <20-card yield or the round cap. Yield 357 → **1892/2000** (rounds: 1030/254/138/49/29/35; batch 1 = `msgbatch_01V963YuofrN6yHsTeAybLU8`; stopped at the 6-round cap with ~108 recoverable, not worth another round at 94.6%). Cost ~$5–8 on Sharang's key. **Validated trainable against DATASET.md §2/§3/§4:** 0 invalid, 0 dup IDs, 8,508 assistant turns, strict user→assistant alternation, 1–12 user turns; mode mix fw 39.7% / ci 25.4% / tr 20.0% / gr 14.9% (target 40/25/20/15); length bands single 31.7% / medium 40.7% / **long 27.6%** (target 30/40/30 — **M2f delivered: long 13.7%→27.6% vs the pilot**); safety mirror **193 (10.2%)**, all 47 safety-medical dialogues carry referral vocab in an assistant turn (**5× the pilot's ~36 — the direct M4a medical-refusal-floor remedy**); callback 32.9%, anti-echo 100%. All records `review.status: "pending"` (the §6 hand-review is the next protocol step). Remaining before M3 training, both Sharang's: the §6 hand-review (10%/slice, 100% of safety mirror) and the HF re-upload to `Sharangp/quietnote-m2-v1` (was the 357-snapshot). No code/PR — dataset stays git-ignored; docs recorded here + decisions.md. |
 | 2026-07-22 | M2f — Long-arc yield calibration (shape repair + band tolerance) | this PR | Sharang interactive, reviewing the pilot for the §6 veto, asked whether long-form use is represented. Measured the full 357-record snapshot: entries are fine (opening median 41 words, 27% >80-word unloads) but 8–12-turn **conversation** arcs — the 10-turn quality-bar regime — came out 13.7% vs the deck's 30% target (persona 58/42 terse vs 50/50). Root cause is NOT the deck (it builds 600/800/600, 996 expansive/1004 terse) — it's differential filter survival: pilot pass rates single 89.2% / medium 64.5% / long **28.0%**; terse 73.0% / expansive **49.7%**, because whole-dialogue rejection compounds with turn count. Sharang picked the root-cause yield-lift over deck counter-weighting; the measurement then **redirected the fix** (honest discrepancy noted in the M2f section): the dominant lever is exact-turn-count strictness, not the double-role splits I'd hypothesized. Shipped filter/parser-only in `m2DatasetGenerator.ts`: (1) `repairTurns()` merges consecutive same-role objects (verbatim join) before filtering, wired into `parseTeacherReply`/`ingestBatch`/`generateDataset` so batch+api+loop+mock paths and the stored record all get repaired turns, idempotent on clean input; (2) `parseTeacherReply` trailing-comma fallback, attempted only when the first parse fails; (3) `classifyLengthBand()` + the shape check accepts by band (single=1/medium=3–6/long=7+) not exact count — severe out-of-band early-stops still reject. **No echo/safety-mirror/callback/format/diagnosis-vocab gate touched — composition filter, not safety; deck untouched, stability test green.** Reason-based recovery estimate on the 341 pilot rejects: merge 13 (1 long) + band tolerance 82 (66 long); 103 severe early-stops (87 long) remain a teacher-prompt lever, flagged as the next step, not queued. 7 new tests; build green, 1053 tests. Pre-loads the full ~1,415-card run for when the §6 go lands. |
 | 2026-07-19 | M5a (loop half) — dev-only model override + LiteRT conversion notebook | #107 | Dev override shipped in `mediapipe-engine.ts`: localStorage `quietnote-model-url-override` read ONLY when `import.meta.env.DEV` (the EvalPanel pattern), console-warns loudly when active, and keys the `mediapipe-cache` entry by the resolved URL so an overridden model never collides with the default. 4 new tests incl. a production-safety pin (`vi.stubEnv("DEV", false)` → override ignored). Verified live on `npm run dev` via Playwright: override set → warn logged, model fetched from `localhost:8080` (zero huggingface requests), dummy bytes rejected by MediaPipe with "No model format matched" surfaced as the calm error card + Retry (screenshot `docs/screenshots/2026-07-19/`). Conversion notebook `notebooks/m5a-litert-convert-gemma4-e2b.ipynb` (8 cells, nbformat-validated) written from fresh research — **grounding correction: ai-edge-torch is now `litert-torch`; its documented gemma-4 `export_hf` (nightly only) emits `.litertlm`, not the web `.task` the app loads (that recipe is unpublished, like the ONNX one); open upstream bugs #998/#1001/#2078 noted in the notebook with the python-API fallback and a fallback ladder if tasks-genai 0.10.27 won't load a gemma4 `.litertlm`.** Safety framing pinned in the notebook: the pilot model FAILED the M4a gate floors — this is a dev-only pipeline test, nothing ships. Remaining half is Sharang's Colab run + the in-app exchange. Build green, 1046 tests. |
@@ -611,6 +640,14 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 ## Blocked on Sharang
 
+- **M6 corrective retrain — Colab run** (added 2026-07-25): the M6 builder
+  change is shipped, so the regenerated `notebooks/m3-qlora-gemma4-e2b.ipynb`
+  now oversamples the safety mirrors 6× in the TRAIN split. Re-run it on Colab
+  against the **existing** `Sharangp/quietnote-m2-v1` (1892 records — no
+  regeneration, no new API spend), then M4-rerun the merged checkpoint through
+  the M4a GGUF proxy + full release gate. If the medical/jailbreak floors move,
+  dilution was the cause and the permanent fix is a `DATASET.md` §3/§4c share
+  change; if they're still short, bump `SAFETY_OVERSAMPLE` toward 8 and rerun.
 - **M5a conversion run** (added 2026-07-19): run
   `notebooks/m5a-litert-convert-gemma4-e2b.ipynb` on Colab (**High-RAM
   CPU runtime** — the exporter is CPU-only and the fp16 checkpoint is
