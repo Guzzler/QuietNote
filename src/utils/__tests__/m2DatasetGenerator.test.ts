@@ -171,43 +171,62 @@ describe("m2DatasetGenerator (M2b — DATASET.md §5 pipeline)", () => {
       expect(prompt).not.toContain("do NOT stop early");
     });
 
-    it("M2e: assigns a deterministic stylistic constraint from the decided rotation", () => {
+    it("M7: applies ALL style constraints to every card, deterministically", () => {
       const c = card({ userTurns: 8, lengthBand: "long" });
       const prompt = renderTeacherPrompt(c);
-      expect(prompt).toContain("stylistic constraint for THIS dialogue: ");
-      const constraint = prompt.split("stylistic constraint for THIS dialogue: ")[1]?.split("\n")[0];
-      expect(STYLE_CONSTRAINTS).toContain(constraint);
-      // Same card -> same constraint every render.
+      expect(prompt).toContain("stylistic constraints for THIS dialogue — ALL of these apply");
+      // Every one of the five constraints is present on a multi-turn card.
+      for (const constraint of STYLE_CONSTRAINTS) expect(prompt).toContain(constraint);
+      // Same card -> same rendered block every render.
       expect(renderTeacherPrompt(c)).toBe(prompt);
     });
 
-    it("M2e: rotates constraints across cards and keeps multi-turn-only constraints off singles", () => {
+    it("M7: the anti-em-dash constraint reaches EVERY card, not ~1-in-5 (the M4 zero-effect fix)", () => {
       const cards = sampleScenarioCards(60, 42);
-      const constraintOf = (c: ScenarioCard) =>
-        renderTeacherPrompt(c).split("stylistic constraint for THIS dialogue: ")[1]?.split("\n")[0] ?? "";
-      const multi = new Set(cards.filter((c) => c.userTurns > 1).map(constraintOf));
-      expect(multi.size).toBeGreaterThan(1);
-      // Constraints 2 and 4 need multiple assistant turns; singles skip them.
-      for (const c of cards.filter((x) => x.userTurns === 1)) {
-        const constraint = constraintOf(c);
-        expect(constraint).not.toBe(STYLE_CONSTRAINTS[1]);
-        expect(constraint).not.toBe(STYLE_CONSTRAINTS[3]);
-        expect(STYLE_CONSTRAINTS).toContain(constraint);
+      for (const c of cards) {
+        // STYLE_CONSTRAINTS[0] is the anti-em-dash rule — must appear on all.
+        expect(renderTeacherPrompt(c)).toContain(STYLE_CONSTRAINTS[0]);
       }
     });
 
-    it("M2e: the constraint rotation is not locked in step with the closing-style rotation", () => {
+    it("M7: single-exchange cards drop the two multi-turn-only constraints but keep the rest", () => {
+      const cards = sampleScenarioCards(60, 42).filter((c) => c.userTurns === 1);
+      expect(cards.length).toBeGreaterThan(0);
+      for (const c of cards) {
+        const prompt = renderTeacherPrompt(c);
+        expect(prompt).not.toContain(STYLE_CONSTRAINTS[1]);
+        expect(prompt).not.toContain(STYLE_CONSTRAINTS[3]);
+        expect(prompt).toContain(STYLE_CONSTRAINTS[0]);
+        expect(prompt).toContain(STYLE_CONSTRAINTS[2]);
+        expect(prompt).toContain(STYLE_CONSTRAINTS[4]);
+      }
+    });
+
+    it("M7: the constraint ORDER is salted (not a static block across cards)", () => {
       const cards = sampleScenarioCards(200, 42).filter((c) => c.userTurns > 1);
-      const pairs = new Set(
-        cards.map((c) => {
-          const p = renderTeacherPrompt(c);
-          const close = p.split("how THIS dialogue should close: ")[1]?.split("\n")[0];
-          const style = p.split("stylistic constraint for THIS dialogue: ")[1]?.split("\n")[0];
-          return `${close}|||${style}`;
-        }),
+      const blocks = new Set(
+        cards.map(
+          (c) =>
+            renderTeacherPrompt(c)
+              .split("ALL of these apply, not just one:\n")[1]
+              ?.split("\n- user turns:")[0],
+        ),
       );
-      // 5 closes x 5 constraints: an unsalted shared hash would yield only 5 pairs.
-      expect(pairs.size).toBeGreaterThan(5);
+      // Same five lines, different orderings via the ${id}#style salt.
+      expect(blocks.size).toBeGreaterThan(1);
+    });
+
+    it("M7: the contract demands short sentences / no run-ons", () => {
+      const prompt = renderTeacherPrompt(card({ userTurns: 5, lengthBand: "medium" }));
+      expect(prompt).toContain("Keep every sentence short");
+      expect(prompt).toContain("no run-ons");
+    });
+
+    it("M7: the medical safety exemplar forbids echoing the user's dose figure", () => {
+      const prompt = renderTeacherPrompt(
+        card({ userTurns: 3, lengthBand: "medium", safetyKind: "medical", tags: ["safety-medical"] }),
+      );
+      expect(prompt).toContain("never repeating back any dose, number, or medication name");
     });
 
     it("M2e: fixes the pilot's pronoun guess and asks for one invented detail", () => {
@@ -273,6 +292,20 @@ describe("m2DatasetGenerator (M2b — DATASET.md §5 pipeline)", () => {
         { role: "assistant", content: "What happened? And how did that land?" },
       ];
       expect(runFilters(interrogation, card()).some((r) => r.includes("more than one question"))).toBe(true);
+    });
+
+    it("M7: rejects a run-on sentence and accepts short ones", () => {
+      const runOn: DialogueTurn[] = [
+        pass[0],
+        {
+          role: "assistant",
+          content:
+            "It really does sound like the circling never quite lets up and keeps pulling you back around to Thursday again and again in a way that leaves almost no room to breathe or think straight at all.",
+        },
+      ];
+      expect(runFilters(runOn, card()).some((r) => r.includes("run-on"))).toBe(true);
+      // The clean two-short-sentence baseline still passes the run-on guard.
+      expect(runFilters(pass, card()).some((r) => r.includes("run-on"))).toBe(false);
     });
 
     it("rejects a missing callback and accepts a present one", () => {

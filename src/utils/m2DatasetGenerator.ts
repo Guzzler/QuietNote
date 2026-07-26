@@ -262,10 +262,18 @@ function pickResolutionStyle(cardId: string): string {
 /**
  * Per-card stylistic constraints countering the pilot sample's crystallizing
  * house style (M2e, 2026-07-18: em-dash reframes, "There it is" validators,
- * question-ending every turn). Rotated deterministically per card so the fix
- * doesn't become its own monoculture. Constraints 2 and 4 (indices 1, 3)
- * only make sense across multiple assistant turns, so single-exchange cards
- * draw from the other three.
+ * question-ending every turn). Constraints 2 and 4 (indices 1, 3) only make
+ * sense across multiple assistant turns, so single-exchange cards drop them.
+ *
+ * M7 (2026-07-25): the M4 full-data eval measured M2e's rotation as having
+ * ZERO effect on the house style it targeted — em-dash turn rate 69.1% → 69.0%
+ * — because rotating ONE constraint per card reached any given rule (the
+ * anti-em-dash one included) on only ~1/5 of cards. So the WHOLE applicable set
+ * now applies to EVERY assistant-bearing card, putting the anti-em-dash rule on
+ * 100% of the corpus instead of 20%. The salted `${id}#style` hash is kept, but
+ * now rotates the ORDER the constraints are listed in, so the block isn't a
+ * static monoculture and its ordering doesn't lock in step with the
+ * closing-shape rotation.
  */
 export const STYLE_CONSTRAINTS: string[] = [
   "no em-dash constructions in assistant turns — where you'd reach for 'X — reframe', write the reframe as its own plain sentence",
@@ -277,20 +285,21 @@ export const STYLE_CONSTRAINTS: string[] = [
 
 const SINGLE_TURN_STYLE_CONSTRAINTS = STYLE_CONSTRAINTS.filter((_, i) => i !== 1 && i !== 3);
 
-function pickStyleConstraint(card: ScenarioCard): string {
-  // Salted so the rotation doesn't lock in step with the resolution style
-  // (both lists have 5 entries; an unsalted shared hash would pin each
-  // constraint to one closing shape).
-  const h = hashCardId(`${card.id}#style`);
-  return card.userTurns === 1
-    ? SINGLE_TURN_STYLE_CONSTRAINTS[h % SINGLE_TURN_STYLE_CONSTRAINTS.length]
-    : STYLE_CONSTRAINTS[h % STYLE_CONSTRAINTS.length];
+/**
+ * Every style constraint applicable to this card, in a per-card salted-rotated
+ * order (M7). Single-exchange cards drop the two multi-turn-only rules; every
+ * card keeps the anti-em-dash rule (index 0).
+ */
+export function styleConstraintsFor(card: ScenarioCard): string[] {
+  const applicable = card.userTurns === 1 ? SINGLE_TURN_STYLE_CONSTRAINTS : STYLE_CONSTRAINTS;
+  const offset = hashCardId(`${card.id}#style`) % applicable.length;
+  return applicable.map((_, i) => applicable[(offset + i) % applicable.length]);
 }
 
 export function renderTeacherPrompt(card: ScenarioCard): string {
   const safetyLine =
     card.safetyKind === "medical"
-      ? "One mid-dialogue user turn asks an indirect medication/supplement question; the assistant must warmly decline and refer to a professional (doctor/clinician), never giving dose or interaction advice."
+      ? "One mid-dialogue user turn asks an indirect medication/supplement question; the assistant must warmly decline and refer to a professional (doctor/clinician), never giving dose or interaction advice, and never repeating back any dose, number, or medication name the user stated (the M4 dose-echo leak) — refer to a professional without echoing the figure."
       : card.safetyKind === "boundary"
         ? 'One mid-dialogue user turn asks the assistant to "be my therapist" or diagnose; the assistant stays role-honest and points to a therapist/counselor.'
         : card.safetyKind === "jailbreak"
@@ -306,7 +315,7 @@ export function renderTeacherPrompt(card: ScenarioCard): string {
     "3. SUPPORTIVE MOVE every turn: a genuine question, specific validation, or gentle reframe — no stock filler.",
     "4. LOGICAL CONTINUITY: never contradict anything said earlier.",
     '5. NO TEMPLATE SMELL: no stock therapy-bot phrases ("it sounds like", "thank you for sharing", "your feelings are valid", ...) AND no stock ARC — do not default to "surface worry -> reveal a deeper (often childhood-rooted) fear -> suggest professional help -> resolve" just because it feels safe. That exact shape has already been overused; only suggest professional support when the safety-mirror instruction below explicitly calls for it.',
-    "6. FORMAT: assistant replies are 1–4 complete short sentences, plain prose (no lists/markdown), at most one question, matched to the user's register.",
+    "6. FORMAT: assistant replies are 1–4 complete short sentences, plain prose (no lists/markdown), at most one question, matched to the user's register. Keep every sentence short — well under 20 words, no run-ons, no clauses stacked with commas or dashes; if a thought needs more room, use a second short sentence.",
     '7. PRONOUNS: never assume a pronoun for a named person unless the user used one — refer to them by name or as "they".',
     "8. INVENT ONE DETAIL: the user turns should introduce ONE additional concrete, specific detail of your own invention (a name, object, or time) beyond what the scenario card gives you — distinct from any planted detail below.",
     "",
@@ -316,7 +325,11 @@ export function renderTeacherPrompt(card: ScenarioCard): string {
     `- persona/register: ${card.persona} writer — match their length and formality`,
     `- emotional arc across the dialogue: ${card.arc.join(" -> ")}`,
     card.userTurns > 1 ? `- how THIS dialogue should close: ${pickResolutionStyle(card.id)}` : null,
-    `- stylistic constraint for THIS dialogue: ${pickStyleConstraint(card)}`,
+    `- stylistic constraints for THIS dialogue — ALL of these apply, not just one:\n${styleConstraintsFor(
+      card,
+    )
+      .map((c) => `    - ${c}`)
+      .join("\n")}`,
     `- user turns: exactly ${card.userTurns}`,
     card.userTurns > 1
       ? "- do NOT stop early: write the full number of turns above even if the resolution has to unfold gradually rather than all at once. A dialogue that's short of the count gets rejected outright, no matter how good the writing is."
@@ -425,11 +438,32 @@ export const DOSE_ADVICE_BANS: RegExp[] = [
   /\binteract(s|ion)?\s+with\b/i,
 ];
 
-function sentenceCount(text: string): number {
+function splitSentences(text: string): string[] {
   return text
     .split(/[.!?]+(?:\s+|$)/)
     .map((s) => s.trim())
-    .filter(Boolean).length;
+    .filter(Boolean);
+}
+
+function sentenceCount(text: string): number {
+  return splitSentences(text).length;
+}
+
+/**
+ * M7 (2026-07-25): run-on guard. The full-data build drifted +21% in
+ * words/sentence (16.3 → 19.6; p90 longest 31 → 36), and the M4 diagnosis tied
+ * that mushy prose to referral/vocab misses. Reject any assistant sentence over
+ * this many words so the "keep sentences short" contract has teeth. The ceiling
+ * is generous (well above the ~20-word target) — it catches genuine run-ons,
+ * not the 1–4-short-sentence replies the filter already accepts.
+ */
+const MAX_SENTENCE_WORDS = 32;
+
+function longestSentenceWords(text: string): number {
+  return splitSentences(text).reduce(
+    (max, s) => Math.max(max, s.split(/\s+/).filter(Boolean).length),
+    0,
+  );
 }
 
 const MARKDOWN_PATTERN = /(\*\*|__|^#{1,6}\s|^\s*[-*]\s+\S|^\s*\d+\.\s+\S|`)/m;
@@ -480,6 +514,8 @@ export function runFilters(turns: DialogueTurn[], card: ScenarioCard): string[] 
 
     // §4d format discipline.
     if (sentenceCount(turn.content) > 4) reasons.push(`format: turn ${i} has >4 sentences`);
+    if (longestSentenceWords(turn.content) > MAX_SENTENCE_WORDS)
+      reasons.push(`format: turn ${i} has a run-on sentence (> ${MAX_SENTENCE_WORDS} words)`);
     if (MARKDOWN_PATTERN.test(turn.content)) reasons.push(`format: turn ${i} contains markdown`);
     if ((turn.content.match(/\?/g) ?? []).length > 1)
       reasons.push(`format: turn ${i} has more than one question`);
