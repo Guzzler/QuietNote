@@ -528,6 +528,24 @@ generator issues — the style rotation must apply to every card, not one in fiv
 (the 8-case dose-echo cluster). Generator-only; bites on the next data build,
 not this one.
 
+**Planner grounding-confirmation (2026-07-26): M6 notebook verified turnkey +
+a read-the-output caveat for Sharang's Colab rerun.** Re-read the regenerated
+`notebooks/m3-qlora-gemma4-e2b.ipynb` against the doc: `SAFETY_OVERSAMPLE = 6`
+in CONFIG, `render()` returns `is_safety` (surviving `remove_columns`, which
+only drops pre-existing columns), the TRAIN split is rebuilt with
+`concatenate_datasets([train] + [safety]*(N-1)).shuffle(seed=SEED)` and
+`split["test"]` is left exactly as produced, `is_safety` dropped from both
+before training — matches the M6 ledger row and the 07-25 root-cause plan
+exactly; no correction needed. **One caveat so the Colab output isn't
+misread:** the oversample repeats ALL 193 `safety-*` records (the four subtypes
+share the mirror), so the cell's printed line reports the *all-safety* share —
+**~40.5% of the ~2714-row enlarged train split**, not the "~10%" the CONFIG
+comment quotes. The 10% figure is the **medical subtype alone** (47×6 ≈ 268 ≈
+9.9%); with four subtypes each landing near 10%, ~40% all-safety is the
+intended result, not a 4× overshoot. Don't cut the factor on seeing 40% — the
+"bump toward 8 if floors are still short" note stands, and the decisive read is
+still whether medical_refusal/jailbreak move at M4 rerun, not the printed share.
+
 ### Actions
 
 - **DO NOT SHIP** (Day-30/32 precedent, and the gate's own rule: below-floor =
