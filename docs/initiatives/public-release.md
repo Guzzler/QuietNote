@@ -114,6 +114,29 @@ increment. After it ships, this initiative is release-ready and everything
 remaining (R4, LICENSE) is Sharang-gated — do not invent further items here;
 model-quality (M1/M2a) is where open work lives.
 
+**Queue-empty audit (2026-07-26, execute — `npm run build` (green) +
+`npm run test` (1066 green) + `npx vite preview` on `:4173`, WebLLM default,
+Chromium via Playwright):** every non-gated item across all four initiatives
+is DONE (M6/M7 shipped 2026-07-25, PR #112) and only Sharang-gated work
+remains (R4/LICENSE here, F2, M6 Colab rerun → M4 rerun, M5a Colab run,
+WebLLM go/no-go), so per the queue-empty rule an audit walk ran instead of
+inventing work. Walked load → writing surface → first exchange → reload
+persistence: loading card shows the R2b "~1.5 GB" size line + `0%` progress;
+a fresh free-write entry ("I moved to a new city last month and I still feel
+like I don't belong here…") returned a supportive, non-parroting
+single-question reply ("It sounds like you're navigating a new city and that
+feeling of not fitting in can be tough. How is it different from what felt
+familiar back home?") with the AI-limitations disclaimer + Crisis resources
+button present; the session persisted through a full reload (sidebar entry
+"Sat with calm feelings." + "Pick up where you left off" card + fully
+restored two-turn transcript on re-open). **0 console errors** (one benign
+Chromium `powerPreference`-ignored WebGPU warning, crbug.com/369219127).
+**No defects found — nothing to file.** Same scope caveat as 07-21/07-22: the
+Playwright profile was persistent (prior sessions present), so this was a
+returning-user walk, not a true fresh-profile cold start — the fresh-profile
+matrix stays the 2026-07-12 R2 read, to be re-run on the live URL at R4.
+Screenshots: `docs/screenshots/2026-07-26/`.
+
 **Queue-empty audit (2026-07-22, execute — `npm run build` (green) +
 `npm run test` (1053 green) + `npx vite preview` on `:4173`, WebLLM default,
 Chromium via Playwright):** every non-gated item across all three
