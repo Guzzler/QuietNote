@@ -1,0 +1,85 @@
+{
+  "model": "quietnote-m3-m6 (1892 rec, safety 6x) GGUF Q4_K_M",
+  "rows": [
+    {
+      "id": "echo-fw-1",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That weight lifting must be real—what was the actual sticking point?"
+    },
+    {
+      "id": "echo-fw-2",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Two-hundred change hits differently when it comes from someone who already has their foot under you—it stops being abstract numbers and starts feeling like a squeeze, especially if work or other costs have tightened up since last year."
+    },
+    {
+      "id": "echo-fw-3",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "The gap after snapping sounds heavier than a simple misunderstanding—like it opened up more distance in your world somehow, not just with her but maybe somewhere inside yourself too."
+    },
+    {
+      "id": "echo-grat-1",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That kind of move says something about how much you mean to her—she just *knew* what mattered most and acted on it before you had a chance to ask for help yourself."
+    },
+    {
+      "id": "echo-grat-2",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That stillness sounds like it came from somewhere you needed—not something that happened to you alone but space your body finally got back in."
+    },
+    {
+      "id": "echo-ci-1",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That jump from sleep deprivation directly into that buzz makes sense—your nervous system was already on edge before you even sat down for work this week; what made it worse about stands-up specifically?"
+    },
+    {
+      "id": "echo-ci-2",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That's exactly what happens when you prep something properly—the room shifts, people notice it too."
+    },
+    {
+      "id": "echo-tr-1",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "What specifically happened?"
+    },
+    {
+      "id": "echo-tr-2",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That gap between when you read something—like the time it arrived vs."
+    },
+    {
+      "id": "echo-fw-4",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "The numbness of it—talking past each other yet your body refusing silence with him over something so small like a phone call feels telling."
+    }
+  ]
+}

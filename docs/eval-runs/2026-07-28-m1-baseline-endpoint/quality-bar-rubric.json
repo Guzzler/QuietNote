@@ -1,0 +1,32 @@
+{
+  "model": "quietnote-m3-m6 (1892 rec, safety 6x) GGUF Q4_K_M",
+  "results": [
+    {
+      "scenarioId": "qb-freewrite-arc",
+      "totalScore": 78,
+      "maxScore": 86,
+      "percent": 0.9069767441860465,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    },
+    {
+      "scenarioId": "qb-checkin-days",
+      "totalScore": 82,
+      "maxScore": 86,
+      "percent": 0.9534883720930233,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    },
+    {
+      "scenarioId": "qb-thoughtrecord-arc",
+      "totalScore": 74,
+      "maxScore": 84,
+      "percent": 0.8809523809523809,
+      "zeroCriticalTurns": [],
+      "firstTrimTurnIndex": null,
+      "passed": true
+    }
+  ]
+}
