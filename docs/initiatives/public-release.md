@@ -54,16 +54,22 @@ decisions, release gate, queue format).
   release day (see R4). Production behavior is verified locally via
   `npm run build` + `npx vite preview` (serves `dist/` at the configured
   `base`).
-- **Deploy-gate re-verified against the live file 2026-07-21:**
-  `.github/workflows/deploy.yml`'s `deploy` job carries
-  `if: ${{ !github.event.repository.private }}`, so it skips cleanly while
-  private and flips to running automatically the moment Sharang makes the
-  repo public at R4 — **no workflow edit is needed on release day**. The
-  `build` job runs on every push (build + `upload-pages-artifact`) with
-  `configure-pages` set `continue-on-error`, so doc-only pushes to `main`
-  don't fail CI while Pages is disabled. R4's Pages-enable command
+- **Deploy-gate re-verified against the live file 2026-07-27** (was
+  2026-07-21 — unchanged): `.github/workflows/deploy.yml`'s `deploy` job
+  (line 39) still carries `if: ${{ !github.event.repository.private }}`, so it
+  skips cleanly while private and flips to running automatically the moment
+  Sharang makes the repo public at R4 — **no workflow edit is needed on
+  release day**. The `build` job runs on every push (build +
+  `upload-pages-artifact`) with `configure-pages` set `continue-on-error`
+  (line 30), so doc-only pushes to `main` don't fail CI while Pages is
+  disabled. R4's Pages-enable command
   (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`)
-  is still the correct current-API invocation for the Actions build type.
+  is still the correct current-API invocation for the Actions build type —
+  and **re-confirmed the POST (create) verb is right, not PUT (update):** a
+  live `gh api repos/Guzzler/QuietNote/pages` on 2026-07-27 returns
+  `404 Not Found`, i.e. no Pages site exists yet, so R4 creates one. Repo
+  visibility re-checked the same day: still `PRIVATE`, so there is no live
+  URL and the deploy job is dormant exactly as designed.
 - `README.md` today is the **stock Vite template** (React+TS+Vite boilerplate,
   ESLint config advice) — R3a is a from-scratch write, not an edit.
 - No LICENSE file (see Blocked).
