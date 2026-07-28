@@ -120,6 +120,33 @@ increment. After it ships, this initiative is release-ready and everything
 remaining (R4, LICENSE) is Sharang-gated — do not invent further items here;
 model-quality (M1/M2a) is where open work lives.
 
+**Queue-empty audit (2026-07-27, execute — `npm run build` (green) +
+`npm run test` (1066 green) + `npx vite preview` on `:4173`, WebLLM default,
+Chromium via Playwright):** every non-gated item across all four initiatives
+is DONE (M6/M7 shipped 2026-07-25, PR #112; last non-gated work anywhere) and
+only Sharang-gated work remains (R4/LICENSE here, F2, M6 Colab rerun → M4
+rerun, M5a Colab run, WebLLM go/no-go, personalization gated on the quality
+bar), so per the queue-empty rule an audit walk ran instead of inventing work.
+Walked load → writing surface → first exchange → reload persistence: loading
+card shows the R2b "~1.5 GB" size line + `0%` progress; mode strip renders in
+the shipped order (Free Write · Gratitude · Check-in · Thought Record) and the
+footer carries all four calm links (Share feedback → `issues/new/choose`,
+email → `mailto:`, open source → repo, hrefs correct in the DOM). A fresh
+free-write entry ("I got passed over for a promotion at work today and I can't
+stop replaying the meeting in my head…") returned a supportive, non-parroting
+single-question reply ("It sounds like the disappointment from not getting
+that promotion is weighing on your mind… What are some of these specific
+moments you keep going over?") with the AI-limitations disclaimer + Crisis
+resources button present; the session persisted through a full reload (sidebar
+entry "I got passed over for a promotion…" + "Pick up where you left off" card
+referencing it + fully restored two-turn transcript on re-open). **0 console
+errors** (one benign Chromium `powerPreference`-ignored WebGPU warning,
+crbug.com/369219127). **No defects found — nothing to file.** Same scope
+caveat as 07-21/07-22/07-26: the Playwright profile was persistent (prior
+sessions present), so this was a returning-user walk, not a true fresh-profile
+cold start — the fresh-profile matrix stays the 2026-07-12 R2 read, to be
+re-run on the live URL at R4. Screenshots: `docs/screenshots/2026-07-27/`.
+
 **Queue-empty audit (2026-07-26, execute — `npm run build` (green) +
 `npm run test` (1066 green) + `npx vite preview` on `:4173`, WebLLM default,
 Chromium via Playwright):** every non-gated item across all four initiatives
