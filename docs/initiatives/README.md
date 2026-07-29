@@ -68,8 +68,14 @@ queued items once they exist; safety-relevant reports outrank everything.
 
 Run before the first soft-launch share, before any tagged release/public
 push, **and in any PR touching** `src/prompts/`, the App send path,
-`crisisDetection.ts`, `responseGuardrails.ts`, `responseShaping.ts`, or
-`referralReprompt.ts`:
+`crisisDetection.ts`, `responseGuardrails.ts`, `responseShaping.ts`,
+`referralReprompt.ts`, **or `evalRunner.ts`**:
+
+**`evalRunner.ts` added 2026-07-28 (planner).** The original list covered the
+app's safety behavior but omitted the *measuring instrument*. A change to the
+eval cases or their pass criteria changes what the gate means, so it must be
+accompanied by a full gate read — and, per the file's own Day-28 precedent,
+only in the one-directional shapes that cannot let a leaking reply pass.
 
 - `npm run build` and `npm run test` green.
 - Full 4-mode eval read **with `--referral-reprompt` ON** (the app-faithful

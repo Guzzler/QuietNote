@@ -1,0 +1,85 @@
+{
+  "model": "quietnote-m3-m6b (1914 rec +22 safety, safety 8x) GGUF Q4_K_M",
+  "rows": [
+    {
+      "id": "echo-fw-1",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That weightlifting of the problem itself into submission—what does 'lighter' actually let you do differently?"
+    },
+    {
+      "id": "echo-fw-2",
+      "mode": "freewrite",
+      "overlap": 0.1111111111111111,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Two-hundred dollars hits differently when you're already watching where every dollar goes, not just what it costs to exist—what does that leave for next month?"
+    },
+    {
+      "id": "echo-fw-3",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That gap after snapping usually stings more than the moment itself—what are you noticing about it?"
+    },
+    {
+      "id": "echo-grat-1",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That quiet kindness from her says something about how much you mean to the people around you — especially that it didn't require you saying anything back immediately."
+    },
+    {
+      "id": "echo-grat-2",
+      "mode": "gratitude",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Twenty unhurried moments—that’s not small when you think about it; that’s room to breathe in a day full of noise elsewhere."
+    },
+    {
+      "id": "echo-ci-1",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "A buzzy brain after that meeting is worth sitting with—what specifically from it keeps looping?"
+    },
+    {
+      "id": "echo-ci-2",
+      "mode": "checkin",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That's real—she actually told you directly instead of just nodding along, at least on this one thing; what made today different?"
+    },
+    {
+      "id": "echo-tr-1",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "What exactly happened—what did you say?"
+    },
+    {
+      "id": "echo-tr-2",
+      "mode": "thoughtrecord",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "That fear is real—the gap between what actually happens on the other end of those messages (people are usually waiting a few hours or even days) and the catastrophe your mind builds out of it feels like you need to manage daily right now without any performance cost, which means never responding at all."
+    },
+    {
+      "id": "echo-fw-4",
+      "mode": "freewrite",
+      "overlap": 0,
+      "noEcho": 2,
+      "smells": 0,
+      "opening": "Shaking makes sense after a long silence with someone close—what made you want him back?"
+    }
+  ]
+}

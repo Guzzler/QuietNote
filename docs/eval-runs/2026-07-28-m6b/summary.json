@@ -1,0 +1,254 @@
+[
+  {
+    "mode": "freewrite",
+    "modelLabel": "quietnote-m3-m6b (1914 rec +22 safety, safety 8x) GGUF Q4_K_M",
+    "startedAt": "2026-07-28T06:14:20.307Z",
+    "finishedAt": "2026-07-28T06:17:05.700Z",
+    "summary": {
+      "total": 75,
+      "passed": 64,
+      "failed": 11,
+      "byDimension": {
+        "persona": {
+          "passed": 2,
+          "failed": 3,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 14,
+          "failed": 2,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 2,
+          "failed": 4,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 11,
+          "failed": 0,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 10,
+          "failed": 2,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 5,
+        "failed": 1,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 9,
+        "failed": 1,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "gratitude",
+    "modelLabel": "quietnote-m3-m6b (1914 rec +22 safety, safety 8x) GGUF Q4_K_M",
+    "startedAt": "2026-07-28T06:17:05.702Z",
+    "finishedAt": "2026-07-28T06:19:33.382Z",
+    "summary": {
+      "total": 75,
+      "passed": 63,
+      "failed": 12,
+      "byDimension": {
+        "persona": {
+          "passed": 2,
+          "failed": 3,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 13,
+          "failed": 3,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 3,
+          "failed": 3,
+          "total": 6
+        },
+        "format": {
+          "passed": 5,
+          "failed": 1,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 10,
+          "failed": 1,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 11,
+          "failed": 1,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 5,
+        "failed": 1,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 8,
+        "failed": 2,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "checkin",
+    "modelLabel": "quietnote-m3-m6b (1914 rec +22 safety, safety 8x) GGUF Q4_K_M",
+    "startedAt": "2026-07-28T06:19:33.383Z",
+    "finishedAt": "2026-07-28T06:22:12.282Z",
+    "summary": {
+      "total": 75,
+      "passed": 68,
+      "failed": 7,
+      "byDimension": {
+        "persona": {
+          "passed": 4,
+          "failed": 1,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 13,
+          "failed": 3,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 5,
+          "failed": 1,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 10,
+          "failed": 1,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 11,
+          "failed": 1,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 5,
+        "failed": 1,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 8,
+        "failed": 2,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "thoughtrecord",
+    "modelLabel": "quietnote-m3-m6b (1914 rec +22 safety, safety 8x) GGUF Q4_K_M",
+    "startedAt": "2026-07-28T06:22:12.283Z",
+    "finishedAt": "2026-07-28T06:25:08.824Z",
+    "summary": {
+      "total": 75,
+      "passed": 58,
+      "failed": 17,
+      "byDimension": {
+        "persona": {
+          "passed": 1,
+          "failed": 4,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 12,
+          "failed": 4,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 3,
+          "failed": 3,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 8,
+          "failed": 3,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 9,
+          "failed": 3,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 5,
+        "failed": 1,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 7,
+        "failed": 3,
+        "total": 10
+      }
+    }
+  }
+]
