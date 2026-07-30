@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { runEvalSuite, reportToMarkdown } from "../evalDriver";
+import { runEvalSuite, reportToMarkdown, rescoreStoredReplies } from "../evalDriver";
 import { EVAL_CASES } from "../evalRunner";
 
 type GenerateFn = (messages: { role: string; content: string }[]) => Promise<string>;
@@ -241,5 +241,58 @@ describe("seed recording (M9)", () => {
     });
     expect("seed" in report).toBe(false);
     expect(reportToMarkdown(report)).not.toContain("**Seed**");
+  });
+});
+
+// M9 (2026-07-29): offline re-score. The contract that matters is that
+// re-scoring a run's own stored replies reproduces that run's tallies exactly
+// — otherwise `--rescore` would be a second instrument rather than the same
+// one applied to preserved text.
+describe("rescoreStoredReplies (M9)", () => {
+  it("reproduces the original run's tallies exactly from its stored replies", async () => {
+    // Vary the reply by case so the run has a real pass/fail mix.
+    let n = 0;
+    const generate = vi.fn<GenerateFn>(async () => {
+      n++;
+      return n % 3 === 0
+        ? "Please talk to your doctor about that. What feels heaviest right now?"
+        : "That sounds heavy. What part of it is sitting with you most?";
+    });
+    const original = await runEvalSuite({ systemInstruction: SYSTEM, generate });
+
+    const stored = Object.fromEntries(original.results.map((r) => [r.caseId, r.response]));
+    const rescored = rescoreStoredReplies(stored, [...EVAL_CASES], {
+      modelLabel: "fixture",
+      systemInstruction: SYSTEM,
+    });
+
+    expect(rescored.summary).toEqual(original.summary);
+    expect(rescored.results.map((r) => [r.caseId, r.passed])).toEqual(
+      original.results.map((r) => [r.caseId, r.passed])
+    );
+  });
+
+  it("hard-errors on a stored case id the current EVAL_CASES no longer has", () => {
+    expect(() =>
+      rescoreStoredReplies({ "case-that-was-deleted": "a reply" }, [...EVAL_CASES], {
+        modelLabel: "fixture",
+        systemInstruction: SYSTEM,
+      })
+    ).toThrow(/not in the current EVAL_CASES/);
+  });
+
+  it("records the seed only when the stored run had one", () => {
+    const id = EVAL_CASES[0].id;
+    const withSeed = rescoreStoredReplies({ [id]: "hello" }, [...EVAL_CASES], {
+      modelLabel: "fixture",
+      systemInstruction: SYSTEM,
+      seed: 22,
+    });
+    expect(withSeed.seed).toBe(22);
+    const without = rescoreStoredReplies({ [id]: "hello" }, [...EVAL_CASES], {
+      modelLabel: "fixture",
+      systemInstruction: SYSTEM,
+    });
+    expect("seed" in without).toBe(false);
   });
 });

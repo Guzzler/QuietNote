@@ -77,6 +77,28 @@ export async function runEvalSuite(
     opts.onProgress?.(i + 1, cases.length, r);
   }
 
+  return {
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    modelLabel,
+    systemInstruction: opts.systemInstruction,
+    ...(opts.seed !== undefined ? { seed: opts.seed } : {}),
+    results,
+    summary: summarizeResults(results, cases),
+  };
+}
+
+/**
+ * Tally a set of scored results. Extracted from `runEvalSuite` (M9,
+ * 2026-07-29) so the offline `--rescore` path builds its summary through the
+ * exact same code — a re-score whose tallies were computed by a second
+ * implementation would be a new instrument, which is the opposite of the
+ * point.
+ */
+export function summarizeResults(
+  results: EvalResult[],
+  cases: EvalCase[]
+): EvalRunReport["summary"] {
   const byDimension: Record<string, { passed: number; failed: number; total: number }> = {};
   const medicalRefusalDirect = { passed: 0, failed: 0, total: 0 };
   const medicalRefusalIndirect = { passed: 0, failed: 0, total: 0 };
@@ -101,20 +123,56 @@ export async function runEvalSuite(
   }
 
   return {
-    startedAt,
-    finishedAt: new Date().toISOString(),
-    modelLabel,
-    systemInstruction: opts.systemInstruction,
-    ...(opts.seed !== undefined ? { seed: opts.seed } : {}),
+    total: results.length,
+    passed: results.filter((r) => r.passed).length,
+    failed: results.filter((r) => !r.passed).length,
+    byDimension,
+    medicalRefusalDirect,
+    medicalRefusalIndirect,
+  };
+}
+
+/**
+ * Offline re-score (M9, 2026-07-29): score an existing corpus of *stored*
+ * replies against the current matchers — no model, no endpoint, no
+ * generation. This is what M8 needed and did not have: it had to regenerate,
+ * so its matcher-repair delta was confounded with sampling noise.
+ *
+ * Every stored reply is the exact string the matchers saw on the original run
+ * (post referral-reprompt), so scoring it again isolates the matcher change.
+ * A stored id with no matching case in the CURRENT `EVAL_CASES` is a hard
+ * error — silently dropping it would quietly shrink the denominator, which is
+ * precisely the kind of unnoticed instrument change the gate exists to catch.
+ */
+export function rescoreStoredReplies(
+  storedReplies: Record<string, string>,
+  cases: EvalCase[],
+  meta: { modelLabel: string; systemInstruction: string; seed?: number; startedAt?: string }
+): EvalRunReport {
+  const caseById = new Map(cases.map((c) => [c.id, c]));
+  const unknown = Object.keys(storedReplies).filter((id) => !caseById.has(id));
+  if (unknown.length > 0) {
+    throw new Error(
+      `rescoreStoredReplies: ${unknown.length} stored case id(s) are not in the ` +
+        `current EVAL_CASES and cannot be scored: ${unknown.join(", ")}`
+    );
+  }
+  const scoredCases: EvalCase[] = [];
+  const results: EvalResult[] = [];
+  for (const [id, response] of Object.entries(storedReplies)) {
+    const c = caseById.get(id)!;
+    scoredCases.push(c);
+    results.push(evaluateResponse(response, c));
+  }
+  const now = new Date().toISOString();
+  return {
+    startedAt: meta.startedAt ?? now,
+    finishedAt: now,
+    modelLabel: meta.modelLabel,
+    systemInstruction: meta.systemInstruction,
+    ...(meta.seed !== undefined ? { seed: meta.seed } : {}),
     results,
-    summary: {
-      total: results.length,
-      passed: results.filter((r) => r.passed).length,
-      failed: results.filter((r) => !r.passed).length,
-      byDimension,
-      medicalRefusalDirect,
-      medicalRefusalIndirect,
-    },
+    summary: summarizeResults(results, scoredCases),
   };
 }
 
