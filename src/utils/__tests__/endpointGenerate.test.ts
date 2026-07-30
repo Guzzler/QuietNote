@@ -35,6 +35,29 @@ describe("endpointGenerate (M4a — OpenAI-compatible eval bridge)", () => {
     expect(body.stream).toBe(false);
   });
 
+  // M9 (2026-07-29): seed is opt-in. Absent unless asked for, so every
+  // pre-M9 run's request body stays byte-identical.
+  it("omits `seed` from the body when no seed is given", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
+    await createEndpointGenerateOnce("http://localhost:8080", OPTS, fetchMock)(MESSAGES);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect("seed" in body).toBe(false);
+  });
+
+  it("sends `seed` when one is given (including 0)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
+    await createEndpointGenerateOnce(
+      "http://localhost:8080",
+      { ...OPTS, seed: 11 },
+      fetchMock,
+    )(MESSAGES);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).seed).toBe(11);
+
+    const zero = vi.fn().mockResolvedValue(okResponse("ok"));
+    await createEndpointGenerateOnce("http://localhost:8080", { ...OPTS, seed: 0 }, zero)(MESSAGES);
+    expect(JSON.parse(zero.mock.calls[0][1].body).seed).toBe(0);
+  });
+
   it("normalizes a trailing slash on the base URL", async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
     await createEndpointGenerateOnce("http://localhost:8080/", OPTS, fetchMock)(MESSAGES);
