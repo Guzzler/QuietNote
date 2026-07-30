@@ -88,6 +88,17 @@ only in the one-directional shapes that cannot let a leaking reply pass.
 
 Gate failure outranks every queued item.
 
+**Multi-seed rule (planner, 2026-07-29 — takes effect when model-quality's M9
+lands).** M8 established that the harness pins no seed and has no replay mode,
+so a single gate read carries ≥2 cases of run-to-run noise per floor — the same
+size as the residual three training runs have chased. From M9 onward a gate read
+is **three reads at the fixed seeds 11 / 22 / 33**, and a floor counts as met
+only if it is met at **all three** (`min ≥ floor`). That is strictly stricter
+than the single read used through M8, so it cannot turn a historical FAIL into a
+PASS. The complementary diagnostic rule — a floor is a legitimate *training*
+target only if even its best seed misses — lives in `model-quality.md`'s
+variance-protocol section, along with the model-vs-model disjoint-range rule.
+
 **Runnability grounded 2026-07-24 (planner)** — the gate is executable
 exactly as written: `package.json` carries `build` (`tsc -b && vite build`)
 and `test` (`vitest run`); the eval read is `npm run eval -- --referral-reprompt`
