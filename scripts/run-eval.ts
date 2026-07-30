@@ -26,11 +26,16 @@
  *   npm run eval         # full per-mode suite
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, dirname, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { runEvalSuite, reportToMarkdown, type EvalRunReport } from "../src/utils/evalDriver.ts";
+import {
+  runEvalSuite,
+  reportToMarkdown,
+  rescoreStoredReplies,
+  type EvalRunReport,
+} from "../src/utils/evalDriver.ts";
 import { EVAL_CASES, type EvalDimension } from "../src/utils/evalRunner.ts";
 import { getBaseSystemInstruction } from "../src/prompts/systemPrompts.ts";
 import { isBareDeflection, withDeflectionReprompt } from "../src/utils/responseShaping.ts";
@@ -179,6 +184,16 @@ if (seedArg) {
   SEED = parsed;
 }
 
+// M9 (2026-07-29): --rescore=<dir> re-runs SCORING ONLY over the full replies
+// captured by an earlier run (`<dir>/replies.json`) — no model, no endpoint,
+// no generation. M8 could not do this: the mode reports truncate replies to
+// ~300 chars, so it had to regenerate and its matcher-repair delta was
+// confounded with sampling noise. Reports are written back into the same dir
+// with a `rescored` suffix unless --outdir/--outfile-suffix say otherwise, so
+// the original raw data is never clobbered.
+const rescoreArg = args.find((a) => a.startsWith("--rescore="));
+const RESCORE_DIR = rescoreArg ? rescoreArg.split("=").slice(1).join("=") : null;
+
 const outdirArg = args.find((a) => a.startsWith("--outdir="));
 const OUTDIR_NAME = outdirArg ? outdirArg.split("=")[1] : undefined;
 const suffixArg = args.find((a) => a.startsWith("--outfile-suffix="));
@@ -188,9 +203,89 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = join(__dirname, "..");
 const TODAY = new Date().toISOString().slice(0, 10);
-const OUT_DIR = join(REPO_ROOT, "docs", "eval-runs", resolveOutDirName(OUTDIR_NAME, TODAY));
+// A --rescore path may be absolute (tests use a temp dir) or repo-relative
+// (`docs/eval-runs/<name>`, how it is invoked in practice).
+const RESCORE_ABS = RESCORE_DIR
+  ? isAbsolute(RESCORE_DIR)
+    ? RESCORE_DIR
+    : join(REPO_ROOT, RESCORE_DIR)
+  : null;
+const OUT_DIR =
+  RESCORE_ABS && !OUTDIR_NAME
+    ? RESCORE_ABS
+    : join(REPO_ROOT, "docs", "eval-runs", resolveOutDirName(OUTDIR_NAME, TODAY));
+// Never overwrite the source run's reports when re-scoring in place.
+const EFFECTIVE_SUFFIX =
+  OUTFILE_SUFFIX ?? (RESCORE_ABS && OUT_DIR === RESCORE_ABS ? "rescored" : undefined);
+
+/** Shape of `<outdir>/replies.json` (M9). */
+interface RepliesFile {
+  modelLabel: string;
+  generatedAt: string;
+  seed?: number;
+  referralReprompt: boolean;
+  /** mode → { caseId → the exact reply the matchers scored, untruncated } */
+  modes: Partial<Record<JournalingMode, Record<string, string>>>;
+  /** systemInstruction per mode, so a re-score records what the model was told. */
+  systemInstructions: Partial<Record<JournalingMode, string>>;
+}
+
+/**
+ * --rescore: score stored replies with the CURRENT matchers and write fresh
+ * reports. Returns without touching the network or loading a model.
+ */
+function runRescore(): void {
+  const path = join(RESCORE_ABS!, "replies.json");
+  if (!existsSync(path)) {
+    console.error(
+      `[run-eval] --rescore: no replies.json in ${RESCORE_ABS}. Only runs from ` +
+        `M9 (2026-07-29) onward capture full replies; earlier runs' reports are ` +
+        `truncated to ~300 chars and cannot be re-scored.`
+    );
+    process.exit(1);
+  }
+  const file = JSON.parse(readFileSync(path, "utf8")) as RepliesFile;
+  const modes = Object.keys(file.modes) as JournalingMode[];
+  console.log(
+    `[run-eval] Re-scoring ${modes.length} mode(s) from ${path} ` +
+      `(seed=${file.seed ?? "unset"}, referral-reprompt=${file.referralReprompt}) — ` +
+      `no model, no endpoint.`
+  );
+  mkdirSync(OUT_DIR, { recursive: true });
+  const modeSummaries: unknown[] = [];
+  for (const mode of modes) {
+    const stored = file.modes[mode]!;
+    const report = rescoreStoredReplies(stored, [...EVAL_CASES], {
+      modelLabel: `${file.modelLabel} — re-scored ${new Date().toISOString().slice(0, 10)}`,
+      systemInstruction:
+        file.systemInstructions?.[mode] ?? getBaseSystemInstruction(mode, { morning: false }),
+      seed: file.seed,
+    });
+    const outPath = join(OUT_DIR, modeReportFilename(mode, EFFECTIVE_SUFFIX));
+    writeFileSync(outPath, reportToMarkdown(report), "utf8");
+    console.log(
+      `[run-eval] ${mode}: ${report.summary.passed}/${report.summary.total} pass → ${outPath}`
+    );
+    modeSummaries.push({
+      mode,
+      modelLabel: report.modelLabel,
+      startedAt: report.startedAt,
+      finishedAt: report.finishedAt,
+      ...(report.seed !== undefined ? { seed: report.seed } : {}),
+      rescoredFrom: path,
+      summary: report.summary,
+    });
+  }
+  const summaryPath = join(OUT_DIR, summaryFilename(EFFECTIVE_SUFFIX));
+  writeFileSync(summaryPath, JSON.stringify(modeSummaries, null, 2), "utf8");
+  console.log(`\n[run-eval] Wrote ${summaryPath} — done (re-score).`);
+}
 
 async function main() {
+  if (RESCORE_ABS) {
+    runRescore();
+    return;
+  }
   let generateOnce: (messages: { role: string; content: string }[]) => Promise<string>;
   if (ENDPOINT) {
     console.log(
@@ -285,6 +380,8 @@ async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
 
   const allReports: { mode: JournalingMode; report: EvalRunReport }[] = [];
+  const repliesByMode: RepliesFile["modes"] = {};
+  const systemInstructionsByMode: RepliesFile["systemInstructions"] = {};
 
   for (const mode of RUN_BASE ? RUN_MODES : []) {
     const systemInstruction = getBaseSystemInstruction(mode, { morning: false });
@@ -326,6 +423,12 @@ async function main() {
       );
       writeMarkdown(mode, report);
       allReports.push({ mode, report });
+      // M9: capture every scored reply UNTRUNCATED (the mode reports cut at
+      // ~300 chars). `r.response` is the exact string the matchers saw —
+      // post referral-reprompt — so `--rescore` isolates a matcher change
+      // from sampling noise.
+      repliesByMode[mode] = Object.fromEntries(report.results.map((r) => [r.caseId, r.response]));
+      systemInstructionsByMode[mode] = systemInstruction;
     } finally {
       if (sampled) {
         (EVAL_CASES as unknown as any[]).length = 0;
@@ -460,6 +563,22 @@ async function main() {
   }
   const summaryPath = join(OUT_DIR, summaryFilename(OUTFILE_SUFFIX));
   writeFileSync(summaryPath, JSON.stringify(summary, null, 2), "utf8");
+  // M9: the full-reply corpus, so this run can be re-scored later without
+  // regenerating. Written only when the base per-mode suite ran (scripts/tools
+  // passes have their own artifacts).
+  if (Object.keys(repliesByMode).length > 0) {
+    const repliesFile: RepliesFile = {
+      modelLabel: MODEL_LABEL,
+      generatedAt: new Date().toISOString(),
+      ...(SEED !== undefined ? { seed: SEED } : {}),
+      referralReprompt: REFERRAL_REPROMPT,
+      modes: repliesByMode,
+      systemInstructions: systemInstructionsByMode,
+    };
+    const repliesPath = join(OUT_DIR, withOutfileSuffix("replies.json", OUTFILE_SUFFIX));
+    writeFileSync(repliesPath, JSON.stringify(repliesFile, null, 2), "utf8");
+    console.log(`[run-eval] Wrote ${repliesPath} (full replies, re-scorable)`);
+  }
   if (REFERRAL_REPROMPT) {
     console.log(`[run-eval] [ReferralReprompt] total fires this run: ${referralRepromptFires}`);
   }

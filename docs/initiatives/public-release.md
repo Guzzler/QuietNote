@@ -120,6 +120,34 @@ increment. After it ships, this initiative is release-ready and everything
 remaining (R4, LICENSE) is Sharang-gated — do not invent further items here;
 model-quality (M1/M2a) is where open work lives.
 
+**Audit walk (2026-07-29, execute — `npm run build` (green) +
+`npm run test` (1099 green, 68 files) + `npx vite preview` on `:4173`, WebLLM
+default, Chromium via Playwright):** at run start the only open queue item
+anywhere was F2 (gated on R4), so the queue-empty rule sent this run to an
+audit walk; the planner pushed M9/M10 to `main` mid-walk (commit 470d711),
+which the run then picked up and worked. The walk's finding stands either way.
+Walked load → writing surface → first exchange → second turn →
+reload persistence → session re-open. Working: model loaded from cache with no
+errors; the AI-limitations disclaimer + Crisis resources button render above
+the transcript; mode strip in the shipped order; all four footer links carry
+the correct hrefs; the new session persisted through a full reload (sidebar
+"Today felt heavy." / "Worked through sad feelings around relationships." +
+"Pick up where you left off" card + fully restored two-turn transcript on
+re-open, which also confirms the reply text is what is stored in IndexedDB).
+**0 console errors** (one benign Chromium `powerPreference`-ignored WebGPU
+warning, crbug.com/369219127).
+**One defect found — filed as model-quality M11 (proposed):** both assistant
+replies opened with a stray unmatched `"` (`"Feeling guilty about letting your
+friend down…`, `"Staying late at work and skipping dinner…`) — 2/2 turns, and
+persisted, so it is in the reply text, not a render artifact. Also observed
+(not a new item — existing echo/parroting evidence for M1/M4): turn 2 ignored
+the new disclosure ("scared of being seen as replaceable") and restated turn
+1's content. Same scope caveat as 07-21/07-22/07-26/07-27: the Playwright
+profile was persistent (prior sessions present), so this was a returning-user
+walk, not a true fresh-profile cold start — the fresh-profile matrix stays the
+2026-07-12 R2 read, to be re-run on the live URL at R4. Screenshots:
+`docs/screenshots/2026-07-29/`.
+
 **Queue-empty audit (2026-07-27, execute — `npm run build` (green) +
 `npm run test` (1066 green) + `npx vite preview` on `:4173`, WebLLM default,
 Chromium via Playwright):** every non-gated item across all four initiatives
