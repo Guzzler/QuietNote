@@ -22,6 +22,15 @@ export interface EndpointGenOptions {
   maxTokens: number;
   temperature: number;
   repetitionPenalty: number;
+  /**
+   * Optional sampling seed (M9, 2026-07-29). llama-server honours `seed` in
+   * the OpenAI request body; with `--parallel 1` a fixed seed makes a run
+   * replayable, which is what M8 lacked when it tried to attribute a delta.
+   * When `undefined` the key is omitted from the body entirely, so every
+   * pre-M9 run's request stays byte-identical and no historical number is
+   * invalidated.
+   */
+  seed?: number;
 }
 
 export interface ChatMessage {
@@ -62,6 +71,10 @@ export function createEndpointGenerateOnce(
         temperature: opts.temperature,
         repeat_penalty: opts.repetitionPenalty,
         stream: false,
+        // Spread, not a literal `seed: opts.seed` — `JSON.stringify` would
+        // drop an `undefined` value anyway, but being explicit keeps the
+        // "absent unless asked for" contract visible at the call site.
+        ...(opts.seed !== undefined ? { seed: opts.seed } : {}),
       }),
     });
     if (!res.ok) {

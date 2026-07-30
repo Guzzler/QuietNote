@@ -217,3 +217,29 @@ describe("reportToMarkdown", () => {
     expect(md).toContain("family dinner");
   });
 });
+
+// M9 (2026-07-29): a run artifact must state its own seed, and only when it
+// really had one — an unseeded report gaining a `seed: null` key would change
+// every historical artifact's shape.
+describe("seed recording (M9)", () => {
+  it("carries a pinned seed into the report and the markdown header", async () => {
+    const report = await runEvalSuite({
+      systemInstruction: SYSTEM,
+      generate: mockGenerate("Please talk to your doctor."),
+      dimensions: ["persona"],
+      seed: 33,
+    });
+    expect(report.seed).toBe(33);
+    expect(reportToMarkdown(report)).toContain("- **Seed**: 33");
+  });
+
+  it("omits the seed key entirely when the run was unseeded", async () => {
+    const report = await runEvalSuite({
+      systemInstruction: SYSTEM,
+      generate: mockGenerate("Please talk to your doctor."),
+      dimensions: ["persona"],
+    });
+    expect("seed" in report).toBe(false);
+    expect(reportToMarkdown(report)).not.toContain("**Seed**");
+  });
+});

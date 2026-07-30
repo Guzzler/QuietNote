@@ -154,6 +154,31 @@ const MODEL_LABEL =
   modelLabelArg?.split("=").slice(1).join("=") ??
   (ENDPOINT ? `OpenAI-compatible endpoint (${ENDPOINT})` : "Gemma 4 E2B (Node onnxruntime-node)");
 
+// M9 (2026-07-29): --seed=<n> pins llama-server's sampler so a run is
+// replayable. Endpoint path ONLY — the local ONNX path
+// (@huggingface/transformers `generate`) exposes no seed knob, so passing
+// --seed without --endpoint must fail loudly rather than silently produce an
+// unseeded run that claims a seed in its artifacts.
+const seedArg = args.find((a) => a.startsWith("--seed="));
+let SEED: number | undefined;
+if (seedArg) {
+  const raw = seedArg.split("=")[1];
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed)) {
+    console.error(`[run-eval] --seed must be an integer, got "${raw}".`);
+    process.exit(1);
+  }
+  if (!ENDPOINT) {
+    console.error(
+      "[run-eval] --seed requires --endpoint=<url>: the local ONNX generate() " +
+        "path has no seed knob, so a seeded run is impossible there. Re-run " +
+        "with --endpoint, or drop --seed."
+    );
+    process.exit(1);
+  }
+  SEED = parsed;
+}
+
 const outdirArg = args.find((a) => a.startsWith("--outdir="));
 const OUTDIR_NAME = outdirArg ? outdirArg.split("=")[1] : undefined;
 const suffixArg = args.find((a) => a.startsWith("--outfile-suffix="));
@@ -168,12 +193,16 @@ const OUT_DIR = join(REPO_ROOT, "docs", "eval-runs", resolveOutDirName(OUTDIR_NA
 async function main() {
   let generateOnce: (messages: { role: string; content: string }[]) => Promise<string>;
   if (ENDPOINT) {
-    console.log(`[run-eval] Targeting endpoint ${ENDPOINT} (${MODEL_LABEL})`);
+    console.log(
+      `[run-eval] Targeting endpoint ${ENDPOINT} (${MODEL_LABEL})` +
+        ` seed=${SEED === undefined ? "unset" : SEED}`
+    );
     const { createEndpointGenerateOnce } = await import("../src/utils/endpointGenerate.ts");
     generateOnce = createEndpointGenerateOnce(ENDPOINT, {
       maxTokens: GEN_DEFAULTS.max_new_tokens,
       temperature: GEN_DEFAULTS.temperature,
       repetitionPenalty: GEN_DEFAULTS.repetition_penalty,
+      seed: SEED,
     });
   } else {
     console.log(`[run-eval] Loading ${MODEL_ID} via @huggingface/transformers (Node)…`);
@@ -292,7 +321,7 @@ async function main() {
     }
     try {
       const report = await runEvalSuite(
-        { systemInstruction, generate, dimensions, onProgress: progress(mode) },
+        { systemInstruction, generate, dimensions, onProgress: progress(mode), seed: SEED },
         MODEL_LABEL
       );
       writeMarkdown(mode, report);
@@ -408,6 +437,9 @@ async function main() {
     modelLabel: report.modelLabel,
     startedAt: report.startedAt,
     finishedAt: report.finishedAt,
+    // M9: the seed key appears only on seeded runs, so unseeded summary.json
+    // files keep the historical shape exactly.
+    ...(report.seed !== undefined ? { seed: report.seed } : {}),
     summary: report.summary,
   }));
   let summary: unknown = modeSummaries;

@@ -8,6 +8,14 @@ export interface EvalRunOptions {
   dimensions?: EvalDimension[];
   onProgress?: (done: number, total: number, last: EvalResult) => void;
   signal?: AbortSignal;
+  /**
+   * Sampling seed this run was generated under (M9, 2026-07-29) — recorded
+   * only, never used for scoring. A run artifact that doesn't state its own
+   * seed is not replayable, which is what blocked M8's attribution. Omitted
+   * (not `null`) when the run had no pinned seed, so pre-M9 artifacts keep
+   * their exact shape.
+   */
+  seed?: number;
 }
 
 export interface EvalRunReport {
@@ -15,6 +23,7 @@ export interface EvalRunReport {
   finishedAt: string;
   modelLabel: string;
   systemInstruction: string;
+  seed?: number;
   results: EvalResult[];
   summary: {
     total: number;
@@ -96,6 +105,7 @@ export async function runEvalSuite(
     finishedAt: new Date().toISOString(),
     modelLabel,
     systemInstruction: opts.systemInstruction,
+    ...(opts.seed !== undefined ? { seed: opts.seed } : {}),
     results,
     summary: {
       total: results.length,
@@ -114,6 +124,8 @@ export function reportToMarkdown(report: EvalRunReport): string {
   lines.push("");
   lines.push(`- **Started**: ${report.startedAt}`);
   lines.push(`- **Finished**: ${report.finishedAt}`);
+  // M9: state the seed in the artifact itself when the run pinned one.
+  if (report.seed !== undefined) lines.push(`- **Seed**: ${report.seed}`);
   lines.push(`- **Total cases**: ${report.summary.total}`);
   lines.push(`- **Passed**: ${report.summary.passed} (${Math.round((report.summary.passed / report.summary.total) * 100)}%)`);
   lines.push(`- **Failed**: ${report.summary.failed}`);
