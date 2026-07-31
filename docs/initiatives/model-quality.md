@@ -222,6 +222,8 @@ parked list stays parked.
 | M8 | **Measurement-integrity audit of the residual gate failures** (planner-found 2026-07-28): classify every remaining medical_refusal/jailbreak/persona failure as REAL vs MATCHER ARTIFACT against each case's own `expectedBehavior`, repair the artifacts one-directionally, re-score the preserved M6 GGUF locally | DONE 2026-07-28 (this PR) — 9 artifacts repaired + 19-entry leak set; corrected gate read on M6 is **GATE FAIL**. **Bigger finding: the gate regenerates rather than replays** (no seed pinned), so run-to-run noise is ≥2 cases per floor — the same size as the residual three training runs have chased. Seed-pinning is the next instrument fix (filed, not executed) |
 | M9 | **Instrument fix: pin the seed + capture full replies + offline re-score.** M8's own headline is that the gate regenerates rather than replays (no seed anywhere, `temperature: 0.6`), so its noise band (≥2 cases/floor) is the same size as the residual three Colab runs have chased. Add `seed` to the endpoint request + `--seed=` to `run-eval.ts`, persist untruncated replies, add `--rescore=<dir>`, then read the gate 3× on the preserved M6 GGUF and record the spread | QUEUED 2026-07-29 (planner) — gate-triggering harness work; free (no Colab, no API). **Must land and be characterised before any further training run** (standing "the measuring instrument is not a variable" rule) |
 | M10 | **The 4 newly surfaced matcher artifacts, ruled on cold** — M8 deliberately left them unfixed because fixing after seeing a run's failures is homework-grading. The planner has now ruled on them without a run in flight (see the ruling section); all four fall in the two families M8 already validated | QUEUED 2026-07-29 (planner) — gated on M9 landing first, so the delta is scored on M9's captured replies at pinned seeds (pure matcher delta, zero sampling mixed in) |
+| M11 | **Strip the unmatched leading quote from replies** — the shipped default engine (WebLLM / Gemma 2 2B) opened 2/2 replies with a stray `"` in the 07-29 audit walk; it is the first thing a stranger sees the AI "say" | QUEUED, planner-CONFIRMED 2026-07-30 — shape decided (shared `stripUnmatchedLeadingQuote` at the App finalize point + `evalRunner.ts`); grounded as an engine artifact, **not** a data artifact (0 leading quotes in 900 M6-GGUF replies). Gate-triggering; take it **after** M10 and M12 |
+| M12 | **Make a seeded read actually replayable** (`cache_prompt: false`) — M9 measured that a pinned seed does not reproduce a suite read; the mechanism (llama-server prefix-cache path dependence) is isolated and the fix probed 3/3 | QUEUED 2026-07-29 (execute-proposed), planner-ordered 2026-07-30 to run **before** M11 so M11's 3-seed read lands on a characterised instrument |
 | M7 | Teacher-side **fluency + style pass** (generator only; effective on the NEXT data build, which is Sharang's $-gated call — this does not regenerate): STYLE_CONSTRAINTS rotation on EVERY card (1-in-5 had zero effect: em-dash 69.1%→69.0%) + sentence-length pressure (+21% drift) + a "never repeat the dose figure" line in the safety-medical exemplar | DONE (this PR) — all three shipped generator-side; bites on the next data build |
 
 ## Task queue
@@ -514,16 +516,66 @@ parked list stays parked.
   diagnostic / dismissive / length) and `responseShaping.ts` only re-prompts;
   the one precedent for cleaning engine output is M1c's
   `TurnMarkerStreamFilter` in `mediapipe-engine.ts:80`, which is per-engine.
-  Suggested shape (planner to confirm before execute takes it): a small,
-  well-tested cosmetic unwrap applied where the final reply is assembled —
-  drop a leading `"` **only** when there is no matching closing quote, so
-  genuine quoted text is left alone; never alter the interior. **Hard
-  constraints if taken:** it touches the App send path, so it **IS
-  gate-triggering**; the five safety utils, `src/prompts/` and `echoMetric.ts`
-  stay untouched. Open question for the planner: whether this belongs here or
-  is better fixed teacher-side/at the engine boundary, and whether the same
-  artifact appears in the GGUF eval corpus (a `--rescore`-era `replies.json`
-  makes that checkable for free now).
+  **Planner ruling 2026-07-30 — CONFIRMED, take it; the open question is
+  answered and the shape is fixed below. Do not re-derive it.**
+
+  *Grounding done this run (measured, not assumed — the check M11 asked for).*
+  Scanned all three `--rescore`-era corpora
+  (`2026-07-29-m9-seed{22,33}`, `seed11-replay`) — **900 M6-GGUF replies, 300
+  per corpus, 4 modes**: **0 begin with a quote character** (`"` or `“`), and
+  only **11 of 900 contain one anywhere**. So the artifact is **absent from
+  the fine-tune corpus** and is a property of the *currently shipped* default
+  engine path (WebLLM / Gemma 2 2B), not of the M2 teacher data.
+
+  *Answers to the two open questions:*
+  1. **Not teacher-side.** There is nothing to fix there — the corpus does not
+     exhibit it (0/900), and the fine-tune is not the shipped model anyway.
+     Fixing it teacher-side would also be untestable until M5 ships.
+  2. **Not per-engine.** M1c's `TurnMarkerStreamFilter`
+     (`mediapipe-engine.ts:80`) is the only cleanup precedent and it is
+     MediaPipe-only; this artifact was observed on **WebLLM**, so a
+     per-engine fix would have to be written three times
+     (`webllm-engine.ts`, `mediapipe-engine.ts`, `transformersjs-engine.ts`)
+     and would drift. It belongs at the **one place the whole reply exists**.
+
+  *Decided shape (execute implements exactly this):*
+  - New pure util `src/utils/replyCleanup.ts` exporting
+    `stripUnmatchedLeadingQuote(text: string): string`. Rule: after leading
+    whitespace, if position 0 is `"` or `“`, strip that **one** character
+    **only when the string has no closing partner** — i.e. an odd total count
+    of `"`, or a `“` with no `”`. Never touch the interior, never touch a
+    balanced pair, never strip more than one character, empty/short input
+    returns unchanged.
+  - Wire it in at the **finalize** point in `App.tsx`, both send paths
+    (`:439` and `:634`, verified this run):
+    `stripUnmatchedLeadingQuote(truncateToLastSentence(acc))` — **after**
+    truncation, **before** `sanitizeResponse`, so the guardrails still run on
+    whatever is stored and no safety util is touched.
+  - **Accepted tradeoff, stated so execute doesn't get creative:** the stray
+    `"` stays visible during streaming and disappears at finalize. Do **not**
+    try to strip mid-stream — "unmatched" is undecidable before the reply
+    ends, and a mid-stream rule would eat the opening quote of genuinely
+    quoted text.
+  - Also call it in `evalRunner.ts` at the same relative position (after
+    reply assembly, before matching) so the eval stays app-faithful. This is
+    a **grounded no-op** on the current corpus (0/900), which makes it
+    free to verify — see (d).
+
+  **Hard constraints:** touches the App send path *and* `evalRunner.ts` →
+  **gate-triggering**; `crisisDetection.ts`, `responseGuardrails.ts`,
+  `responseShaping.ts`, `referralReprompt.ts`, `src/prompts/` and
+  `echoMetric.ts` all stay untouched; floors unchanged.
+  → **Verify:** (a) unit tests for `stripUnmatchedLeadingQuote` — strips the
+  two observed replies from `docs/screenshots/2026-07-29/`; leaves
+  `He said "hello" to me.` and a fully-quoted `"..."` reply untouched; leaves
+  a leading quote alone when a closing one exists; idempotent. (b) A test
+  pinning both `App.tsx` call sites so a future edit can't drop one.
+  (c) `npm run build` + `npm run test` green. (d) `--rescore` seeds 22 and 33
+  → the delta must be **exactly zero on every floor** (the no-op prediction;
+  a non-zero delta means the util is matching something it shouldn't and the
+  PR is rejected). (e) Then the 3-seed generate read, per the gate.
+  (f) Re-drive the two-turn free-write session on `npx vite preview` and
+  screenshot that the reply no longer opens with `"`.
 
 - [ ] 2026-07-29 · **M12 — Make a seeded read actually replayable
   (`cache_prompt: false`)** (**proposed by execute from M9's measurement**;
@@ -549,14 +601,41 @@ parked list stays parked.
   replayable instrument would make the min/median/max table collapse to three
   reproducible points and finally let a Colab run be attributed).
 
-**Queue status (2026-07-29, planner): 2 open items (M9, M10), both free.**
-M8 closed the queue with a filed-but-unexecuted recommendation; leaving that
-unqueued for a second run would repeat the 2026-07-25 planning miss (a gate
-finding with no queue item). Nothing else non-gated is open across the four
-initiatives; public-release and human-feedback stay release-ready/gated.
+**Queue status (2026-07-30, planner): 3 open items — M10, M12, M11 — all free
+(no Colab, no API spend). Work them in THAT order, not file order:**
 
-**Doc size (honest note): this file is ~1,000 lines against the README's ~200
-guideline** — nine increments across four training runs, and the rule's remedy
+1. **M10 first.** It is scored by `--rescore` on stored text, so it needs
+   nothing from the generator and its delta is provable. Its M9 gate cleared
+   2026-07-29.
+2. **M12 second.** It changes what the generator does. Landing it before M11
+   means M11's mandatory 3-seed read is taken on an instrument that is
+   *knowably* replayable (or knowably not — either result is the finding),
+   instead of spending a fourth read into the ±2–3 band.
+3. **M11 last.** It is the only item that touches the app a stranger will
+   actually use, and its 3-seed read is the expensive one; it should be the
+   read that finally means something.
+
+M10 and M12 both touch harness/eval files and M11 touches `evalRunner.ts` too
+— **do not run them concurrently or fold them together**; one PR each, in
+order, so each delta stays attributable (the M8 lesson).
+
+Nothing else non-gated is open across the four initiatives; public-release and
+human-feedback stay release-ready/gated, and personalization stays gated on the
+quality bar. **The soft launch is still blocked by the quality bar, and the
+honest statement of where that stands is: no fine-tune has passed the gate, and
+after M9 we know three floors (empathy, medical checkin, medical thoughtrecord)
+are genuinely short while the other seven are inside the noise.**
+
+**Doc size (honest note, updated 2026-07-30): this file is ~1,260 lines against
+the README's ~200 guideline — it GREW ~85 lines this run** (the M11 ruling with
+its grounding, the revised variance corollary, two increment rows), offset only
+~10 by pruning the M4 full-data per-floor numbers. Stating that plainly rather
+than claiming progress: the prune rule is losing to the increment count, and the
+real remedy is that M10/M11/M12 close the harness era — once they land, the four
+gate-read sections collapse into one 3-seed table and this file should drop
+below 800. Original note follows.
+
+**this file is ~1,000 lines against the README's ~200 guideline** — nine increments across four training runs, and the rule's remedy
 (prune superseded content into the Ledger) has already been applied to M4a and,
 this run, to M2f (−72 lines). What remains is genuinely load-bearing: the
 standing decisions header, the four gate-read result sections that each later
@@ -604,9 +683,20 @@ down *before* M9's reads, so it cannot be tuned to a result afterwards.**
 - **A model-vs-model delta counts only if the two `[min, max]` ranges are
   disjoint.** Corollary, applied retroactively: M6b-vs-M6's medical
   regressions (−1/−2 per mode) and every `−1` in the M8 table are **not
-  established results**. The one M6b finding that survives this rule is
-  empathy 43→39 (a 4-case drop, outside the ≥2 band) — so "8× shifted the
-  register and cost empathy" stands, while "8× hurt medical refusal" does not.
+  established results**.
+  - **Revised 2026-07-30 (planner), on execute's flag from the M9 read.** The
+    protocol originally kept one survivor — "empathy 43→39, a 4-case drop,
+    outside the ≥2 band". M9 then *measured* empathy's spread at a **single
+    fixed model** as 5 (36 / 40 / 41), so a 4-case single-read drop sits
+    inside the band. Both endpoints were single unseeded reads, so neither
+    has a range at all and the disjoint-range test cannot even be applied.
+    **Ruling: no M6b-vs-M6 delta is an established result** — not medical,
+    not jailbreak, and not empathy. "8× shifted the register and cost
+    empathy" is **withdrawn** as a finding. What survives from M6b is only
+    the *decision*: 8× was tried, produced nothing measurably better, and
+    oversampling is not being pushed further — that stands on cost, not on
+    evidence of harm. M6 (6×) remains the reference model because it is the
+    one with a 3-seed read, not because it beat M6b.
 - **Report shape:** every future gate read records a per-floor
   `min / median / max` row across the three seeds, not a single number. A
   single-seed read is a smoke test, never a gate read.
@@ -659,13 +749,12 @@ its own.
 
 ## M4 full-data eval (2026-07-24/25) — GATE FAIL (superseded by the M6/M6b reruns below)
 
-Kept as the run that produced the root cause. The 1892-record retrain FAILED the
-gate: medical_refusal rose in 3 of 4 modes but cleared none (fw 11 / ci 13 /
-gr 12 / tr 12 against 14/15/16/16), jailbreak REGRESSED (fw 4→3, gr 5→3, ci 5→2),
-empathy 43/44, specificity 60/60, boundary 4/4 held, and the M1 rubric slipped
-97/99/98 → 90/92/90. Reports: `docs/eval-runs/2026-07-25/` and
-`docs/eval-runs/2026-07-25-m1-baseline-endpoint/`; full numbers in the 2026-07-25
-ledger rows.
+Kept **only** for the root cause below — the run's per-floor numbers are pruned
+2026-07-30 (they were single unseeded reads, so under the variance protocol they
+carry no attributable delta anyway). Headline: the 1892-record retrain FAILED the
+gate on medical_refusal in all four modes and regressed jailbreak. Full numbers:
+`docs/eval-runs/2026-07-25/`, `docs/eval-runs/2026-07-25-m1-baseline-endpoint/`,
+and the 2026-07-25 ledger rows.
 
 **Root cause (Sharang supplied the loss curve; over-training DISCONFIRMED — val
 loss fell 1.76→1.70, i.e. the model fit the data BETTER than the pilot and
@@ -876,6 +965,9 @@ three seeds it is **2–3 cases on every safety floor and 5 on empathy**
    **Flagged for the planner, not changed here** — that line is the planner's
    ruling to revise, and the honest reading now is that *no* M6b-vs-M6 delta is
    established. (`empathy 43` itself came from a single unseeded read.)
+   → **RULED 2026-07-30 (planner): flag upheld in full.** The empathy
+   survivor is withdrawn; no M6b-vs-M6 delta is an established result. See the
+   revised corollary in the variance-protocol section.
 
 ### Does a pinned seed actually make a read replayable? **No — and this is M9's real finding**
 
