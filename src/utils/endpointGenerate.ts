@@ -31,6 +31,21 @@ export interface EndpointGenOptions {
    * invalidated.
    */
   seed?: number;
+  /**
+   * Disable llama-server's prefix KV-cache reuse for this request (M12,
+   * 2026-07-30). M9 measured that a pinned `seed` does NOT make a suite read
+   * replayable: a 4th read at the same seed 11 drifted ±2 per floor. The
+   * mechanism is llama-server reusing the prefix cache across the suite's
+   * sequential requests, which makes each reply depend on what was generated
+   * before it. `cache_prompt: false` reprocesses the prompt every call and
+   * removed the divergence in 3/3 probes; the cost is ~2.3 s vs ~0.3 s per
+   * request.
+   *
+   * Same "absent unless asked for" contract as `seed` above: when `undefined`
+   * the key is omitted entirely, so every pre-M12 run's request body stays
+   * byte-identical and no historical number is invalidated.
+   */
+  cachePrompt?: boolean;
 }
 
 export interface ChatMessage {
@@ -75,6 +90,9 @@ export function createEndpointGenerateOnce(
         // drop an `undefined` value anyway, but being explicit keeps the
         // "absent unless asked for" contract visible at the call site.
         ...(opts.seed !== undefined ? { seed: opts.seed } : {}),
+        ...(opts.cachePrompt !== undefined
+          ? { cache_prompt: opts.cachePrompt }
+          : {}),
       }),
     });
     if (!res.ok) {

@@ -58,6 +58,51 @@ describe("endpointGenerate (M4a — OpenAI-compatible eval bridge)", () => {
     expect(JSON.parse(zero.mock.calls[0][1].body).seed).toBe(0);
   });
 
+  // M12 (2026-07-30): cache_prompt gets the same "absent unless asked for"
+  // treatment as seed, for the same reason — no historical run's request body
+  // may change. `false` is the value that matters, so the test must prove the
+  // key is present AND false, not merely falsy.
+  it("omits `cache_prompt` from the body when cachePrompt is not given", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
+    await createEndpointGenerateOnce("http://localhost:8080", OPTS, fetchMock)(MESSAGES);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect("cache_prompt" in body).toBe(false);
+  });
+
+  it("sends `cache_prompt: false` when cachePrompt is false", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
+    await createEndpointGenerateOnce(
+      "http://localhost:8080",
+      { ...OPTS, cachePrompt: false },
+      fetchMock,
+    )(MESSAGES);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect("cache_prompt" in body).toBe(true);
+    expect(body.cache_prompt).toBe(false);
+  });
+
+  it("sends `cache_prompt: true` when cachePrompt is true (the knob is not one-way)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
+    await createEndpointGenerateOnce(
+      "http://localhost:8080",
+      { ...OPTS, cachePrompt: true },
+      fetchMock,
+    )(MESSAGES);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).cache_prompt).toBe(true);
+  });
+
+  it("seed and cache_prompt are independent keys — both ride the same body", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
+    await createEndpointGenerateOnce(
+      "http://localhost:8080",
+      { ...OPTS, seed: 22, cachePrompt: false },
+      fetchMock,
+    )(MESSAGES);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.seed).toBe(22);
+    expect(body.cache_prompt).toBe(false);
+  });
+
   it("normalizes a trailing slash on the base URL", async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse("ok"));
     await createEndpointGenerateOnce("http://localhost:8080/", OPTS, fetchMock)(MESSAGES);

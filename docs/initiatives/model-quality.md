@@ -221,9 +221,9 @@ parked list stays parked.
 | M6b | Oversample 8× + 22 loop-authored targeted safety-medical exemplars (dataset 1914) — the "bump toward 8×" lever | DONE 2026-07-28 (Sharang's Colab run) — **GATE FAIL and net WORSE than M6 6×**: empathy fell below floor (43→39), medical dropped in 3 modes, jailbreak regressed fw/tr. **Oversampling is exhausted; 6× is the sweet spot** |
 | M8 | **Measurement-integrity audit of the residual gate failures** (planner-found 2026-07-28): classify every remaining medical_refusal/jailbreak/persona failure as REAL vs MATCHER ARTIFACT against each case's own `expectedBehavior`, repair the artifacts one-directionally, re-score the preserved M6 GGUF locally | DONE 2026-07-28 (this PR) — 9 artifacts repaired + 19-entry leak set; corrected gate read on M6 is **GATE FAIL**. **Bigger finding: the gate regenerates rather than replays** (no seed pinned), so run-to-run noise is ≥2 cases per floor — the same size as the residual three training runs have chased. Seed-pinning is the next instrument fix (filed, not executed) |
 | M9 | **Instrument fix: pin the seed + capture full replies + offline re-score.** M8's own headline is that the gate regenerates rather than replays (no seed anywhere, `temperature: 0.6`), so its noise band (≥2 cases/floor) is the same size as the residual three Colab runs have chased. Add `seed` to the endpoint request + `--seed=` to `run-eval.ts`, persist untruncated replies, add `--rescore=<dir>`, then read the gate 3× on the preserved M6 GGUF and record the spread | QUEUED 2026-07-29 (planner) — gate-triggering harness work; free (no Colab, no API). **Must land and be characterised before any further training run** (standing "the measuring instrument is not a variable" rule) |
-| M10 | **The 4 newly surfaced matcher artifacts, ruled on cold** — M8 deliberately left them unfixed because fixing after seeing a run's failures is homework-grading. The planner has now ruled on them without a run in flight (see the ruling section); all four fall in the two families M8 already validated | QUEUED 2026-07-29 (planner) — gated on M9 landing first, so the delta is scored on M9's captured replies at pinned seeds (pure matcher delta, zero sampling mixed in) |
+| M10 | **The 4 newly surfaced matcher artifacts, ruled on cold** — M8 deliberately left them unfixed because fixing after seeing a run's failures is homework-grading. The planner has now ruled on them without a run in flight (see the ruling section); all four fall in the two families M8 already validated | DONE 2026-07-30 (PR #116) — all four landed; 3-seed `--rescore` delta **non-negative on all 33 floor-readings** (4 up, 0 down, every flip `jailbreak-3.3`). **The artifact class is now closed and priced: 4 jailbreak cases, 0 medical.** Verdict unchanged: GATE FAIL, same floors as M9 — the residual is the model's |
 | M11 | **Strip the unmatched leading quote from replies** — the shipped default engine (WebLLM / Gemma 2 2B) opened 2/2 replies with a stray `"` in the 07-29 audit walk; it is the first thing a stranger sees the AI "say" | QUEUED, planner-CONFIRMED 2026-07-30 — shape decided (shared `stripUnmatchedLeadingQuote` at the App finalize point + `evalRunner.ts`); grounded as an engine artifact, **not** a data artifact (0 leading quotes in 900 M6-GGUF replies). Gate-triggering; take it **after** M10 and M12 |
-| M12 | **Make a seeded read actually replayable** (`cache_prompt: false`) — M9 measured that a pinned seed does not reproduce a suite read; the mechanism (llama-server prefix-cache path dependence) is isolated and the fix probed 3/3 | QUEUED 2026-07-29 (execute-proposed), planner-ordered 2026-07-30 to run **before** M11 so M11's 3-seed read lands on a characterised instrument |
+| M12 | **Make a seeded read actually replayable** (`cache_prompt: false`) — M9 measured that a pinned seed does not reproduce a suite read; the mechanism (llama-server prefix-cache path dependence) is isolated and the fix probed 3/3 | DONE 2026-07-30 (PR #117) — **decisive test PASSED: two reads at seed 11 are byte-identical (same sha256, 0/75 cases differing, deep-equal summaries).** The gate is replayable for the first time; a seeded read is now a fact, not a sample. **Cost was ~4× the estimate** (13m45s per *mode*, not per read → 3-seed gate read ≈ 2.75 h) |
 | M7 | Teacher-side **fluency + style pass** (generator only; effective on the NEXT data build, which is Sharang's $-gated call — this does not regenerate): STYLE_CONSTRAINTS rotation on EVERY card (1-in-5 had zero effect: em-dash 69.1%→69.0%) + sentence-length pressure (+21% drift) + a "never repeat the dose figure" line in the safety-medical exemplar | DONE (this PR) — all three shipped generator-side; bites on the next data build |
 
 ## Task queue
@@ -596,8 +596,23 @@ parked list stays parked.
   (f) Re-drive the two-turn free-write session on `npx vite preview` and
   screenshot that the reply no longer opens with `"`.
 
-- [ ] 2026-07-29 · **M12 — Make a seeded read actually replayable
-  (`cache_prompt: false`)** (**proposed by execute from M9's measurement**;
+- [x] 2026-07-29 · **M12 — Make a seeded read actually replayable
+  (`cache_prompt: false`)** (DONE 2026-07-30, PR **#117** — see the **M12 replay
+  proof** section below and the Ledger. **The decisive test PASSED: two reads at
+  seed 11 produced a byte-identical `replies.json` — sha256
+  `a02bd263…5ca8c485` on both, 0 of 75 cases differing, and identical scored
+  summaries.** The instrument is now genuinely replayable, which is the thing
+  M9's protocol assumed and M9 itself disproved. **Discrepancy from the task,
+  measured: the cost estimate was wrong by ~4×.** The task predicted a 4-mode
+  read would go from ~13 min to ~25–30 min; the measured cost is **13m45s per
+  *mode*** (~11 s/request; 78 requests/mode = 75 cases + 3 referral-reprompt
+  fires), so a 4-mode read is ~55 min and a **3-seed gate read is ~2.75 h**.
+  The probe that produced "~2.3 s vs ~0.3 s" measured short prompts in
+  isolation; the suite's are ~1500 tokens and reprocessed in full every call
+  (confirmed in the server log: `progress` climbs 0→1 on every request).)
+  <details><summary>original task</summary>
+
+  (**proposed by execute from M9's measurement**;
   free). M9 measured what the protocol assumed: a pinned seed does **not**
   reproduce a suite read (see the replay table above — same seed 11, ±2 per
   floor). The mechanism is isolated and the fix is probed: llama-server reuses
@@ -619,14 +634,21 @@ parked list stays parked.
   3-seed read and, if the replay is exact, re-state the noise band (a genuinely
   replayable instrument would make the min/median/max table collapse to three
   reproducible points and finally let a Colab run be attributed).
+  </details>
 
-**Queue status (2026-07-30, execute): M10 SHIPPED this run (PR #116) — 2 open
-items left, M12 then M11, both still free.** The planner's ordering below is
-unchanged for the remaining two. One thing M10 settled that the ordering
-assumed but could not know: the matcher-artifact class is now **closed and
-measured** — it was worth 4 cases, all jailbreak, zero medical — so M11's and
-M12's reads no longer have a matcher confounder to argue about, only the
-generator's non-replayability (M12's target).
+**Queue status (2026-07-30, execute): M10 (PR #116) and M12 (PR #117) both
+SHIPPED this run — 1 open item left, M11, still free.** Two things the ordering
+assumed but could not know, both now measured:
+
+1. The matcher-artifact class is **closed and priced** — 4 cases, all jailbreak,
+   zero medical (M10). No matcher confounder remains to argue about.
+2. The generator is **exactly replayable** (M12) — so M11's mandatory 3-seed
+   read lands on an instrument where a difference means something, which is
+   precisely why the planner ordered M12 before M11. That ordering paid off.
+
+**The one thing a future run must budget for:** a 3-seed gate read now costs
+~2.75 h of wall clock (see the M12 cost table). M11 is gate-triggering, so it
+needs a run with room for that — it does not fit alongside two other PRs.
 
 <details><summary>original ordering rationale (planner, 2026-07-30)</summary>
 
@@ -730,6 +752,49 @@ down *before* M9's reads, so it cannot be tuned to a result afterwards.**
 - **Report shape:** every future gate read records a per-floor
   `min / median / max` row across the three seeds, not a single number. A
   single-seed read is a smoke test, never a gate read.
+
+## M12 replay proof (2026-07-30, execute) — **the instrument is now exactly replayable**, and it costs ~4× more than predicted
+
+Two reads, identical invocation, same seed, `cache_prompt: false` on both
+(`docs/eval-runs/2026-07-30-m12-replay{A,B}/`, freewrite, 75 cases,
+`--referral-reprompt` ON, llama-server `--parallel 1` on the preserved M6 GGUF):
+
+| | read A | read B |
+|---|---|---|
+| `replies.json` sha256 (freewrite map) | `a02bd263…5ca8c485` | `a02bd263…5ca8c485` |
+| cases differing | — | **0 / 75** |
+| scored summary | 67/75 | **67/75, deep-equal** |
+
+**This is the first time in the project's history that a suite read has
+reproduced.** M9's contrary result is also reproduced in the other direction:
+read A vs M9's `seed11-replay` (same seed, cache **on**) differ on **69 of 75**
+cases — so the prefix-cache path dependence M9 isolated was the whole mechanism,
+and disabling it removes the whole divergence, not part of it.
+
+**What this changes.** The variance protocol's min/median/max table exists
+because a read could not be replayed. From M12 onward a seeded read is a
+*fact*, not a sample: any two runs of the same model at the same seed are the
+same run. Model-vs-model deltas at a fixed seed are therefore attributable for
+the first time — a Colab run can finally be judged. The three-seed rule still
+stands, but it now measures **seed sensitivity** (a real property of the model)
+rather than **instrument noise** (an artifact we could not see past).
+
+**The cost, measured rather than assumed.** M12's task predicted ~25–30 min for
+a 4-mode read. Actual: **13m45s per mode** at ~11 s/request, 78 requests per
+mode (75 cases + 3 referral-reprompt fires). So:
+
+| | cache on (through M9) | `cache_prompt: false` (M12) |
+|---|---|---|
+| per mode | ~3.5 min | **~13m45s** |
+| 4-mode read | ~13 min | **~55 min** |
+| 3-seed gate read | ~45 min | **~2.75 h** |
+
+~4× the predicted cost, because the probe timed short prompts in isolation while
+the suite's are ~1500 tokens and are reprocessed in full on every call (the
+server log shows `progress` climbing 0→1 on each request — the cache really is
+bypassed). **Planning consequence, stated so a future run does not rediscover
+it: a 3-seed gate read no longer fits alongside other work in one loop run.**
+Budget a run for it, or accept that a gate-triggering harness PR will span two.
 
 ## M10 re-score (2026-07-30, execute) — matcher delta is **+4 jailbreak, 0 everywhere else**; verdict still **GATE FAIL**
 

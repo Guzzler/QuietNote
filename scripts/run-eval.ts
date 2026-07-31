@@ -298,6 +298,14 @@ async function main() {
       temperature: GEN_DEFAULTS.temperature,
       repetitionPenalty: GEN_DEFAULTS.repetition_penalty,
       seed: SEED,
+      // M12 (2026-07-30): a seeded run also disables llama-server's prefix
+      // KV-cache reuse. M9 measured that `seed` alone does not make a read
+      // replayable (same seed 11, ±2 per floor) because each request reuses
+      // the cache left by the previous one. A seeded run that is knowably
+      // non-replayable is the thing worth preventing, so the two travel
+      // together; unseeded runs send neither key and stay byte-identical to
+      // every historical run.
+      cachePrompt: SEED !== undefined ? false : undefined,
     });
   } else {
     console.log(`[run-eval] Loading ${MODEL_ID} via @huggingface/transformers (Node)…`);
