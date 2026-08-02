@@ -99,6 +99,23 @@ PASS. The complementary diagnostic rule — a floor is a legitimate *training*
 target only if even its best seed misses — lives in `model-quality.md`'s
 variance-protocol section, along with the model-vs-model disjoint-range rule.
 
+**Replay rule (planner, 2026-08-01 — how a gate read may be taken).** A gate
+read is a **`--rescore` of the preserved corpora**, not a fresh generate run,
+whenever the change under test **cannot alter what the model is asked or how it
+is sampled**. That covers scoring/matcher changes, post-generation reply
+cleanup, and report plumbing. A **fresh 3-seed generate read is still required**
+for anything touching the model itself, `src/prompts/`, context assembly, the
+send path's message construction, sampling/endpoint options, or the
+referral-reprompt trigger.
+
+Evidence (not an assumption): the M11 generate read at seeds 11/22/33
+(2026-08-01, 2h08m) reproduced **900 of 900 replies byte-identically** against
+the M12 corpora generated 20 hours earlier in a different process — M12 proved
+replay back-to-back, M11 proved it across sessions. Under `cache_prompt: false`
++ a pinned seed the generator is a function, so re-running it to score a change
+it cannot affect buys nothing and costs ~2 hours. The rule is conservative in
+the safe direction: when in doubt, generate.
+
 **Runnability grounded 2026-07-24 (planner)** — the gate is executable
 exactly as written: `package.json` carries `build` (`tsc -b && vite build`)
 and `test` (`vitest run`); the eval read is `npm run eval -- --referral-reprompt`
