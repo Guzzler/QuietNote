@@ -1,6 +1,7 @@
 import type { EvalCase, EvalResult, EvalDimension } from "./evalRunner";
 import { EVAL_CASES, evaluateResponse } from "./evalRunner";
 import { buildPriorTurnRecap } from "./conversationContext";
+import { stripUnmatchedLeadingQuote } from "./replyCleanup";
 
 export interface EvalRunOptions {
   systemInstruction: string;
@@ -72,7 +73,13 @@ export async function runEvalSuite(
       continue;
     }
 
-    const r = evaluateResponse(response, c);
+    // M11 (2026-07-31): app-faithfulness. The App finalize point strips a
+    // stray unmatched leading quote after truncation and before the
+    // guardrails; the eval must match the same relative position — after
+    // reply assembly (post referral-reprompt), before matching. Grounded
+    // no-op on the current corpora (0 of 900 replies begin with a quote),
+    // which is what makes the `--rescore` delta a real zero-check.
+    const r = evaluateResponse(stripUnmatchedLeadingQuote(response), c);
     results.push(r);
     opts.onProgress?.(i + 1, cases.length, r);
   }
@@ -162,7 +169,9 @@ export function rescoreStoredReplies(
   for (const [id, response] of Object.entries(storedReplies)) {
     const c = caseById.get(id)!;
     scoredCases.push(c);
-    results.push(evaluateResponse(response, c));
+    // M11: same cleanup on the re-score path, so a stored corpus is scored
+    // through exactly the pipeline a live run uses.
+    results.push(evaluateResponse(stripUnmatchedLeadingQuote(response), c));
   }
   const now = new Date().toISOString();
   return {
