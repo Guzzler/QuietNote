@@ -223,7 +223,9 @@ parked list stays parked.
 | M9 | **Instrument fix: pin the seed + capture full replies + offline re-score.** M8's own headline is that the gate regenerates rather than replays (no seed anywhere, `temperature: 0.6`), so its noise band (≥2 cases/floor) is the same size as the residual three Colab runs have chased. Add `seed` to the endpoint request + `--seed=` to `run-eval.ts`, persist untruncated replies, add `--rescore=<dir>`, then read the gate 3× on the preserved M6 GGUF and record the spread | QUEUED 2026-07-29 (planner) — gate-triggering harness work; free (no Colab, no API). **Must land and be characterised before any further training run** (standing "the measuring instrument is not a variable" rule) |
 | M10 | **The 4 newly surfaced matcher artifacts, ruled on cold** — M8 deliberately left them unfixed because fixing after seeing a run's failures is homework-grading. The planner has now ruled on them without a run in flight (see the ruling section); all four fall in the two families M8 already validated | DONE 2026-07-30 (PR #116) — all four landed; 3-seed `--rescore` delta **non-negative on all 33 floor-readings** (4 up, 0 down, every flip `jailbreak-3.3`). ~~The artifact class is now closed and priced: 4 jailbreak cases, 0 medical.~~ **CORRECTED 2026-07-31 (planner): that claim is FALSIFIED.** M10's re-score ran on the M9 corpora, which happened not to use the colliding constructions; the M12 corpus surfaces **3 more live artifacts (2 medical, 1 jailbreak)** in the same two families — see the 2026-07-31 cold ruling. Verdict unchanged: GATE FAIL |
 | M11 | **Strip the unmatched leading quote from replies** — the shipped default engine (WebLLM / Gemma 2 2B) opened 2/2 replies with a stray `"` in the 07-29 audit walk; it is the first thing a stranger sees the AI "say" | QUEUED, planner-CONFIRMED 2026-07-30 — shape decided (shared `stripUnmatchedLeadingQuote` at the App finalize point + `evalRunner.ts`); grounded as an engine artifact, **not** a data artifact (0 leading quotes in 900 M6-GGUF replies). Gate-triggering **in the expensive way** (a fresh 3-seed generate read, ~2.75 h); take it **after** M13, so that read lands on final matchers. Grounding re-confirmed 2026-07-31: the two finalize points are still `App.tsx:439` and `:634` and no `replyCleanup.ts` exists yet. **DONE 2026-08-01, PR #119** — the built tree landed verbatim (no rebuild, no re-run of the 2h08m read); reload screenshot re-taken. Gate read = the committed 3-seed generate read: **GATE FAIL**, same 5 floors as M13, model-attributable. The user-visible wrapper artifact survives it → **M11b** |
-| M11b | **Strip the model's self-quoting wrapper** — the artifact M11 was written against is the *odd-count* subcase; execute's own M11 screenshot shows the shipped engine wrapping its whole opening reflection in a **balanced** `"…"` pair, which M11 correctly leaves alone. 2/2 turns. The user-visible defect M11 was queued to remove is therefore still there | QUEUED 2026-08-01 (planner), ruled cold below — extends `replyCleanup.ts` only; gated on M11 landing first |
+| M11b | **Strip the model's self-quoting wrapper** — the artifact M11 was written against is the *odd-count* subcase; execute's own M11 screenshot shows the shipped engine wrapping its whole opening reflection in a **balanced** `"…"` pair, which M11 correctly leaves alone. 2/2 turns. The user-visible defect M11 was queued to remove is therefore still there | QUEUED 2026-08-01 (planner), ruled cold below — extends `replyCleanup.ts` only; gated on M11 landing first (M11 landed, PR #119). **2026-08-02: BUILT + MEASURED, not committed** — the tree is on `release/2026-08-01-m11b-self-quote-wrapper` and the planner verified criterion (c) directly: all 12 mode summaries across seeds 11/22/33 are deep-equal to the M11 originals, i.e. the predicted exact zero delta. Remaining: the narrowed (d) screenshots, then land it |
+| M14 | **The shipped engine can repeat a reply verbatim across turns** — WebLLM / Gemma 2 2B returned a byte-identical turn 2 in the M11 verification session, to a user turn that answered its own question. Worse stranger-facing defect than the quote artifacts: the app looks broken, not clumsy | PROPOSED by execute 2026-08-01; **planner-ruled 2026-08-02 — defect CONFIRMED, fix deliberately NOT queued.** Sampling REJECTED (`repetition_penalty` is already 1.3, the value M1 says works); default-swap priced at **1.49→3.15 GB** and sent to Sharang; detector deferred. See the M14 cold ruling |
+| M14a | **Does the E2B path repeat too?** The one unmeasured variable that decides M14's shape — nobody has driven Transformers.js two turns. 3 sessions per engine, identical entries, doc + screenshots only | QUEUED 2026-08-02 (planner) — free, no code, no eval read, not gate-triggering. Decision rule for the next run is fixed in the ruling section *before* the data exists |
 | M13 | **Finish two unfinished matcher repairs + the `override` collision** (planner-found 2026-07-31): M10's "artifact class closed" claim is falsified — the M12 corpus surfaces 3 more live artifacts, two of them the unfinished halves of repairs M8/M10 already made in the same case. Ruled cold; 5 further candidates REJECTED, 2 as real leaks | QUEUED 2026-07-31 (planner) — free, scored by `--rescore` on stored text (no generate run). Flips **one floor FAIL→PASS** (jailbreak checkin); verdict stays GATE FAIL. Take it **before M11** |
 | M12 | **Make a seeded read actually replayable** (`cache_prompt: false`) — M9 measured that a pinned seed does not reproduce a suite read; the mechanism (llama-server prefix-cache path dependence) is isolated and the fix probed 3/3 | DONE 2026-07-30 (PR #117) — **decisive test PASSED: two reads at seed 11 are byte-identical (same sha256, 0/75 cases differing, deep-equal summaries).** The gate is replayable for the first time; a seeded read is now a fact, not a sample. **Cost was ~4× the estimate** (13m45s per *mode*, not per read → 3-seed gate read ≈ 2.75 h) |
 | M7 | Teacher-side **fluency + style pass** (generator only; effective on the NEXT data build, which is Sharang's $-gated call — this does not regenerate): STYLE_CONSTRAINTS rotation on EVERY card (1-in-5 had zero effect: em-dash 69.1%→69.0%) + sentence-length pressure (+21% drift) + a "never repeat the dose figure" line in the safety-medical exemplar | DONE (this PR) — all three shipped generator-side; bites on the next data build |
@@ -634,7 +636,35 @@ parked list stays parked.
 - [ ] 2026-08-01 · **M11b — Strip the model's self-quoting wrapper**
   (planner-ruled cold this run from execute's own M11 screenshot; free — no
   Colab, no API, no generate run. **Gated on M11 landing first**, so the diff
-  sits on top of `replyCleanup.ts` rather than racing it.) In
+  sits on top of `replyCleanup.ts` rather than racing it.)
+
+  **STATUS 2026-08-02 (planner): built and measured, not committed — the M11
+  pattern again.** Branch `release/2026-08-01-m11b-self-quote-wrapper` carries
+  the working tree (`replyCleanup.ts` +89, its test +188, the two `App.tsx`
+  finalize points, `evalDriver.ts`'s new `cleanReply()` composing both rules on
+  the live *and* `--rescore` paths) and
+  `docs/eval-runs/2026-08-01-m11b-rescore-seed{11,22,33}/` carries the re-score.
+  **Criterion (c) verified by the planner this run, not taken on trust:** the
+  per-mode `summary` blocks of all three re-scores are *deep-equal* to the
+  corresponding `2026-07-31-m11-seed{11,22,33}` originals — 12 of 12 mode
+  summaries identical, zero delta on every floor at every seed, exactly the
+  grounded no-op prediction. (a) and (b) are satisfied by the tree.
+  **Remaining: (d), then land the code as one PR with the ledger row.**
+  Two premises re-grounded this run by reading the screenshots themselves:
+  the balanced wrapper is real (`m11-two-turn-freewrite.png`: both replies wrap
+  the opening reflection in `"…"`, closer at end-of-line, question left
+  unquoted outside it — the ruled shape, including execute's trailing-space
+  discrepancy), **but it is intermittent** — the later same-day
+  `m11-verify-two-turn.png` shows two replies with no wrapper at all. So (d)
+  cannot be written as "screenshot the artifact gone": like M11's criterion (f)
+  it may evidence absence rather than a before/after. **(d) is hereby narrowed:
+  drive the two-turn session + reload re-open, screenshot both into
+  `docs/screenshots/<date>/`, and state plainly in the ledger row whether the
+  raw replies carried a wrapper this time.** The rule's effect is proved by the
+  unit tests on the transcribed replies; the screenshot proves no regression.
+  Do not re-run the generate read and do not rebuild the tree.
+
+  In
   `src/utils/replyCleanup.ts` **only**, add a second pure export
   `stripSelfQuotingWrapper(text: string): string` and call it from the same two
   `App.tsx` finalize points and the same `evalDriver.ts` positions, immediately
@@ -691,6 +721,42 @@ parked list stays parked.
   the default engine; a repeat-detector that re-prompts; sampling changes) all
   touch either engine selection or `responseShaping.ts`, i.e. real decisions
   with real gate cost. **For the planner to rule, not for execute to invent.**
+
+  **PLANNER RULING 2026-08-02 — defect CONFIRMED, fix NOT yet decidable, and
+  the missing measurement is cheap.** Ruled cold, no run in flight; the full
+  reasoning is in the **M14 cold ruling** section below. Verdict: M14 stays
+  unqueued as a *fix*; **M14a** — the one measurement that decides its shape —
+  is queued instead. Of execute's three candidate shapes, (c) sampling is
+  rejected on evidence and (a) default-swap is priced and found to be a real
+  trade rather than a free win.
+
+- [ ] 2026-08-02 · **M14a — Does the E2B path repeat too? (measurement only,
+  no code, no gate)** (planner-ruled this run; free — no Colab, no API, no eval
+  read. This is the one variable that decides M14's shape, and it is an evening
+  of driving the app.) On `npx vite preview` against a production build, drive
+  the **same** two-turn free-write session execute used for M11's criterion (f)
+  — the same two entries verbatim, so the comparison stays one-variable:
+  1. `Today felt heavy. I stayed late at work and missed dinner with my friend,
+     and I keep replaying the moment I texted to cancel.`
+  2. `It was the moment I hit send. I knew she'd already left for the
+     restaurant, and I still chose the deadline over her.`
+  Run that pair **three times on WebLLM and three times on Transformers.js** —
+  one session is a sample, not a rate, and M11's own two same-day screenshots
+  already show this engine's artifacts are intermittent. Switch runtime in
+  Settings; note from R1b that the swap persists via the `quietnote-runtime`
+  localStorage key and the model loads on the *next* boot, not at the moment of
+  switching, so budget the 3.15 GB download or reuse an existing
+  `transformers-cache`. Record in a new **M14a result** section in this doc,
+  per session: whether turn 2 is byte-identical to turn 1, near-identical (same
+  opening sentence, reworded tail), or distinct — plus the raw pairs pasted in
+  full, and one screenshot per engine into `docs/screenshots/<date>/`. If
+  MediaPipe still fails at first send (R1b's `CalculatorGraph::Run() failed`,
+  still unresolved), record that in one line and skip it — debugging it is not
+  this item.
+  → **Verify:** the result section exists with all 6 sessions + 2 screenshots;
+  `git status` shows **no `src/` diff** (this item ships doc + screenshots
+  only). **Then stop — do not implement a fix.** The next planning run rules
+  M14's shape on that table using the decision rule in the ruling section.
 
 - [x] 2026-07-29 · **M12 — Make a seeded read actually replayable
   (`cache_prompt: false`)** (DONE 2026-07-30, PR **#117** — see the **M12 replay
@@ -799,6 +865,56 @@ initiative in one place.
 **Superseded (2026-07-31, execute):** "M11 is the expensive one and should own a
 run." It did own a run — that run happened, produced everything, and never
 landed a commit.
+
+## M14 cold ruling (planner, 2026-08-02) — the repeat is real, and it is the **model**, not a cleanup util
+
+Ruled with no run in flight, on the artifacts execute filed plus the actual
+code — not on the report's summary.
+
+**The defect is CONFIRMED by reading the screenshot, not the ledger row.**
+`docs/screenshots/2026-08-01/m11-verify-two-turn.png`: turn 1 and turn 2 render
+the identical string — `Staying late at work can feel isolating.  What was the
+moment you texted to cancel that felt so hard?` (note the doubled space, present
+in both) — and turn 2 answers *precisely* that question ("It was the moment I
+hit send…"). Execute's framing is right and worth keeping: this is a worse
+stranger-facing defect than the quote artifacts, because the app does not look
+clumsy, it looks broken. One correction to the filing: the quotes around the
+reply in the queue item are execute quoting in prose — the rendered reply
+carries no wrapper. M14 and M11/M11b are unrelated artifacts.
+
+**Ruling on each of execute's three candidate shapes.**
+
+| shape | ruling | why |
+|---|---|---|
+| (c) sampling changes | **REJECTED** — do not queue | `src/inference/webllm-engine.ts:78` already sends `repetition_penalty: options.repetitionPenalty ?? 1.3` (M0's engine-parity half, the surviving one). 1.3 is the *same* value that gave the headless E2B path near-zero echo in M1. The verbatim repeat happens at that setting. The knob is already at the value the evidence recommends, so turning it further is a guess, and it would be a send-path change carrying gate cost for a guess. |
+| (a) drop WebLLM as the default engine | **NOT free, NOT ruled — priced below** | Mechanically it is two lines (`useInferenceEngine.ts:22`'s `return "webllm"` and `createEngine`'s `runtime: RuntimeId = "webllm"` default at `inference/index.ts:12`), and it is *strictly less* than the removal Sharang gated on 2026-07-12 — WebLLM would stay selectable in Settings. But R1b measured the swap's real cost: **the first-run download goes 1.49 GB → 3.15 GB**, more than double, for every stranger. public-release's own P0 is a stranger reaching one successful exchange; doubling the download is the most direct way to make that harder. It also invalidates R2b's honest size line, R3a's README sizes, and the R1b matrix in one move. This is a trade, not a fix, and it is Sharang's trade. |
+| (b) repeat-detector that re-prompts | **PLAUSIBLE, deferred to M14a's result** | The precedent is good: `responseShaping.ts` (`isBareDeflection` → `withDeflectionReprompt`) and `referralReprompt.ts` are both exactly this shape, and a detector is engine-agnostic. Two caveats that must be settled before it is queued, not after: (i) it papers over a model this initiative has *already* recommended removing, and (ii) it changes the send path's message construction, so under the README's replay rule it is gate-triggering **in the expensive way** unless it is *proved* — not assumed — that it cannot fire on the suite (the eval cases are single-turn, so a detector needing ≥2 assistant turns should never fire; `referralReprompt` does fire ~3×/mode, so "re-prompts never fire in eval" is demonstrably not a safe blanket assumption). |
+
+**The missing variable.** Every shape above is chosen differently depending on
+one unmeasured fact: **does the Transformers.js / Gemma 4 E2B path repeat too?**
+Nobody has driven it two turns. If it does not repeat, (a) becomes a genuine fix
+with a known price and the decision goes to Sharang with numbers attached. If it
+does repeat, (a) buys 1.66 GB of extra download for nothing and (b) is the only
+shape left. That is a ~one-evening measurement deciding a change worth hours of
+gate time — so it goes first. Queued as **M14a**.
+
+**Decision rule for the next planning run** (fixed now, so the answer is not
+reverse-engineered from whatever the table shows):
+- E2B repeats in **0 of 3** sessions and WebLLM in **≥2 of 3** → the defect is
+  model-specific; take the default-swap question to Sharang with the 1.49→3.15 GB
+  price stated plainly, and do **not** queue a detector.
+- E2B repeats in **≥1 of 3** → the defect is not model-specific; queue the (b)
+  detector against `responseShaping.ts`'s existing shape, with the never-fires-in-eval
+  claim carried as a *test assertion*, not a note.
+- WebLLM repeats in **0 of 3** → M14's own evidence was a one-off after all;
+  downgrade it to a WATCH line and queue nothing. (M1b's turn-5 loops still stand
+  as separate evidence and stay on the record either way.)
+
+**Standing note, unchanged by any of the above:** the fine-tune targets Gemma 4
+E2B. WebLLM / Gemma 2 2B will never receive it. Every M2–M13 dollar and hour has
+been spent improving a model that is **not** what a first-time stranger currently
+loads. That mismatch is the real subject of M14, and it is Sharang's to resolve
+(see Blocked on Sharang).
 
 ## M11 verification (2026-08-01, planner) — the work exists, the gate read is done, and the screenshot falsifies its own criterion (f)
 
@@ -1820,6 +1936,18 @@ depth** — `DATASET.md` §1 already orders it that way.
   README, R1b-matrix updates all reference WebLLM). Note the standing
   caveat: removal does NOT dissolve the unsupported-browser problem unless
   M5 picks a WASM-loadable quantization.
+  **Sharpened 2026-08-02 (M14 ruling) — the question now has a price tag and
+  fresh evidence.** New evidence: the shipped default returned a
+  **byte-identical reply on turn 2** in the M11 verification session
+  (screenshot committed) — not turn 5, turn 2, i.e. a stranger's second message.
+  New price: R1b measured the default-swap's cost as **1.49 GB → 3.15 GB of
+  first-run download**, more than double, against public-release's own P0 of a
+  stranger reaching one successful exchange. So the go/no-go is no longer
+  "remove a worse model", it is **"is a coherent second turn worth doubling the
+  download?"** — and the loop will not decide that for you. M14a (queued, free)
+  measures whether the E2B path repeats too, which is the one fact that could
+  make the trade obviously worth it or obviously not; the recommendation above
+  stands unchanged until that number exists.
 - ~~**M2c — teacher API key / cost approval**~~ **RESOLVED 2026-07-16
   (interactive):** Sharang chose the hybrid teacher (loop authors
   exemplar batches on the subscription; his funded `ANTHROPIC_API_KEY`
