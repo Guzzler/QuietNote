@@ -45,7 +45,8 @@
       "mcp__plugin_playwright_playwright__browser_evaluate",
       "Skill(claude-api)",
       "Skill(claude-api:*)",
-      "PowerShell(Set-Location \"C:\\\\Users\\\\shara\\\\OneDrive\\\\Desktop\\\\My Stuff\\\\Work\\\\Dev\\\\QuietNote\"; $raw = \\(Get-Content .env.local -Raw\\); $idx = $raw.IndexOf\\(\"ANTHROPIC_API_KEY=\"\\); if \\($idx -lt 0\\) { \"marker not found\"; exit 1 }; $hfPart = $raw.Substring\\(0, $idx\\).TrimEnd\\(\\); $anthPart = $raw.Substring\\($idx\\).Trim\\(\\); Set-Content -Path .env.local -Value \\($hfPart + \"`r`n\" + $anthPart + \"`r`n\"\\) -Encoding utf8 -NoNewline; $check = Get-Content .env.local; \"lines now: $\\($check.Count\\)\"; $check | ForEach-Object { $p = $_ -split \"=\", 2; \"  $\\($p[0]\\)=<redacted len $\\($p[1].Length\\)>\" })"
+      "PowerShell(Set-Location \"C:\\\\Users\\\\shara\\\\OneDrive\\\\Desktop\\\\My Stuff\\\\Work\\\\Dev\\\\QuietNote\"; $raw = \\(Get-Content .env.local -Raw\\); $idx = $raw.IndexOf\\(\"ANTHROPIC_API_KEY=\"\\); if \\($idx -lt 0\\) { \"marker not found\"; exit 1 }; $hfPart = $raw.Substring\\(0, $idx\\).TrimEnd\\(\\); $anthPart = $raw.Substring\\($idx\\).Trim\\(\\); Set-Content -Path .env.local -Value \\($hfPart + \"`r`n\" + $anthPart + \"`r`n\"\\) -Encoding utf8 -NoNewline; $check = Get-Content .env.local; \"lines now: $\\($check.Count\\)\"; $check | ForEach-Object { $p = $_ -split \"=\", 2; \"  $\\($p[0]\\)=<redacted len $\\($p[1].Length\\)>\" })",
+      "mcp__plugin_playwright_playwright__browser_find"
     ]
   }
 }
