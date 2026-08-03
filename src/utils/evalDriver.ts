@@ -1,7 +1,16 @@
 import type { EvalCase, EvalResult, EvalDimension } from "./evalRunner";
 import { EVAL_CASES, evaluateResponse } from "./evalRunner";
 import { buildPriorTurnRecap } from "./conversationContext";
-import { stripUnmatchedLeadingQuote } from "./replyCleanup";
+import { stripUnmatchedLeadingQuote, stripSelfQuotingWrapper } from "./replyCleanup";
+
+/**
+ * The App finalize point's reply cleanup, in the app's own order. Kept as one
+ * function so the live path and the `--rescore` path can never drift apart.
+ * M11 (2026-07-31) + M11b (2026-08-01).
+ */
+function cleanReply(response: string): string {
+  return stripSelfQuotingWrapper(stripUnmatchedLeadingQuote(response));
+}
 
 export interface EvalRunOptions {
   systemInstruction: string;
@@ -79,7 +88,7 @@ export async function runEvalSuite(
     // reply assembly (post referral-reprompt), before matching. Grounded
     // no-op on the current corpora (0 of 900 replies begin with a quote),
     // which is what makes the `--rescore` delta a real zero-check.
-    const r = evaluateResponse(stripUnmatchedLeadingQuote(response), c);
+    const r = evaluateResponse(cleanReply(response), c);
     results.push(r);
     opts.onProgress?.(i + 1, cases.length, r);
   }
@@ -171,7 +180,7 @@ export function rescoreStoredReplies(
     scoredCases.push(c);
     // M11: same cleanup on the re-score path, so a stored corpus is scored
     // through exactly the pipeline a live run uses.
-    results.push(evaluateResponse(stripUnmatchedLeadingQuote(response), c));
+    results.push(evaluateResponse(cleanReply(response), c));
   }
   const now = new Date().toISOString();
   return {
