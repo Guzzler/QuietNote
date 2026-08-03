@@ -13,7 +13,7 @@ import { putSession, listSessions, getSession, putMood, deleteSession, listMoods
 import { detectCrisis, getCrisisResponseMessage } from "./utils/crisisDetection";
 import { buildManagedMessages } from "./utils/tokenEstimator";
 import { sanitizeResponse } from "./utils/responseGuardrails";
-import { stripUnmatchedLeadingQuote } from "./utils/replyCleanup";
+import { stripUnmatchedLeadingQuote, stripSelfQuotingWrapper } from "./utils/replyCleanup";
 import { isBareDeflection, withDeflectionReprompt } from "./utils/responseShaping";
 import { shouldAttemptReferralReprompt, withReferralReprompt } from "./utils/referralReprompt";
 import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
@@ -441,7 +441,13 @@ export default function App() {
       // and BEFORE the guardrails, so `sanitizeResponse` still classifies exactly
       // what gets stored and no safety util is touched. Both send paths call this —
       // pinned by test so a future edit cannot drop one.
-      const finalContent = stripUnmatchedLeadingQuote(truncateToLastSentence(acc));
+      // M11b (2026-08-01): composed immediately after M11 — same position, same
+      // reason. M11 removes the ragged odd-count opener; M11b unwraps the
+      // balanced pair the shipped engine puts around its whole reflection.
+      // Composed, never folded together: the two rules carry different risk.
+      const finalContent = stripSelfQuotingWrapper(
+        stripUnmatchedLeadingQuote(truncateToLastSentence(acc))
+      );
 
       // Run response guardrails — blocks medical/diagnostic responses with safe fallback
       const guardrailResult = sanitizeResponse(finalContent);
@@ -640,7 +646,13 @@ export default function App() {
       // and BEFORE the guardrails, so `sanitizeResponse` still classifies exactly
       // what gets stored and no safety util is touched. Both send paths call this —
       // pinned by test so a future edit cannot drop one.
-      const finalContent = stripUnmatchedLeadingQuote(truncateToLastSentence(acc));
+      // M11b (2026-08-01): composed immediately after M11 — same position, same
+      // reason. M11 removes the ragged odd-count opener; M11b unwraps the
+      // balanced pair the shipped engine puts around its whole reflection.
+      // Composed, never folded together: the two rules carry different risk.
+      const finalContent = stripSelfQuotingWrapper(
+        stripUnmatchedLeadingQuote(truncateToLastSentence(acc))
+      );
 
       // Run response guardrails — blocks medical/diagnostic responses with safe fallback
       const guardrailResult = sanitizeResponse(finalContent);
