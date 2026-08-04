@@ -118,7 +118,67 @@ decisions, release gate, queue format).
 **Queue note (2026-07-14):** R3b is the LAST non-gated public-release
 increment. After it ships, this initiative is release-ready and everything
 remaining (R4, LICENSE) is Sharang-gated — do not invent further items here;
-model-quality (M1/M2a) is where open work lives.
+model-quality (M1/M2a) is where open work lives. **(Amended 2026-08-03,
+execute:** R5 below is not an invented increment — it is an audit-walk finding
+filed under the queue-empty rule, which is the one path by which new
+public-release items may appear. It is PROPOSED and awaits a planner ruling.**)**
+
+**Queue-empty audit (2026-08-03, execute — `npm run build` (green) +
+`npm run test` (1203 green, 72 files) + `npx vite preview` on `:4173`, WebLLM
+default, Chromium via Playwright):** the only open checkboxes anywhere were
+M14 (PROPOSED, explicitly "do not start without a ruling" — and the planner's
+own 2026-08-02 ruling leaves it unqueued as a fix pending the next planning
+run's read of the M14a table) and F2 (gated on R4), so the queue-empty rule
+sent this run to an audit walk. Walked load → writing surface → first exchange
+→ second turn → reload persistence → session re-open. **The Playwright profile
+had no saved sessions this time** ("No saved sessions yet." on first paint), so
+unlike every walk since 07-21 this was a genuinely empty-journal start — the
+model still loaded from an existing Cache Storage entry, so it is an
+empty-IndexedDB walk, not a true first-download cold start; the fresh-profile
+download matrix stays the 2026-07-12 R2 read. Working: model reached ready with
+the R2b "~1.5 GB" size line and real progress (0% → 35% → 94% → ready, ~2 min);
+AI-limitations disclaimer + Crisis resources button above the transcript; mode
+strip in the shipped order; all four footer links carry the correct hrefs; a
+two-turn free-write exchange came back supportive, turn-aware and **distinct**
+(turn 2 picked up the new disclosure — being four hours away, doing the math on
+taking a week off — rather than restating turn 1), with **no quote artifact of
+any kind** (M11/M11b's rules holding on the live path) and **no M14 repeat**;
+the session survived a full reload and re-opened from the sidebar with both
+turns intact. **0 console errors** (one benign Chromium `powerPreference`
+WebGPU warning, crbug.com/369219127). Screenshots:
+`docs/screenshots/2026-08-03/`.
+
+**One defect found — filed as R5 (proposed) below:** the "Pick up where you
+left off" card splices the raw first 8 words of the previous entry into the
+middle of a sentence, producing ungrammatical, double-punctuated copy on the
+first screen a returning user sees.
+
+- [ ] 2026-08-03 · **R5 (PROPOSED by execute — planner to rule) — the
+  continuity card splices raw entry text into a sentence.**
+  `src/utils/continuityPrompt.ts:12-22` (`extractShortTopic`) returns the first
+  8 words of the previous session's first user message *verbatim*, including
+  its leading capital, and `:77` interpolates that into
+  `` `${formatWhen(days)}, you wrote about ${shortTopic}. How are you feeling
+  about that today?` ``. Measured live this run with the entry "My sister
+  called tonight to say our dad is going into surgery next week…", the card
+  rendered: **"Earlier today, you wrote about My sister called tonight to say
+  our dad…. How are you feeling about that today?"** — a capitalized clause
+  mid-sentence, and `…` immediately followed by the sentence period (`….`).
+  `:78`'s `suggestedInput` carries the same splice into the textarea, verified:
+  `"I want to revisit what I wrote about My sister called tonight to say our
+  dad…. "` — so the malformed text also becomes the user's next *prompt to the
+  model*, not just display copy. Not new (the 07-22/07-26/07-27 walks all
+  screenshotted the same shape without flagging it) and not a crash — but it is
+  on the first screen a returning stranger sees, and it reads as broken rather
+  than clumsy. Shapes the planner may want to weigh: a themes-based topic
+  (`extractThemes` is already imported for the recurring-theme branch), quoting
+  the fragment, or a punctuation-safe join. **Execute did not fix it** — the
+  card is display copy *and* prompt text, and picking between those shapes is a
+  design call, not an execute call. `continuityPrompt.ts` is not on the
+  gate-triggering list, but `suggestedInput` feeds the send path's user text,
+  so the ruling should say explicitly whether a change here needs a gate read.
+  Evidence: `docs/screenshots/2026-08-03/audit-04-continuity-card-defect.png`
+  (card) and `audit-05-continuity-prefill-defect.png` (prefilled textarea).
 
 **Audit walk (2026-07-29, execute — `npm run build` (green) +
 `npm run test` (1099 green, 68 files) + `npx vite preview` on `:4173`, WebLLM

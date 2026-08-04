@@ -972,6 +972,16 @@ Three sessions per engine cannot separate "1/3 vs 0/3" from noise. **For the
 next planning run to rule**, with the obvious cheap option being more samples
 at the same zero cost.
 
+**One free WebLLM sample added 2026-08-03 (execute, from the queue-empty audit
+walk — not a re-run of M14a).** The 08-03 audit drove a two-turn free-write
+session on the shipped WebLLM default with *different* entries (a sibling's call
+about a parent's surgery, then "mostly scared… four hours away"): **turn 2 was
+distinct and substantively turn-aware**, picking up the distance and the
+take-the-week-off math rather than restating turn 1. Different entries, so it is
+not a fourth replication of M14a's one-variable pair — but it is a fourth WebLLM
+two-turn session, and the running tally is **1 repeat in 4**. Recorded here so
+the next planning run has it; execute is not re-ruling on it.
+
 **Two observations recorded because they cost nothing and bear on M14's shapes:**
 - Every E2B turn 2 was *substantively* turn-aware — it picked up "the moment I
   hit send" and the deadline-over-friend choice rather than restating turn 1.
