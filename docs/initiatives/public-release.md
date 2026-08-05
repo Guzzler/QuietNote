@@ -171,32 +171,90 @@ first screen a returning user sees.
   `npm run test` green; GitHub shows "MIT" in the repo sidebar once pushed.
   Not gate-triggering (no `src/`, no send path, no safety util).
 
-- [ ] 2026-08-03 · **R5 (PROPOSED by execute — planner to rule) — the
-  continuity card splices raw entry text into a sentence.**
-  `src/utils/continuityPrompt.ts:12-22` (`extractShortTopic`) returns the first
-  8 words of the previous session's first user message *verbatim*, including
-  its leading capital, and `:77` interpolates that into
-  `` `${formatWhen(days)}, you wrote about ${shortTopic}. How are you feeling
-  about that today?` ``. Measured live this run with the entry "My sister
-  called tonight to say our dad is going into surgery next week…", the card
-  rendered: **"Earlier today, you wrote about My sister called tonight to say
-  our dad…. How are you feeling about that today?"** — a capitalized clause
-  mid-sentence, and `…` immediately followed by the sentence period (`….`).
-  `:78`'s `suggestedInput` carries the same splice into the textarea, verified:
-  `"I want to revisit what I wrote about My sister called tonight to say our
-  dad…. "` — so the malformed text also becomes the user's next *prompt to the
-  model*, not just display copy. Not new (the 07-22/07-26/07-27 walks all
-  screenshotted the same shape without flagging it) and not a crash — but it is
-  on the first screen a returning stranger sees, and it reads as broken rather
-  than clumsy. Shapes the planner may want to weigh: a themes-based topic
-  (`extractThemes` is already imported for the recurring-theme branch), quoting
-  the fragment, or a punctuation-safe join. **Execute did not fix it** — the
-  card is display copy *and* prompt text, and picking between those shapes is a
-  design call, not an execute call. `continuityPrompt.ts` is not on the
-  gate-triggering list, but `suggestedInput` feeds the send path's user text,
-  so the ruling should say explicitly whether a change here needs a gate read.
-  Evidence: `docs/screenshots/2026-08-03/audit-04-continuity-card-defect.png`
-  (card) and `audit-05-continuity-prefill-defect.png` (prefilled textarea).
+### R5 cold ruling (planner, 2026-08-04) — defect CONFIRMED, fix QUEUED
+
+**Grounding re-verified against the files this run** (not from execute's
+report): `continuityPrompt.ts:16-17` takes the first 8 words of the previous
+session's first non-empty user message verbatim — leading capital included —
+and appends `…` when the message was longer; `:77` splices that into
+`` `${formatWhen(days)}, you wrote about ${shortTopic}. How are you feeling
+about that today?` `` and `:78` into
+`` `I want to revisit what I wrote about ${shortTopic}. ` ``. Both defects
+execute measured follow mechanically from those two lines: a capitalized
+clause mid-sentence, and `…` immediately followed by the sentence period
+(`….`). Confirmed; the ledger of walks that screenshotted it without flagging
+it (07-22/07-26/07-27) is a reminder that "no defects found" means "none
+noticed".
+
+**Two facts execute's proposal did not have, both read from the code:**
+1. **The prefill does not reach the model as anything but ordinary typed
+   text.** `ContinuityCard.tsx:17` passes `suggestedInput` to `onClick`, and
+   `ChatPanel.tsx:394-397` does exactly `setUserInput(text)` + focus. There is
+   no auto-send, no injection into context assembly, no separate prompt path —
+   the user reads it, edits it, and presses send like any other entry.
+2. **`extractThemes` cannot carry this card.** It returns 7 coarse
+   `PromptCategory` labels (gratitude / self-reflection / goals / challenges /
+   relationships / growth / creativity), so a themes-based topic renders "you
+   wrote about relationships".
+
+**Shape decided: keep the user's own words, quote them, and make the join
+punctuation-safe.** The themes variant is **REJECTED** — "you wrote about
+relationships" is exactly the generic warmth the 2026-07-12 positioning
+decision rules out (the sell is that the app uses *this* user's details).
+Dropping the fragment entirely is **REJECTED** for the same reason: the
+callback *is* the value of the card. Quoting fixes both defects at once — a
+capital is correct inside a quotation, and a quoted fragment ends a clause, so
+nothing needs a period after it.
+
+**Copy decided (execute: use verbatim, `kind: "last-session"` branch only —
+the `recurring-theme` and `mood-followup` branches are already grammatical and
+must not be touched):**
+> body: `${formatWhen(days)}, you wrote: “${fragment}” How are you feeling about that today?`
+> suggestedInput: `${formatWhen(days)} I wrote: “${fragment}” I want to come back to that. `
+
+**Fragment rule (this is the whole fix in `extractShortTopic`):** split the
+trimmed message on whitespace; if it has **more than 8 words**, join the first
+8, strip any trailing `.,;:!?-—"'` from that last word, and append `…`; if it
+has **8 or fewer**, return the trimmed message unchanged *with* its own
+punctuation (so a short entry reads `“Today felt heavy.” How are you…` and a
+long one reads `“My sister called tonight to say our dad…” How are you…` —
+never `….`). Guard a pathological entry: if the assembled fragment exceeds 80
+characters, cut at the last space before 80 and append `…`. Use **curly**
+quotes `“ ”` — straight `"` would be typographically worse *and* would sit in
+text that later flows past M11's `stripUnmatchedLeadingQuote`; curly quotes
+cannot interact with it at all.
+
+**Gate ruling: NOT gate-triggering, and here is the reasoning execute asked
+for.** `continuityPrompt.ts` is not on the gate-triggering list, and the
+`suggestedInput` worry is answered by fact 1 above — it is a textarea prefill,
+not a message the app constructs. It changes nothing about `src/prompts/`,
+context assembly, the send path's message construction, sampling, or the
+referral trigger, so neither the fresh-generate nor the `--rescore` arm of the
+replay rule applies. **Hard guard:** if the implementation turns out to need an
+edit inside `App.tsx`'s send path, `buildMessages`, or any safety util, stop
+and re-queue — that would be a different item with a different gate answer.
+
+- [ ] 2026-08-04 · **R5 — Fix the continuity card's spliced entry text**
+  (planner-ruled above; free, no gate read). In
+  `src/utils/continuityPrompt.ts`: rewrite `extractShortTopic` (`:12-22`) to
+  the fragment rule above, and replace the `kind: "last-session"` `body` and
+  `suggestedInput` at `:77-78` with the decided copy verbatim. Leave the
+  `recurring-theme` and `mood-followup` branches, `themeExtractor.ts`,
+  `ContinuityCard.tsx` and `ChatPanel.tsx` untouched — this is a
+  string-construction fix in one file. **Note the existing test at
+  `src/utils/__tests__/continuityPrompt.test.ts:53` asserts
+  `suggestedInput` contains `"revisit"`**, which the new copy drops; update
+  that assertion rather than bending the copy to it.
+  → **Verify:** (a) new unit tests in `continuityPrompt.test.ts` for all four
+  fragment cases — >8 words (ends `…`, no `….` anywhere in `body`), ≤8 words
+  (keeps its own trailing period, no `…`), a last word carrying punctuation
+  before truncation (stripped), and an >80-char fragment (cut on a space,
+  ends `…`); plus one assertion that `body` contains no `“…”.` sequence and
+  one that the quotes are balanced. (b) `npm run build` + `npm run test`
+  green. (c) On `npx vite preview`: write an entry, reload into a *new*
+  session so the card renders, screenshot the card **and** the textarea after
+  clicking it — both must read as ordinary English. Screenshots to
+  `docs/screenshots/2026-08-04/`. Not gate-triggering.
 
 **Audit walk (2026-07-29, execute — `npm run build` (green) +
 `npm run test` (1099 green, 68 files) + `npx vite preview` on `:4173`, WebLLM
@@ -253,69 +311,17 @@ sessions present), so this was a returning-user walk, not a true fresh-profile
 cold start — the fresh-profile matrix stays the 2026-07-12 R2 read, to be
 re-run on the live URL at R4. Screenshots: `docs/screenshots/2026-07-27/`.
 
-**Queue-empty audit (2026-07-26, execute — `npm run build` (green) +
-`npm run test` (1066 green) + `npx vite preview` on `:4173`, WebLLM default,
-Chromium via Playwright):** every non-gated item across all four initiatives
-is DONE (M6/M7 shipped 2026-07-25, PR #112) and only Sharang-gated work
-remains (R4/LICENSE here, F2, M6 Colab rerun → M4 rerun, M5a Colab run,
-WebLLM go/no-go), so per the queue-empty rule an audit walk ran instead of
-inventing work. Walked load → writing surface → first exchange → reload
-persistence: loading card shows the R2b "~1.5 GB" size line + `0%` progress;
-a fresh free-write entry ("I moved to a new city last month and I still feel
-like I don't belong here…") returned a supportive, non-parroting
-single-question reply ("It sounds like you're navigating a new city and that
-feeling of not fitting in can be tough. How is it different from what felt
-familiar back home?") with the AI-limitations disclaimer + Crisis resources
-button present; the session persisted through a full reload (sidebar entry
-"Sat with calm feelings." + "Pick up where you left off" card + fully
-restored two-turn transcript on re-open). **0 console errors** (one benign
-Chromium `powerPreference`-ignored WebGPU warning, crbug.com/369219127).
-**No defects found — nothing to file.** Same scope caveat as 07-21/07-22: the
-Playwright profile was persistent (prior sessions present), so this was a
-returning-user walk, not a true fresh-profile cold start — the fresh-profile
-matrix stays the 2026-07-12 R2 read, to be re-run on the live URL at R4.
-Screenshots: `docs/screenshots/2026-07-26/`.
-
-**Queue-empty audit (2026-07-22, execute — `npm run build` (green) +
-`npm run test` (1053 green) + `npx vite preview` on `:4173`, WebLLM default,
-Chromium via Playwright):** every non-gated item across all three
-initiatives is DONE and only Sharang-gated work remains (R4/LICENSE here, F2,
-M2c §6 veto, M5a Colab run, WebLLM go/no-go), so per the queue-empty rule an
-audit walk ran instead of inventing work. Walked load → writing surface →
-first exchange → reload persistence: loading card shows the R2b "~1.5 GB"
-size line + `0%→…` progress; a fresh free-write entry ("I keep putting off a
-big project at work and the guilt is piling up…") returned a supportive,
-non-parroting single-question reply ("You're feeling the weight of that
-project… What's causing you to feel pulled in different directions?") with
-the AI-limitations disclaimer + Crisis resources button present; the session
-persisted through a full reload (sidebar entry "Reflected on creativity." +
-"Pick up where you left off" card + fully restored two-turn transcript on
-re-open). **0 console errors** (one benign Chromium `powerPreference`-ignored
-WebGPU warning, crbug.com/369219127). **No defects found — nothing to file.**
-Same scope caveat as 07-21: the Playwright profile was persistent (07-13/07-21
-sessions present), so this was a returning-user walk, not a true
-fresh-profile cold start — the fresh-profile matrix stays the 2026-07-12 R2
-read, to be re-run on the live URL at R4. Screenshots:
-`docs/screenshots/2026-07-22/`.
-
-**Queue-empty audit (2026-07-21, execute — `npm run build` + `npx vite
-preview` on `:4173`, WebLLM default, Chromium via Playwright):** every
-non-gated item across all three initiatives is DONE and only Sharang-gated
-work remains (R4/LICENSE here, F2, M2c §6 veto, M5a Colab run, WebLLM
-go/no-go), so per the queue-empty rule an audit walk ran instead of inventing
-work. Walked load → writing surface → first exchange → reload persistence:
-loading card shows the R2b "~1.5 GB" size line + real % progress; a fresh
-free-write exchange returned a supportive, non-parroting single-question
-reply ("It sounds like you've been juggling a lot this week. What's making it
-feel extra hard to handle?") with the AI-limitations disclaimer + Crisis
-resources button present; the session persisted through a full reload
-(sidebar entry + restored transcript). **0 console errors** (one benign
-Chromium `powerPreference`-ignored WebGPU warning, crbug.com/369219127).
-**No defects found — nothing to file.** Scope caveat: the Playwright profile
-was persistent (prior 07-13 sessions present), so this was a returning-user
-walk, not a true fresh-profile cold start — the fresh-profile matrix stays
-the 2026-07-12 R2 read, to be re-run on the live URL at R4. Screenshots:
-`docs/screenshots/2026-07-21/`.
+**Superseded audit walks (2026-07-21 / 07-22 / 07-26, execute) — pruned
+2026-08-04, full text in git history.** All three were queue-empty walks on
+`npx vite preview` (WebLLM default, Chromium via Playwright) that reported
+the same shape as the 07-27 walk above: loading card with the R2b "~1.5 GB"
+line and real progress, disclaimer + Crisis button present, a supportive
+non-parroting single-question reply, session surviving a full reload, 0
+console errors, **no defects found**, and the same persistent-profile caveat
+(returning-user walks, not fresh-profile cold starts — the fresh-profile
+matrix stays the 2026-07-12 R2 read below). Screenshots remain at
+`docs/screenshots/2026-07-{21,22,26}/`. Read alongside R5: these walks
+screenshotted the continuity-card splice without flagging it.
 
 **R2 cold-start audit matrix (2026-07-12, `npm run build` + `npx vite
 preview`, Chromium via Playwright; screenshots in
