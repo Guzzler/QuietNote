@@ -9,12 +9,38 @@ export interface ContinuityPrompt {
   kind: "last-session" | "recurring-theme" | "mood-followup";
 }
 
+const FRAGMENT_WORD_LIMIT = 8;
+const FRAGMENT_CHAR_LIMIT = 80;
+const TRAILING_PUNCTUATION = /[.,;:!?\-—"'’”]+$/;
+
+/** Keep a truncated fragment from ending in "…." or a dangling comma. */
+function trimForEllipsis(text: string): string {
+  return text.replace(TRAILING_PUNCTUATION, "");
+}
+
+function capFragmentWidth(fragment: string): string {
+  if (fragment.length <= FRAGMENT_CHAR_LIMIT) return fragment;
+  const head = fragment.slice(0, FRAGMENT_CHAR_LIMIT);
+  const lastSpace = head.lastIndexOf(" ");
+  return trimForEllipsis(lastSpace > 0 ? head.slice(0, lastSpace) : head) + "…";
+}
+
+/**
+ * The user's own words, quoted back. A long entry is cut to 8 words and ends in
+ * "…"; a short one keeps its own punctuation, so the quote always reads as a
+ * complete clause inside the sentence that carries it.
+ */
 function extractShortTopic(session: Session): string | null {
   for (const thread of session.threads) {
     for (const msg of thread.messages) {
-      if (msg.role === "user" && msg.content.trim()) {
-        const words = msg.content.trim().split(/\s+/).slice(0, 8);
-        return words.join(" ") + (msg.content.trim().split(/\s+/).length > 8 ? "…" : "");
+      const trimmed = msg.content.trim();
+      if (msg.role === "user" && trimmed) {
+        const words = trimmed.split(/\s+/);
+        const fragment =
+          words.length > FRAGMENT_WORD_LIMIT
+            ? trimForEllipsis(words.slice(0, FRAGMENT_WORD_LIMIT).join(" ")) + "…"
+            : trimmed;
+        return capFragmentWidth(fragment);
       }
     }
   }
@@ -74,8 +100,8 @@ export function buildContinuityPrompt(
       return {
         kind: "last-session",
         headline: "Pick up where you left off",
-        body: `${formatWhen(days)}, you wrote about ${shortTopic}. How are you feeling about that today?`,
-        suggestedInput: `I want to revisit what I wrote about ${shortTopic}. `,
+        body: `${formatWhen(days)}, you wrote: “${shortTopic}” How are you feeling about that today?`,
+        suggestedInput: `${formatWhen(days)} I wrote: “${shortTopic}” I want to come back to that. `,
       };
     }
   }
