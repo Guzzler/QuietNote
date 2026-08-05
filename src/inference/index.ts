@@ -9,7 +9,7 @@
 import type { InferenceEngine, RuntimeId } from "./types";
 import type { ModelRef } from "../types";
 
-export async function createEngine(runtime: RuntimeId = "webllm"): Promise<InferenceEngine> {
+export async function createEngine(runtime: RuntimeId = "mediapipe"): Promise<InferenceEngine> {
   switch (runtime) {
     case "webllm": {
       const { WebLLMEngine } = await import("./webllm-engine");
