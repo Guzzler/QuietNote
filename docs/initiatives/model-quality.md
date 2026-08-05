@@ -212,7 +212,7 @@ parked list stays parked.
 |---|---|---|
 | M0 | Cheap echo mitigations now: prompt-level (cap the echo to a few words, forbid restating the full entry) + engine sampling parity (MediaPipe/Transformers.js vs WebLLM). Touches `src/prompts/` → **full release-gate eval required in the PR** | DONE (PR #89) — prompt half REVERTED (gate fail); engine parity shipped |
 | M1 | Conversational-quality eval: echo/repetition metric (n-gram overlap between entry and reply opening), naturalness rubric, multi-turn cases; baseline all 3 backends on `vite preview` | harness DONE + Gemma 4 E2B headless baseline recorded (PR #92); browser-backend baseline (WebLLM/MediaPipe) still open → M1b |
-| M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91); **full run DONE 2026-07-24 at 1892/2000** (§6 go given) — schema/shares/bands all in spec, safety mirror 5× thicker (193 vs pilot ~36); §6 hand-review + HF re-upload are Sharang's before M3 |
+| M2 | Dataset: spec + ~1–5k synthetic journaling dialogues (4 modes, safety cases mirrored from the gate floors, anti-echo exemplars), hand-curated sample review | spec DONE (M2a, PR #91); **full run DONE 2026-07-24 at 1892/2000** (§6 go given) — schema/shares/bands all in spec, safety mirror 5× thicker (193 vs pilot ~36). ~~§6 hand-review + HF re-upload are Sharang's before M3.~~ **CORRECTED 2026-08-03 (Sharang flagged it; planner verified against the files): the dataset is 1926, not 1892, and the re-upload plainly happened** — `datasets/quietnote-m2-v1.jsonl` 1892 → `-plus-safety.jsonl` **1914** (+22, what M6b trained on) → `-plus-safety2.jsonl` **1926** (+12 dose-echo exemplars, 07-28). Two Colab retrains consumed this data, so the 07-24 line was stale for ~10 days and the loop kept repeating it. Only remnant: all 1926 records still carry `review.status: "pending"`, i.e. the §6 review was never *recorded in the data* — **bookkeeping, not a gate** |
 | M2f | Long-arc yield calibration: the 357-record pilot came out 13.7% long vs the deck's 30% target because the exact-turn-count filter discarded most long dialogues; harvester now repairs shape slips + accepts by length band | DONE (this PR) — filter/parser only, deck untouched; the severe early-stop residual is a teacher-prompt lever, not queued |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, generating), then Sharang runs it |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | three runs done (357 pilot / 1892 full / M6 6× / M6b 8×): all **GATE FAIL**. M6 (6×) is the best model to date; M6b (8×) is worse. **Blocked on M9 + M10** (was M8, which landed) — the seed fix and the last matcher ruling must land before another training run is spent (see the M6b section) |
@@ -252,9 +252,9 @@ parked list stays parked.
   see Ledger.)
 - [x] 2026-07-16 · **M2c — Generate the dataset (hybrid teacher)**
   (full run DONE 2026-07-24 on Sharang's §6 go — dataset at **1892/2000**,
-  see Ledger. Remaining protocol step before training: the §6 hand-review
-  (10%/slice, 100% of safety mirror) then the HF re-upload to
-  `Sharangp/quietnote-m2-v1` — Sharang's action.)
+  see Ledger. **Superseded 2026-08-03:** the live dataset is **1926** and the
+  re-upload happened — see the corrected M2 row. The §6 review remains
+  unrecorded in `review.status`, which is bookkeeping, not a blocker.)
 
 - [x] 2026-07-18 · **M2e — Teacher-prompt fixes from the pilot review**
   (DONE 2026-07-18, PR #104 — see Ledger. `STYLE_CONSTRAINTS` rotation
@@ -2024,6 +2024,13 @@ depth** — `DATASET.md` §1 already orders it that way.
     two of them one case short. Whether that is worth another training run — or
     whether the better move is to accept M6 is not the answer and re-scope — is
     a call worth making with the full picture rather than reflexively.
+- ~~**§6 hand-review + HF re-upload of the full dataset**~~ **RESOLVED
+  2026-08-03 as never-really-open** (Sharang flagged it; verified against
+  `datasets/`). The dataset is **1926** records and two retrains consumed it,
+  so the re-upload happened. The only true remnant is that all 1926 records
+  still read `review.status: "pending"` — the review was not recorded in the
+  data. That is bookkeeping and it is **not** blocking a training run. Nothing
+  is asked of you here.
 - **The $-gated dataset regeneration (M7 fixes)** — still your call, still the
   last lever. **Its decision rule has now been executed** (above) and neither
   branch fired, so regeneration is **not** indicated by the evidence: the
@@ -2085,11 +2092,12 @@ depth** — `DATASET.md` §1 already orders it that way.
     account (2026-07-12). Budget rule: stay within the already-purchased
     units; never queue anything that requires buying more without asking
     Sharang. Sharang runs the notebook himself — the loop only writes it.
-  - **HF hosting:** account **Sharangp**. Write token lives in git-ignored
-    `.env.local` (repo root) as `HF_TOKEN` — verified 2026-07-12 via
-    `whoami-v2`: fine-grained, `repo.write` scoped to Sharangp only. Never
-    commit it, never print it, never expose it via a `VITE_`-prefixed name;
-    Sharang pastes it into Colab at train time.
+  - **HF hosting:** account **Sharangp**. ~~Write token lives in git-ignored
+    `.env.local` as `HF_TOKEN`.~~ **CORRECTED 2026-08-03: it does not** —
+    `.env.local` today holds only `ANTHROPIC_API_KEY`. Sharang pastes the HF
+    token straight into Colab at train time (which the original note also
+    said), so **the loop cannot verify HF remote state** and must never claim
+    to. Never commit, print, or `VITE_`-prefix either key.
   - Base repo `google/gemma-4-E2B-it` is Apache 2.0 and appears ungated; if
     the notebook's first pull hits a terms gate anyway, Sharang accepts it
     on the Sharangp account.

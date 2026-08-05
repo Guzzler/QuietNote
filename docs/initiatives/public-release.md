@@ -153,6 +153,24 @@ left off" card splices the raw first 8 words of the previous entry into the
 middle of a sentence, producing ungrammatical, double-punctuated copy on the
 first screen a returning user sees.
 
+- [ ] 2026-08-03 · **R6 — Add the MIT LICENSE file** (planner-queued on
+  Sharang's explicit 2026-08-03 go; the 2026-07-12 note required it and it is
+  now given). Add a standard `LICENSE` at the repo root: the verbatim MIT
+  text, `Copyright (c) 2026 Sharang Pai` — no modifications, no added clauses,
+  no dual-licensing. Then make the repo state consistent: `package.json` has
+  no `license` field today — add `"license": "MIT"`; and `README.md`'s R3a
+  rewrite documents everything about the app *except* its license, so add one
+  short License section near the bottom pointing at the file. **Scope guards:**
+  this is a licensing change only — do **not** touch repo visibility, Pages,
+  or any workflow (R4 is Sharang's release-day trigger and is unaffected), and
+  do not add third-party attribution/NOTICE files in this item (the model
+  licenses — Gemma terms, Apache-2.0 for `gemma-4-E2B-it` — are a separate
+  question worth its own increment; flag it, don't fold it in).
+  → **Verify:** `LICENSE` exists at the repo root and matches the canonical
+  MIT text byte-for-byte apart from the copyright line; `npm run build` and
+  `npm run test` green; GitHub shows "MIT" in the repo sidebar once pushed.
+  Not gate-triggering (no `src/`, no send path, no safety util).
+
 - [ ] 2026-08-03 · **R5 (PROPOSED by execute — planner to rule) — the
   continuity card splices raw entry text into a sentence.**
   `src/utils/continuityPrompt.ts:12-22` (`extractShortTopic`) returns the first
@@ -360,6 +378,7 @@ Cross-cutting: Lora serif font broken in production build (missing woff2 in
   ready. Never flip it autonomously. **Deferred until the model-quality bar
   is met** (Sharang 2026-07-12): the soft launch is now gated on
   model-quality's 10-turn quality bar; he'll decide R4 after that.
-- **LICENSE choice** — no license file yet (default all-rights-reserved).
-  Suggest MIT; execute must not add one autonomously. Deferred with R4
-  (2026-07-12).
+- ~~**LICENSE choice**~~ **DECIDED 2026-08-03 (Sharang, interactive): MIT.**
+  Queued as **R6** below — execute now has the explicit go the 2026-07-12 note
+  required. Note this is the *choice* only: adding the file does not publish
+  anything while the repo is private, and it does **not** advance R4.
