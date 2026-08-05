@@ -216,7 +216,7 @@ parked list stays parked.
 | M2f | Long-arc yield calibration: the 357-record pilot came out 13.7% long vs the deck's 30% target because the exact-turn-count filter discarded most long dialogues; harvester now repairs shape slips + accepts by length band | DONE (this PR) — filter/parser only, deck untouched; the severe early-stop residual is a teacher-prompt lever, not queued |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, generating), then Sharang runs it |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | three runs done (357 pilot / 1892 full / M6 6× / M6b 8×): all **GATE FAIL**. M6 (6×) is the best model to date; M6b (8×) is worse. **Blocked on M9 + M10** (was M8, which landed) — the seed fix and the last matcher ruling must land before another training run is spent (see the M6b section) |
-| M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | after M4; ONNX export upstream-blocked, LiteRT path uncertain (see 07-19 correction) — M5a probes it |
+| M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | **BLOCKED — no browser path exists (measured 2026-08-05, M5a).** ONNX export upstream-blocked; the LiteRT bundle converts but `tasks-genai@0.10.27` rejects it at format detection (*"No model format matched"*). See the M5a result section — the cheapest untried lever is a `tasks-genai` version that reads `.litertlm` |
 | M6 | Safety-mirror **oversampling in the training split** (notebook-side, no regeneration, no API spend): repeat the 193 `safety-*` records ~6× in the TRAIN split ONLY so medical/jailbreak refusal reaches ~10% of gradient signal (was 2.5%) — the cheapest decisive test of the 2026-07-25 signal-dilution root cause; gate-fail-triggered | DONE (this PR) — builder writes the oversample; Sharang's Colab rerun on the existing 1892 dataset → M4 rerun |
 | M6b | Oversample 8× + 22 loop-authored targeted safety-medical exemplars (dataset 1914) — the "bump toward 8×" lever | DONE 2026-07-28 (Sharang's Colab run) — **GATE FAIL and net WORSE than M6 6×**: empathy fell below floor (43→39), medical dropped in 3 modes, jailbreak regressed fw/tr. **Oversampling is exhausted; 6× is the sweet spot** |
 | M8 | **Measurement-integrity audit of the residual gate failures** (planner-found 2026-07-28): classify every remaining medical_refusal/jailbreak/persona failure as REAL vs MATCHER ARTIFACT against each case's own `expectedBehavior`, repair the artifacts one-directionally, re-score the preserved M6 GGUF locally | DONE 2026-07-28 (this PR) — 9 artifacts repaired + 19-entry leak set; corrected gate read on M6 is **GATE FAIL**. **Bigger finding: the gate regenerates rather than replays** (no seed pinned), so run-to-run noise is ≥2 cases per floor — the same size as the residual three training runs have chased. Seed-pinning is the next instrument fix (filed, not executed) |
@@ -1114,6 +1114,64 @@ Three facts fall out, and they are the useful part of this item:
 - **1/10 with a 95% CI of roughly 0.3–45% does not separate "rare model tic"
   from "noise" either**; execute is recording the rate and stopping, per the
   task. The next planning run applies the fixed decision rule.
+
+## M5a result (2026-08-05, planner-driven with Sharang) — **the bundle converts, and the app cannot load it**
+
+M5a is **DONE and the answer is NEGATIVE.** Both halves ran for the first time:
+Sharang's Colab export, then the in-app test. Recording the invocation and the
+failure precisely, because "LiteRT path uncertain" has been the placeholder
+since 2026-07-18 and it is now settled.
+
+**1. The export works, but only with a flag the notebook did not have.** Two
+attempts died at `Run LiteRT Converter Passes` — the first read as a `^C`, and
+the second was caught in the act: `free -g` showed **44 of 50 GB used with ~5 GB
+available** entering that stage, then dropped to 0 used with the log frozen at
+the same line. That is an OOM kill, not an error. Adding
+`--experimental_lightweight_conversion` cleared it: **12m36s end to end**, on the
+high-RAM CPU runtime (50 GB, the Pro ceiling). The working invocation, in full:
+
+```
+litert-torch export_hf --model=/content/merged --output_dir=/content/litert-out   --externalize_embedder --experimental_lightweight_conversion   --litert_lm_model_type_override=gemma4   --jinja_chat_template_override=litert-community/gemma-4-E2B-it-litert-lm
+```
+
+Output: `model.litertlm`, **5,071,591,376 bytes (5.07 GB)**, quantization
+`dynamic_wi8_afp32` (0.25 ratio), pushed to
+`Sharangp/quietnote-m3-gemma4-e2b-litert` (verified by API read — 2 files).
+
+**2. The app rejects it — this is the finding.** Driven on `npm run dev` (the
+override is `import.meta.env.DEV`-gated) with the bundle served from a local
+CORS static server and `quietnote-model-url-override` +
+`quietnote-runtime=mediapipe` set in localStorage. The model streamed fine
+(progress reached 63%, then completed), and then:
+
+> `[useInferenceEngine] Model load failed: Error: **No model format matched.**`
+> — thrown inside `@mediapipe/tasks-genai` and surfaced at
+> `mediapipe-engine.ts:225`; the UI shows *"Something went wrong loading the
+> model. Please try again."* Screenshot:
+> `docs/screenshots/2026-08-05/m5a-litertlm-no-format-matched.png`.
+
+**Read it precisely: the bundle is rejected at format DETECTION**, before any
+metadata is parsed. So `--litert_lm_model_type_override=gemma4` and
+litert-torch#1001 are **moot for this runtime** — the container itself is
+unrecognised. The 2026-07-19 correction called this exactly: `export_hf` emits
+`.litertlm`, the app loads a `.task`, and the recipe for the latter is
+unpublished. That was a risk; it is now a measured fact.
+
+**3. Consequence — the fine-tune has NO browser delivery path today.** ONNX is
+blocked upstream (no transformers/optimum pair exports gemma4) and LiteRT emits
+a container `tasks-genai@0.10.27` cannot read. Three candidate ways out, none
+free, none yet investigated: (a) a newer `tasks-genai` that reads `.litertlm`
+— cheapest to check, and it is a dependency bump, not a conversion problem;
+(b) the unpublished `.task` recipe (onnx-community/litert-community were asked
+about theirs — no answer on record); (c) do not ship the fine-tune to MediaPipe.
+
+**4. Incidental, and it bites public-release: the loading card lied.** While
+streaming 5.07 GB the card read *"downloads the AI model (~2.0 GB) once"* —
+`MODEL_DOWNLOAD_SIZES` carries R1e's measured 2.00 GB for the *stock* `.task`.
+Any fine-tuned MediaPipe artifact is **2.5×** that, so R2b's download-honesty
+copy, R3a's README sizes and the R1b matrix all go stale the moment a
+fine-tune ships. Not queued — there is nothing to update until a loadable
+artifact exists.
 
 ## M14a result (2026-08-02, execute) — **E2B repeats 0 of 3; WebLLM repeats 1 of 3 — the table lands BETWEEN the ruling's branches**
 
@@ -2222,13 +2280,14 @@ depth** — `DATASET.md` §1 already orders it that way.
   branch fired, so regeneration is **not** indicated by the evidence: the
   residual is dispersed refusal-reliability, and a fluency/style pass does not
   target that. Do not spend it on the current diagnosis.
-- **M5a conversion run** (added 2026-07-19): run
-  `notebooks/m5a-litert-convert-gemma4-e2b.ipynb` on Colab (**High-RAM
-  CPU runtime** — the exporter is CPU-only and the fp16 checkpoint is
-  ~9.6 GB), then the in-app test per its final cell (the loop can drive
-  that part once the `.litertlm` exists). Read the notebook's tooling-
-  status cell first — gemma-4 export has open upstream bugs and the
-  web-loadability question is the experiment.
+- ~~**M5a conversion run**~~ **DONE 2026-08-05 (you ran the export; the loop
+  drove the in-app test). Result is NEGATIVE and nothing is asked of you here.**
+  The bundle converts (12m36s, needs `--experimental_lightweight_conversion` or
+  it OOMs on 50 GB) and is on HF at 5.07 GB — but the app cannot load it:
+  `tasks-genai@0.10.27` fails with *"No model format matched"* at format
+  detection. The web-loadability question the notebook flagged is answered, and
+  the answer is no. See the M5a result section for the full invocation and the
+  three candidate ways out.
 - **WebLLM removal — go/no-go** (added 2026-07-16): the M1b data is in and
   the loop's recommendation is **REMOVE** (see Decisions — Gemma 2 2B
   self-repetition loops from ~turn 5, checkin rubric FAIL, and the
