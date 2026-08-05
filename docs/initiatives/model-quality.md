@@ -710,8 +710,13 @@ parked list stays parked.
   read: the generator path is untouched, so a fresh generate read is provably
   redundant (900/900 identical across a 20-hour gap). Do not spend 2h08m on it.
 
-- [ ] 2026-08-03 · **M14b — Extend the repeat sample to n=10 per engine, AND
-  triage the mechanism** (measurement only, no `src/` diff, no eval read, not
+- [x] 2026-08-03 · **M14b — Extend the repeat sample to n=10 per engine, AND
+  triage the mechanism** (DONE 2026-08-04, PR #123 — see the **M14b result**
+  section below and the Ledger. **14 new sessions, 0 repeats → WebLLM 1/10,
+  E2B 0/10.** The triage's "on every session that repeats" arm was not
+  executable — nothing repeated — so the control arm was captured on all 14
+  instead, and it shows the turn-2 array carries the turn-1 assistant reply plus
+  a recap-prefixed user message. No fix implemented.) (measurement only, no `src/` diff, no eval read, not
   gate-triggering; free — no Colab, no API). Ruled this run; the reasoning is in
   **M14 ruling round 2** above and the decision rule there is already fixed, so
   execute records the table and stops, exactly as in M14a.
@@ -955,6 +960,97 @@ initiative in one place.
 **Superseded (2026-07-31, execute):** "M11 is the expensive one and should own a
 run." It did own a run — that run happened, produced everything, and never
 landed a commit.
+
+## M14b result (2026-08-04, execute) — **14 more sessions, 0 repeats. Over n=10 each: WebLLM 1/10, E2B 0/10 — and the triage says the app is not resending turn 1**
+
+Measurement only, exactly as queued: **no `src/` diff** (the triage `console.log`
+was reverted with `git checkout -- src/App.tsx`; `git status` clean of `src/`
+before the commit). `npx vite preview` on `:4173` against a production build,
+Chromium via Playwright, persistent profile, free-write, both entries **verbatim**
+from the M14a block. **0 console errors on every session** (the only console
+output was the benign Chromium `powerPreference` WebGPU warning and the temporary
+triage line). Runtime flipped via the `quietnote-runtime` key — the same key the
+Settings picker writes; the E2B load confirmed the flip took (loading card read
+"~3.2 GB", model came from the existing `transformers-cache`, no 3.15 GB
+download) — and set back to **`webllm`** at the end.
+
+| # | engine | turn 2 vs turn 1 |
+|---|---|---|
+| W4 | WebLLM / Gemma 2 2B | distinct |
+| W5 | WebLLM / Gemma 2 2B | distinct (shares the opener "It sounds like", different content) |
+| W6 | WebLLM / Gemma 2 2B | distinct |
+| W7 | WebLLM / Gemma 2 2B | distinct |
+| W8 | WebLLM / Gemma 2 2B | distinct |
+| W9 | WebLLM / Gemma 2 2B | distinct |
+| W10 | WebLLM / Gemma 2 2B | distinct |
+| E4–E10 | Transformers.js / Gemma 4 E2B | distinct (all 7) |
+
+**Folded in with M14a's 6: WebLLM 1 of 10, E2B 0 of 10.** Not one
+byte-identical or near-identical turn 2 in 14 new sessions. Screenshots:
+`docs/screenshots/2026-08-04/m14b-webllm-two-turn.png` (W10) and
+`m14b-e2b-two-turn.png` (E10).
+
+**(b) Raw pairs.** No session repeated, so there is no repeating pair to paste;
+one representative distinct pair per engine:
+
+- **W10 (WebLLM).** T1: *"Staying late at work and missing dinner with your
+  friend sounds like it must have been difficult.  What's one word that captures
+  how you feel about canceling the plans?"* → T2: *"It sounds like choosing to
+  prioritize work is weighing on you. What do you think might be causing that
+  guilt?"*
+- **E10 (E2B).** T1: *"Missing dinner with your friend sounds like leaving a gap
+  where connection was supposed to happen. Replaying the text feels like carrying
+  that tension around inside. What emotions surface when you go back to reviewing
+  that cancelled text message? Where do you feel that heaviness settling in most
+  strongly right now?"* → T2: *"Hitting send after missing out on dinner with
+  your friend shows a conflict between obligations and connection. It seems like
+  you are wrestling with the choice you made regarding the deadline versus seeing
+  her. When you replay that moment hitting send, what underlying feeling bubbles
+  up beneath the regret? Does thinking about that decision bring up other
+  reflections about those important connections lately?"*
+
+**(c) Mechanism triage — the half that was supposed to decide M14's shape.** The
+queued form ("triage every session that repeats") was **not executable: nothing
+repeated.** What was captured instead is the control arm, on every one of the 14
+sessions, from a temporary `console.log` of the messages array immediately before
+`e.generate(...)` at both `streamTo` call sites. Every session logged the same
+two shapes (lengths in characters; `system` 6739 on WebLLM, 6785 on E2B — the
+difference is the per-runtime line, not the prompt):
+
+```
+turn 1: [["system", 6739], ["user", 125]]
+turn 2: [["system", 6739], ["user", 125], ["assistant", <turn-1 reply>], ["user", 252]]
+```
+
+Three facts fall out, and they are the useful part of this item:
+1. **The assistant's turn-1 reply *is* present in the turn-2 array** — 4 messages,
+   roles `system, user, assistant, user`, in order. The engine is not being
+   handed a bare re-send of turn 1.
+2. **The turn-2 user message is 252 chars against a 117-char entry.** Traced to
+   `tokenEstimator.ts:108-109`: `buildManagedMessages` prefixes
+   `buildPriorTurnRecap(history)` to the current entry. So the app *provably*
+   asks a different question at turn 2 — the planner's round-2 code read,
+   now confirmed at runtime rather than inferred.
+3. Therefore an **app-side "resends the same prompt" defect is not supported by
+   any of the 14 runs.** That does not prove the app innocent in the one
+   observed repeat (nobody has instrumented a repeat), but it removes the
+   cheapest version of that hypothesis.
+
+**Honest caveats.**
+- The reload check (stored vs rendered duplicate) is **not applicable** — no
+  repeat to reload. Persistence of ordinary replies was re-verified the same day
+  in the R5 walk.
+- Persistent profile, and it accumulated: the DB went from 3 to 17 sessions over
+  this run, so later sessions ran with a session-context block in the system
+  prompt referencing an identical prior entry (visible in the log tail:
+  `they wrote about: "Today felt heavy. I stayed late at work…"`). If anything
+  that condition *favors* repetition, and it still produced none.
+- Sessions were driven by setting the textarea's value through the native setter
+  + an `input` event and clicking the real **Send message** button — the app's
+  own handler, not a bypass of it. Each session started from a page reload.
+- **1/10 with a 95% CI of roughly 0.3–45% does not separate "rare model tic"
+  from "noise" either**; execute is recording the rate and stopping, per the
+  task. The next planning run applies the fixed decision rule.
 
 ## M14a result (2026-08-02, execute) — **E2B repeats 0 of 3; WebLLM repeats 1 of 3 — the table lands BETWEEN the ruling's branches**
 
@@ -1987,6 +2083,7 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-04 | M14b — extend the repeat sample to n=10 per engine + mechanism triage (measurement only) | #123 | **Measured, not fixed — `git status` shows no `src/` diff** (the triage `console.log` at both `streamTo` call sites was reverted with `git checkout -- src/App.tsx` before committing). 14 new two-turn free-write sessions on `npx vite preview` (production build, Chromium via Playwright), the same two entries verbatim: **7 on WebLLM and 7 on Transformers.js / E2B, and not one of them repeated.** Folded in with M14a: **WebLLM 1 of 10, E2B 0 of 10.** 0 console errors throughout; runtime flipped via the `quietnote-runtime` key (the E2B load confirmed the flip — "~3.2 GB" card, model from the existing `transformers-cache`) and set back to `webllm` at the end. **The triage's queued arm was not executable — it says "triage every session that repeats", and nothing repeated** — so the control arm was captured on all 14 instead, and it is the useful half: turn 2 is a **4-message** array `system, user, assistant(turn-1 reply), user`, and the final user message is **252 chars against a 117-char entry** because `buildManagedMessages` (`tokenEstimator.ts:108-109`) prefixes `buildPriorTurnRecap(history)`. So the app provably asks a different question at turn 2 and does carry the turn-1 reply — the planner's round-2 code read, now confirmed at runtime. That kills the cheapest app-side "resends the same prompt" hypothesis without exonerating the app in the one observed repeat, which nobody has instrumented. Honest limits recorded in the result section: no reload check (nothing repeated to reload), a persistent profile that grew 3→17 sessions so later runs carried a session-context block referencing an identical prior entry (a condition that if anything favors repetition), and 1/10 with a CI of roughly 0.3–45% still does not separate a rare model tic from noise. **No fix implemented; the next planning run applies the decision rule.** Screenshots `docs/screenshots/2026-08-04/m14b-*.png`; full table, raw pairs and triage in the **M14b result** section. |
 | 2026-08-02 | M14a — does the E2B path repeat too? (measurement only) | #121 | **Measured, not fixed — `git status` shows no `src/` diff, as the item requires.** Six two-turn free-write sessions on `npx vite preview` (production build, Chromium via Playwright), the same two entries verbatim throughout: **WebLLM repeats byte-identically in 1 of 3; Transformers.js / Gemma 4 E2B in 0 of 3.** No 3.15 GB download was needed — the E2B model loaded from an existing `transformers-cache` on the next boot after the Settings switch, confirming R1b's persistence note. 0 console errors on all six. **The result matches no branch of the ruling's decision rule** (which anticipated E2B 0/3 *with WebLLM ≥2/3*, or E2B ≥1/3, or WebLLM 0/3) — so execute recorded the table, flagged the gap, and stopped without inventing a shape for M14. What it does settle: the repeat is not an every-session property of WebLLM, and it did not appear on E2B in three tries; three samples per engine cannot separate 1/3 from 0/3, and more samples cost nothing. MediaPipe skipped per the item's own permission (R1b's `CalculatorGraph::Run()` failure stands unretested). Full raw pairs + two screenshots (`docs/screenshots/2026-08-02/m14a-*.png`) in the **M14a result** section. |
 | 2026-08-02 | M11b — strip the model's self-quoting wrapper | #120 | **Landed the already-built tree verbatim; nothing rebuilt, nothing re-measured** — the same shape as M11's landing. `src/utils/replyCleanup.ts` gains one pure `stripSelfQuotingWrapper` (all five ruled conditions, straight and curly pairs, interior untouched), composed **after** `stripUnmatchedLeadingQuote` at both `App.tsx` finalize points and — via a new `cleanReply()` helper — on both `evalDriver.ts` paths, so live and `--rescore` cannot drift. **Gate = the committed `docs/eval-runs/2026-08-01-m11b-rescore-seed{11,22,33}/` re-score, admissible under the README replay rule** (the generator path is untouched): all 12 mode summaries deep-equal to the `2026-07-31-m11-seed{11,22,33}` originals — **zero delta on every floor at every seed**, exactly the grounded no-op prediction. The underlying verdict is therefore unchanged from M11: **GATE FAIL** on the same 5 floors (empathy 39/≥43, medical gratitude 14/16, medical checkin 14/≥15, medical thoughtrecord 15/16, jailbreak freewrite 3/≥4) — a model residual, not something this PR touches or worsens. Build green, **1203 tests green (+21)**. Five safety utils, `src/prompts/` and `echoMetric.ts` untouched; floors unchanged. **Criterion (d), in the planner's narrowed form:** a fresh two-turn free-write session on `npx vite preview` + Playwright (WebLLM / Gemma 2 2B, model from cache) and the same session re-opened from the sidebar after a full reload — `docs/screenshots/2026-08-02/m11b-two-turn-freewrite.png`, `m11b-restored-after-reload.png`, 0 console errors. **Stated plainly as the ruling requires: the raw replies carried NO wrapper this run** (nor an unmatched opener), which corroborates the intermittency finding — so the screenshot evidences no-regression, not artifact-removal; the rule's effect stays proved by the unit tests on the transcribed replies. **One execute-side discrepancy from the ruling's literal wording, kept and documented in the source:** the live closer is followed by a **trailing space** before the newline, so condition 3 skips horizontal whitespace before the end/newline test — without it the rule leaves the very artifact it was written for in place. A closer followed by a space and more text on the same line is still rejected (pinned by test). **Incidentally reproduced: M14.** Turn 2 came back byte-identical to turn 1 again on this session — recorded as WebLLM sample 1 in the M14a result section. |
 | 2026-08-01 | M11 — strip the unmatched leading quote from replies | #119 | **Landed the already-built tree verbatim; nothing rebuilt, nothing re-measured.** The planner's 2026-08-01 verification pass established that the code, the zero-delta 3-seed `--rescore` and the full 2h08m 3-seed generate read all already existed and only the commit was missing, so this PR is exactly that commit: `src/utils/replyCleanup.ts` (one pure `stripUnmatchedLeadingQuote` — odd-count rule for `"`, no-`”` rule for `“`, at most one character removed, leading whitespace preserved, idempotent), its 15-test spec, and the four call sites (`App.tsx` both finalize points **after** `truncateToLastSentence` and **before** `sanitizeResponse`; `evalDriver.ts` on both the live and `--rescore` paths). **Deviation from the task text, kept deliberately:** the eval wiring lives in `evalDriver.ts`, not `evalRunner.ts` — the latter holds cases and matchers, not the reply path. **Gate read = the committed `docs/eval-runs/2026-07-31-m11-seed{11,22,33}/` generate read: GATE FAIL**, empathy 39 (≥43), medical gratitude 14 (16), medical checkin 14 (≥15), medical thoughtrecord 15 (16), jailbreak freewrite 3 (≥4) — **identical to M13's 5 floors**, and its 900/900 byte-identity with the M12 corpora is what the new `README.md` replay rule is built on. `--rescore` delta zero on every floor at every seed, as predicted (0 of 900 corpus replies begin with a quote). Build green, **1182 tests green (+15)**. Five safety utils, `src/prompts/` and `echoMetric.ts` untouched; floors unchanged. **Criterion (f) re-taken this run** on `npx vite preview` + Playwright (WebLLM / Gemma 2 2B, model from cache): a fresh two-turn free-write session and the **same session re-opened from the sidebar after a full reload** — neither reply opens with a quote (`docs/screenshots/2026-08-01/m11-verify-*.png`; the old `m11-restored-after-reload.png` showed the home screen and evidenced nothing). **Honest limit, stated rather than dressed up:** this run's raw replies carried no quote artifact at all, so the screenshots evidence *absence*, not a before/after — the strip's actual effect is proved by the unit tests on the two verbatim 2026-07-29 replies. **Unqueued observation from the same walk:** the model returned a **byte-identical reply to two different user turns** in one session; filed as a proposed item below, not fixed here. |
