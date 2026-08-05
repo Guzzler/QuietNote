@@ -2092,12 +2092,19 @@ depth** — `DATASET.md` §1 already orders it that way.
     account (2026-07-12). Budget rule: stay within the already-purchased
     units; never queue anything that requires buying more without asking
     Sharang. Sharang runs the notebook himself — the loop only writes it.
-  - **HF hosting:** account **Sharangp**. ~~Write token lives in git-ignored
-    `.env.local` as `HF_TOKEN`.~~ **CORRECTED 2026-08-03: it does not** —
-    `.env.local` today holds only `ANTHROPIC_API_KEY`. Sharang pastes the HF
-    token straight into Colab at train time (which the original note also
-    said), so **the loop cannot verify HF remote state** and must never claim
-    to. Never commit, print, or `VITE_`-prefix either key.
+  - **HF hosting:** account **Sharangp**. Write token **is** present in
+    git-ignored `.env.local` as `HF_TOKEN` (fine-grained, `repo.write` scoped
+    to Sharangp, verified 2026-07-12), alongside `ANTHROPIC_API_KEY`. Sharang
+    also pastes it into Colab at train time. Never commit, print, or
+    `VITE_`-prefix either key.
+    **Gotcha that cost a wrong claim on 2026-08-03 — record it so no future
+    run repeats it: `.env.local` begins with a UTF-8 BOM**, so `HF_TOKEN` is
+    physically `﻿HF_TOKEN` on line 1 and every anchored match
+    (`grep '^HF_TOKEN='`, `line.startswith('HF_TOKEN=')`) silently returns
+    nothing. The planner concluded from that the token was absent and wrote it
+    into this doc and `decisions.md`. **Strip the BOM before matching**
+    (read with `encoding='utf-8-sig'`, or match `'HF_TOKEN='` unanchored).
+    Absence of a match in a dotfile is not evidence of absence.
   - Base repo `google/gemma-4-E2B-it` is Apache 2.0 and appears ungated; if
     the notebook's first pull hits a terms gate anyway, Sharang accepts it
     on the Sharangp account.
