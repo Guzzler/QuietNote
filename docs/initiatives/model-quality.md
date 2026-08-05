@@ -750,8 +750,11 @@ parked list stays parked.
   diff**. **Then stop — do not implement a fix.** The next planning run applies
   the fixed decision rule.
 
-- [ ] 2026-08-03 · **M14c — Two-turn drive of MediaPipe, the third shipped
-  engine** (measurement only, no `src/` diff, no eval read, not gate-triggering;
+- [x] 2026-08-03 · **M14c — Two-turn drive of MediaPipe, the third shipped
+  engine** (DONE 2026-08-04, PR #124 — see the **M14c result** section below and
+  the Ledger. **MediaPipe 0/3**, no repeat; the 2.0 GB `.task` downloaded cold
+  and populated `mediapipe-cache`, so R1d/R1e both re-confirmed. Rate reported
+  alongside M14b's, not ruled on.) (measurement only, no `src/` diff, no eval read, not gate-triggering;
   free). Grounding correction made this run: MediaPipe's `CalculatorGraph::Run()
   failed` at first send is **not** an open defect — R1d (PR #83) fixed it
   (`maxTokens` was a 1024 TOTAL budget against 4096-token prompts) and R1e
@@ -960,6 +963,66 @@ initiative in one place.
 **Superseded (2026-07-31, execute):** "M11 is the expensive one and should own a
 run." It did own a run — that run happened, produced everything, and never
 landed a commit.
+
+## M14c result (2026-08-04, execute) — **MediaPipe repeats 0 of 3, and the third shipped engine works end-to-end**
+
+Measurement only, **no `src/` diff**. Same conditions as M14b (production build
+on `npx vite preview`, Chromium via Playwright, free-write, both entries
+verbatim, one session per page load). **0 console errors on all three.**
+
+**The download was cold and it is now recorded honestly:** before this run the
+profile's Cache Storage held `webllm/{config,wasm,model}` and
+`transformers-cache` but **no `mediapipe-cache`**. The 2.0 GB `.task` downloaded
+in full on the first load — the loading card showed the R2b "~2.0 GB" line and
+real byte-based progress (36% → 48% → 60% → 72% → 83% → ready), and the origin's
+quota held it: after the run `caches.keys()` returns **`mediapipe-cache`**, and
+loads 2 and 3 reached ready in seconds off the cache. That is R1e's caching path
+re-confirmed on a genuinely cold start, alongside R1d's inference fix.
+
+| # | engine | turn 2 vs turn 1 |
+|---|---|---|
+| M1 | MediaPipe / Gemma 4 E2B LiteRT | distinct |
+| M2 | MediaPipe / Gemma 4 E2B LiteRT | distinct |
+| M3 | MediaPipe / Gemma 4 E2B LiteRT | distinct |
+
+**MediaPipe 0 of 3.** No repeat, so the reload check does not apply, and no
+triage instrumentation was reinstated (M14b's control arm already covers the
+non-repeating case, and the item forbids inventing a fix). Screenshot:
+`docs/screenshots/2026-08-04/m14c-mediapipe-two-turn.png` (M3).
+
+Raw pairs:
+
+- **M1.** T1: *"Today felt heavy, especially missing dinner with your friend and
+  replaying that cancellation text. Those moments of regret can really weigh you
+  down. What thoughts keep looping in your mind about that canceled dinner?"* →
+  T2: *"Hitting send on that cancellation text, knowing she was already gone,
+  must feel like a sudden, sharp pang of regret. It sounds like you are
+  struggling with the weight of choices you have to make and the feelings that
+  follow them. What is it about choosing the deadline that feels so difficult to
+  let go of right now?"*
+- **M2.** T1: *"Today felt heavy, especially after staying late and missing
+  dinner with your friend, and replaying that cancellation text is weighing on
+  you. What is it about that moment that feels so much like a heavy burden right
+  now? Are you wondering what might happen if you reached out again?"* → T2:
+  *"Hitting send on that cancellation text must have brought up a wave of
+  regret, especially after you had already made the decision to prioritize work.
+  How does that choice feel in the quiet spaces of your mind now? What were the
+  deeper thoughts that were leading up to that moment?"*
+- **M3.** T1: *"Staying late and missing dinner with your friend sounds like a
+  very isolating experience right now. The replay of that canceled text must be
+  bringing up a lot of complex feelings about the relationship. What thoughts are
+  swirling around in your mind when you focus on that moment?"* → T2: *"Hitting
+  send and choosing a deadline over a dinner with your friend sounds like a
+  moment filled with difficult choices and perhaps a deep sense of regret. That
+  decision to prioritize work over that connection must feel heavy now. What
+  does that choice feel like in your body right now?"*
+
+**Rate alongside M14b, not ruled on:** WebLLM **1/10**, E2B **0/10**, MediaPipe
+**0/3**. Three samples cannot distinguish 0/3 from a low rate; this says only
+that MediaPipe was not observed to repeat, and that the engine is a working
+two-turn path — which nobody had checked before today. The runtime was set back
+to `webllm` at the end. Total Cache Storage now holds all three model caches
+(≈6.65 GB, matching R1e's figure).
 
 ## M14b result (2026-08-04, execute) — **14 more sessions, 0 repeats. Over n=10 each: WebLLM 1/10, E2B 0/10 — and the triage says the app is not resending turn 1**
 
@@ -2083,6 +2146,7 @@ depth** — `DATASET.md` §1 already orders it that way.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-04 | M14c — two-turn drive of MediaPipe, the third shipped engine (measurement only) | #124 | **Measured, not fixed — no `src/` diff.** Three two-turn free-write sessions on MediaPipe / Gemma 4 E2B LiteRT, same entries verbatim, same recording format as M14b: **0 of 3 repeated**, so the reload check did not apply. **The `mediapipe-cache` entry was genuinely cold** — before the run Cache Storage held only the WebLLM and Transformers.js caches — so the 2.0 GB `.task` downloaded in full with the R2b "~2.0 GB" line and real byte progress (36→48→60→72→83% → ready), the origin's quota held it, and loads 2 and 3 came off the cache in seconds. That re-confirms **R1e's caching** and **R1d's inference fix** on a cold start, and answers the standing question directly: MediaPipe is a working two-turn path, which nobody had driven before. 0 console errors on all three; runtime set back to `webllm`; all three model caches now resident (≈6.65 GB, matching R1e). **Rate reported, not ruled on: WebLLM 1/10, E2B 0/10, MediaPipe 0/3** — three samples cannot distinguish 0/3 from a low rate. Raw pairs + screenshot (`docs/screenshots/2026-08-04/m14c-mediapipe-two-turn.png`) in the **M14c result** section. |
 | 2026-08-04 | M14b — extend the repeat sample to n=10 per engine + mechanism triage (measurement only) | #123 | **Measured, not fixed — `git status` shows no `src/` diff** (the triage `console.log` at both `streamTo` call sites was reverted with `git checkout -- src/App.tsx` before committing). 14 new two-turn free-write sessions on `npx vite preview` (production build, Chromium via Playwright), the same two entries verbatim: **7 on WebLLM and 7 on Transformers.js / E2B, and not one of them repeated.** Folded in with M14a: **WebLLM 1 of 10, E2B 0 of 10.** 0 console errors throughout; runtime flipped via the `quietnote-runtime` key (the E2B load confirmed the flip — "~3.2 GB" card, model from the existing `transformers-cache`) and set back to `webllm` at the end. **The triage's queued arm was not executable — it says "triage every session that repeats", and nothing repeated** — so the control arm was captured on all 14 instead, and it is the useful half: turn 2 is a **4-message** array `system, user, assistant(turn-1 reply), user`, and the final user message is **252 chars against a 117-char entry** because `buildManagedMessages` (`tokenEstimator.ts:108-109`) prefixes `buildPriorTurnRecap(history)`. So the app provably asks a different question at turn 2 and does carry the turn-1 reply — the planner's round-2 code read, now confirmed at runtime. That kills the cheapest app-side "resends the same prompt" hypothesis without exonerating the app in the one observed repeat, which nobody has instrumented. Honest limits recorded in the result section: no reload check (nothing repeated to reload), a persistent profile that grew 3→17 sessions so later runs carried a session-context block referencing an identical prior entry (a condition that if anything favors repetition), and 1/10 with a CI of roughly 0.3–45% still does not separate a rare model tic from noise. **No fix implemented; the next planning run applies the decision rule.** Screenshots `docs/screenshots/2026-08-04/m14b-*.png`; full table, raw pairs and triage in the **M14b result** section. |
 | 2026-08-02 | M14a — does the E2B path repeat too? (measurement only) | #121 | **Measured, not fixed — `git status` shows no `src/` diff, as the item requires.** Six two-turn free-write sessions on `npx vite preview` (production build, Chromium via Playwright), the same two entries verbatim throughout: **WebLLM repeats byte-identically in 1 of 3; Transformers.js / Gemma 4 E2B in 0 of 3.** No 3.15 GB download was needed — the E2B model loaded from an existing `transformers-cache` on the next boot after the Settings switch, confirming R1b's persistence note. 0 console errors on all six. **The result matches no branch of the ruling's decision rule** (which anticipated E2B 0/3 *with WebLLM ≥2/3*, or E2B ≥1/3, or WebLLM 0/3) — so execute recorded the table, flagged the gap, and stopped without inventing a shape for M14. What it does settle: the repeat is not an every-session property of WebLLM, and it did not appear on E2B in three tries; three samples per engine cannot separate 1/3 from 0/3, and more samples cost nothing. MediaPipe skipped per the item's own permission (R1b's `CalculatorGraph::Run()` failure stands unretested). Full raw pairs + two screenshots (`docs/screenshots/2026-08-02/m14a-*.png`) in the **M14a result** section. |
 | 2026-08-02 | M11b — strip the model's self-quoting wrapper | #120 | **Landed the already-built tree verbatim; nothing rebuilt, nothing re-measured** — the same shape as M11's landing. `src/utils/replyCleanup.ts` gains one pure `stripSelfQuotingWrapper` (all five ruled conditions, straight and curly pairs, interior untouched), composed **after** `stripUnmatchedLeadingQuote` at both `App.tsx` finalize points and — via a new `cleanReply()` helper — on both `evalDriver.ts` paths, so live and `--rescore` cannot drift. **Gate = the committed `docs/eval-runs/2026-08-01-m11b-rescore-seed{11,22,33}/` re-score, admissible under the README replay rule** (the generator path is untouched): all 12 mode summaries deep-equal to the `2026-07-31-m11-seed{11,22,33}` originals — **zero delta on every floor at every seed**, exactly the grounded no-op prediction. The underlying verdict is therefore unchanged from M11: **GATE FAIL** on the same 5 floors (empathy 39/≥43, medical gratitude 14/16, medical checkin 14/≥15, medical thoughtrecord 15/16, jailbreak freewrite 3/≥4) — a model residual, not something this PR touches or worsens. Build green, **1203 tests green (+21)**. Five safety utils, `src/prompts/` and `echoMetric.ts` untouched; floors unchanged. **Criterion (d), in the planner's narrowed form:** a fresh two-turn free-write session on `npx vite preview` + Playwright (WebLLM / Gemma 2 2B, model from cache) and the same session re-opened from the sidebar after a full reload — `docs/screenshots/2026-08-02/m11b-two-turn-freewrite.png`, `m11b-restored-after-reload.png`, 0 console errors. **Stated plainly as the ruling requires: the raw replies carried NO wrapper this run** (nor an unmatched opener), which corroborates the intermittency finding — so the screenshot evidences no-regression, not artifact-removal; the rule's effect stays proved by the unit tests on the transcribed replies. **One execute-side discrepancy from the ruling's literal wording, kept and documented in the source:** the live closer is followed by a **trailing space** before the newline, so condition 3 skips horizontal whitespace before the end/newline test — without it the rule leaves the very artifact it was written for in place. A closer followed by a space and more text on the same line is still rejected (pinned by test). **Incidentally reproduced: M14.** Turn 2 came back byte-identical to turn 1 again on this session — recorded as WebLLM sample 1 in the M14a result section. |
