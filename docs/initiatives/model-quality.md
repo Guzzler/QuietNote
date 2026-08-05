@@ -762,6 +762,31 @@ parked list stays parked.
   one screenshot into `docs/screenshots/<date>/`, and `git status` showing no
   `src/` diff. Report the rate alongside M14b's; do not rule on it.
 
+- [ ] 2026-08-04 · **M15 (PROPOSED by execute — not planner-graded, do not start
+  without a ruling) — an unmatched *trailing* curly `”`, the mirror of M11.**
+  Observed while verifying R5 on `npx vite preview` (shipped default engine =
+  WebLLM / Gemma 2 2B, free-write, entry `Today felt heavy.` against an existing
+  prior session). The stored reply, read straight out of IndexedDB after a
+  reload (so it is in the reply text, not a render artifact), is:
+  > `Your sister calling about your dad's surgery feels like a big weight, doesn’t it?” \nWhat feelings are coming up for you with that news?  How is sharing those emotions playing out in the space around you today?`
+
+  One `”` and no opener anywhere in the reply. **Why the two shipped rules miss
+  it, read from the code, not assumed:** `stripUnmatchedLeadingQuote` only fires
+  when the *first* non-whitespace character is a quote, and
+  `stripSelfQuotingWrapper` requires a matched pair — this is a lone closer in
+  sentence-final position, which is neither. So M11/M11b are holding exactly as
+  specified; this is a third shape they were never written to cover.
+  **What execute did not measure and is not guessing at:** the rate (n=1 here),
+  whether it also appears on E2B/MediaPipe, and whether it is the tail of a
+  wrapper whose opener was dropped upstream. A fix looks like a small
+  `replyCleanup.ts` sibling under conditions as narrow as M11b's, but the shape
+  and the gate answer are the planner's call — `replyCleanup` is called from the
+  App send path's finalize points, so any fix is gate-triggering (satisfiable by
+  `--rescore` under the README replay rule, since the generator is untouched).
+  Note this is **unrelated to R5**: the entry and the prior-session text contain
+  no curly quotes, and R5's curly quotes live only in card copy and the textarea
+  prefill, neither of which reached the model here.
+
 - [x] 2026-08-01 · **M14 (PROPOSED by execute — not planner-graded, do not
   start without a ruling) — the shipped engine can repeat a reply verbatim
   across turns.** (RULED, twice — 2026-08-02 and again 2026-08-03 on M14a's
