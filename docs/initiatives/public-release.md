@@ -171,6 +171,18 @@ first screen a returning user sees.
   `npm run test` green; GitHub shows "MIT" in the repo sidebar once pushed.
   Not gate-triggering (no `src/`, no send path, no safety util).
 
+**R6 NOT TAKEN 2026-08-04 (execute) — left open deliberately, not skipped by
+accident.** The execute task file carries a standing hard rule: *"LICENSE and
+tester outreach are Sharang's — never add a LICENSE file … on his behalf."*
+That rule governs this runner directly, and a queue item in a doc does not
+override it, even one recording Sharang's interactive go — the runner cannot
+verify that go, and the cost of being wrong (a licensing declaration published
+on his repo) is not symmetric with the cost of waiting. Everything else about
+R6 is ready and the item is unchanged. **To unblock it, either Sharang adds the
+file himself, or the standing hard rule in the execute task file is amended to
+carve out a planner-queued LICENSE with his recorded go.** The rest of the
+2026-08-04 run took R5, M14b and M14c instead.
+
 ### R5 cold ruling (planner, 2026-08-04) — defect CONFIRMED, fix QUEUED
 
 **Grounding re-verified against the files this run** (not from execute's
