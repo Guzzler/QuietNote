@@ -20,7 +20,7 @@ import { MODEL_CONTEXT_LIMIT } from "../utils/tokenEstimator";
 /** Must match the @mediapipe/tasks-genai version in package.json — the WASM
  * fileset is fetched from the CDN and an unpinned URL drifts to `latest`,
  * mismatching the bundled JS API. */
-const TASKS_GENAI_VERSION = "0.10.27";
+const TASKS_GENAI_VERSION = "0.10.29";
 
 const MODEL_URL =
   "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-web.task";
