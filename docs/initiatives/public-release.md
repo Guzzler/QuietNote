@@ -271,6 +271,92 @@ them. Do not treat the filenames as a finding; a filename is not a measurement.
 accident.**
 </details>
 
+## Audit walk 2026-08-05 (execute) — two real defects, both in the guided modes
+
+Walked before taking R7/R8, on `npx vite preview` against a production build of
+`main` at the time (so: **WebLLM / Gemma 2 2B**, the pre-R7 default), Chromium
+via Playwright, the persistent profile (model cached — this is an
+empty-IndexedDB-ish walk, **not** a true first-download cold start; the
+fresh-profile download matrix remains R2's 2026-07-12 read). Path: load → free
+write two turns → reload → session re-open → Thought Record two turns → reload
+→ session re-open.
+
+**Working, re-confirmed:** R5's quoting fix is live and grammatical on the real
+path (`3 days ago, you wrote: “Today felt heavy. I stayed late at work…” How
+are you feeling about that today?` — no mid-sentence capital, no `….`); the
+two-turn free-write exchange came back distinct and turn-aware with **no quote
+artifact of any kind** and **no M14 repeat**; both turns survived a full reload
+and re-opened from the sidebar; disclaimer + Crisis resources above the
+transcript; all four footer links correct; **0 console errors** (one benign
+Chromium `powerPreference` warning). Screenshots:
+`docs/screenshots/2026-08-05/audit-*.png`.
+
+- [ ] 2026-08-05 · **R9 (PROPOSED by execute — not planner-graded, do not
+  start without a ruling) — the guided modes are not resumable, and the
+  Thought Record can be silently lost.** Re-opening a Thought Record session
+  from the sidebar restores the transcript but drops the exercise: the mode
+  strip resets to **Free Write** and the "Step N of 5" scaffold disappears
+  (measured: `aria-checked="true"` on Free Write, no `Step ` string in the
+  document). **Grounded in the code, not inferred:** `journalingMode` and the
+  three step counters are plain React state initialised to `"freewrite"` / `1`
+  (`src/App.tsx:152-155`), nothing persists them to the session record, and
+  `src/App.tsx:279-283` resets all three on every `currentId` change — so
+  re-opening *any* guided session lands the user in Free Write at step 1.
+  **The part that is worse than cosmetic:** the structured `ThoughtRecord` is
+  only written when `thoughtRecordStep > 5` (`src/App.tsx:287-318`), and the
+  counter is ephemeral — so a user who reloads mid-exercise and comes back can
+  never reach the save condition for that session. The CBT artifact the mode
+  exists to produce is lost, quietly. A stranger doing the one mode that most
+  looks like "real" therapy work is the one most likely to hit this.
+  **Not guessed at:** how much of this is intended (a session may be meant to
+  be one sitting), and whether the fix is persisting `journalingMode` + step on
+  the session record or deriving the step from the stored message count. Both
+  touch session shape; the choice is the planner's.
+
+- [ ] 2026-08-05 · **R10 (PROPOSED by execute — not planner-graded, do not
+  start without a ruling) — the guided step banner and the model contradict
+  each other, because the model is never told the step.** Observed on turn 2 of
+  the Thought Record walk: the banner had advanced to **"Step 2 of 5 — What
+  went through your mind? What were you thinking?"** while the reply asked
+  *"How does that make you feel?"* — **the identical closing question it had
+  already asked on turn 1**. So the screen simultaneously instructs the user to
+  do two different things, and one of them is a repeat. Survives a reload and a
+  sidebar re-open, so it is in the stored reply, not a render artifact.
+  **The mechanism is structural, and this is the finding:**
+  `getSystemInstruction(mode, contextBlock?, personalityDirective?)`
+  (`src/prompts/systemPrompts.ts:191`) has **no step parameter**, and
+  `THOUGHT_RECORD_SEQUENCE` (`src/data/journalPrompts.ts:379-385`) is imported
+  only by the display component `ThoughtRecordGuide.tsx`. The banner is a pure
+  UI counter incremented on each send (`src/App.tsx:323-325`, `:506-508`) while
+  the model free-associates with no knowledge of it. These two cannot stay in
+  sync except by luck — the observed desync is the default behavior, not a
+  fluke, and the same holds for Gratitude and Check-in.
+  **Related but distinct from M14/M15:** the repeated *closing question* is a
+  partial repeat (opening sentence differed), on the pre-R7 default engine.
+  **Re-measure on MediaPipe before pricing any fix** — R7 changed which model a
+  stranger gets, and this walk predates it. Any fix that feeds the step into
+  the prompt touches `src/prompts/`, i.e. **gate-triggering in the expensive
+  way** (fresh 3-seed generate read); a UI-only fix that hides the banner
+  during a reply is cheap but treats the symptom.
+
+- [ ] 2026-08-05 · **R11 (PROPOSED by execute — low severity, weakest of the
+  three, filed for completeness) — "it loads instantly" is shown to returning
+  users unconditionally.** The first-time note at `src/App.tsx:766-774` renders
+  on *every* load with no cache-awareness, so a returning visitor reads
+  *"First time: downloads the AI model (~2.0 GB) once … After that, it loads
+  instantly"* while watching a progress bar. **Measured this run, and the
+  numbers do not all support the complaint** — cached loads ranged from
+  **5.6 s / 6.3 s** (warm reload, same browser process, WebLLM) through
+  **13.3 s** (MediaPipe from `mediapipe-cache`) to roughly **40–60 s** on the
+  first load of a cold browser process. So "instantly" is fair for a warm
+  reload and false for the cold-process case that a returning stranger actually
+  experiences the next day. **What is missing before this is worth acting on:**
+  a proper cold-process measurement (this run's 40–60 s is inferred from
+  wall-clock between navigation and ready, not instrumented) — R2's fresh-profile
+  methodology is the right instrument. If the planner wants it cheap, the honest
+  copy fix is dropping the word "instantly" for something measured; it is
+  copy-only and not gate-triggering.
+
 **R6 moved out of the queue 2026-08-05 (planner).** It sat open for two runs
 because execute is right to refuse it: its task file's standing rule ("never
 add a LICENSE file on his behalf") governs the runner, and a queue item cannot
