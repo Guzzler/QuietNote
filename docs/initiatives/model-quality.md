@@ -216,7 +216,9 @@ parked list stays parked.
 | M2f | Long-arc yield calibration: the 357-record pilot came out 13.7% long vs the deck's 30% target because the exact-turn-count filter discarded most long dialogues; harvester now repairs shape slips + accepts by length band | DONE (this PR) — filter/parser only, deck untouched; the severe early-stop residual is a teacher-prompt lever, not queued |
 | M3 | QLoRA fine-tune: 4-bit Gemma 4 E2B + LoRA adapter (unsloth/PEFT on Colab), merge adapter → fp16 checkpoint on HF (Sharangp) | setup COMPLETE 2026-07-12; notebook WRITTEN 2026-07-16 (M3a, PR #98) — waits only on the M2 dataset (M2c, generating), then Sharang runs it |
 | M4 | Eval the merged model: M1 harness + full release-gate floors; below-floor = do not ship (Day-30/32 precedent) | three runs done (357 pilot / 1892 full / M6 6× / M6b 8×): all **GATE FAIL**. M6 (6×) is the best model to date; M6b (8×) is worse. **Blocked on M9 + M10** (was M8, which landed) — the seed fix and the last matcher ruling must land before another training run is spent (see the M6b section) |
-| M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | **BLOCKED — no browser path exists (measured 2026-08-05, M5a).** ONNX export upstream-blocked; the LiteRT bundle converts but `tasks-genai@0.10.27` rejects it at format detection (*"No model format matched"*). See the M5a result section — the cheapest untried lever is a `tasks-genai` version that reads `.litertlm` |
+| M5 | Convert + deploy: merged → MLC / ONNX / LiteRT, host on HF, swap model refs in-app in one PR carrying the M4 numbers | **BLOCKED, one layer deeper than M5a left it (M5b, 2026-08-05).** ONNX export is upstream-blocked; the LiteRT bundle converts and `tasks-genai@0.10.29` now *recognises* it, then fails on `could not find gpu_artisan .bin file in .litertlm package` — the web `.task` carries a GPU-precompiled artifact `litert-torch`'s CPU export does not emit. M5a's cheapest lever is spent; the next one is **M5c** |
+| M5b | **Bump `tasks-genai` 0.10.27 → 0.10.29 so `.litertlm` is a recognised format** — M5a's candidate (a), a dependency question rather than a conversion one | DONE 2026-08-05 (Sharang + loop, commit `fd60f58`) — **NEGATIVE for M5, positive for grounding**: the stock `.task` still loads and completes an exchange (no regression), and the fine-tune's failure moved from opaque (*"No model format matched"*) to named (*`gpu_artisan`*). **Not yet on `main`** — it sits with the default-engine swap on `fix/2026-08-05-tasks-genai-litertlm`, which public-release **R7** lands |
+| M5c | **Probe `delegate: "CPU"` against the 5.07 GB `.litertlm`** — the named failure is that the GPU path wants a precompiled GPU blob, and `LlmBaseOptions` exposes a backend override the app has never set. Answers "can this container be loaded at all" for ~an evening, without a Colab run or a conversion | QUEUED 2026-08-05 (planner) — measurement only, temporary local edit reverted before commit. Speed is **not** the question: a browser-CPU E2B will be slow and that is an acceptable answer |
 | M6 | Safety-mirror **oversampling in the training split** (notebook-side, no regeneration, no API spend): repeat the 193 `safety-*` records ~6× in the TRAIN split ONLY so medical/jailbreak refusal reaches ~10% of gradient signal (was 2.5%) — the cheapest decisive test of the 2026-07-25 signal-dilution root cause; gate-fail-triggered | DONE (this PR) — builder writes the oversample; Sharang's Colab rerun on the existing 1892 dataset → M4 rerun |
 | M6b | Oversample 8× + 22 loop-authored targeted safety-medical exemplars (dataset 1914) — the "bump toward 8×" lever | DONE 2026-07-28 (Sharang's Colab run) — **GATE FAIL and net WORSE than M6 6×**: empathy fell below floor (43→39), medical dropped in 3 modes, jailbreak regressed fw/tr. **Oversampling is exhausted; 6× is the sweet spot** |
 | M8 | **Measurement-integrity audit of the residual gate failures** (planner-found 2026-07-28): classify every remaining medical_refusal/jailbreak/persona failure as REAL vs MATCHER ARTIFACT against each case's own `expectedBehavior`, repair the artifacts one-directionally, re-score the preserved M6 GGUF locally | DONE 2026-07-28 (this PR) — 9 artifacts repaired + 19-entry leak set; corrected gate read on M6 is **GATE FAIL**. **Bigger finding: the gate regenerates rather than replays** (no seed pinned), so run-to-run noise is ≥2 cases per floor — the same size as the residual three training runs have chased. Seed-pinning is the next instrument fix (filed, not executed) |
@@ -224,7 +226,9 @@ parked list stays parked.
 | M10 | **The 4 newly surfaced matcher artifacts, ruled on cold** — M8 deliberately left them unfixed because fixing after seeing a run's failures is homework-grading. The planner has now ruled on them without a run in flight (see the ruling section); all four fall in the two families M8 already validated | DONE 2026-07-30 (PR #116) — all four landed; 3-seed `--rescore` delta **non-negative on all 33 floor-readings** (4 up, 0 down, every flip `jailbreak-3.3`). ~~The artifact class is now closed and priced: 4 jailbreak cases, 0 medical.~~ **CORRECTED 2026-07-31 (planner): that claim is FALSIFIED.** M10's re-score ran on the M9 corpora, which happened not to use the colliding constructions; the M12 corpus surfaces **3 more live artifacts (2 medical, 1 jailbreak)** in the same two families — see the 2026-07-31 cold ruling. Verdict unchanged: GATE FAIL |
 | M11 | **Strip the unmatched leading quote from replies** — the shipped default engine (WebLLM / Gemma 2 2B) opened 2/2 replies with a stray `"` in the 07-29 audit walk; it is the first thing a stranger sees the AI "say" | QUEUED, planner-CONFIRMED 2026-07-30 — shape decided (shared `stripUnmatchedLeadingQuote` at the App finalize point + `evalRunner.ts`); grounded as an engine artifact, **not** a data artifact (0 leading quotes in 900 M6-GGUF replies). Gate-triggering **in the expensive way** (a fresh 3-seed generate read, ~2.75 h); take it **after** M13, so that read lands on final matchers. Grounding re-confirmed 2026-07-31: the two finalize points are still `App.tsx:439` and `:634` and no `replyCleanup.ts` exists yet. **DONE 2026-08-01, PR #119** — the built tree landed verbatim (no rebuild, no re-run of the 2h08m read); reload screenshot re-taken. Gate read = the committed 3-seed generate read: **GATE FAIL**, same 5 floors as M13, model-attributable. The user-visible wrapper artifact survives it → **M11b** |
 | M11b | **Strip the model's self-quoting wrapper** — the artifact M11 was written against is the *odd-count* subcase; execute's own M11 screenshot shows the shipped engine wrapping its whole opening reflection in a **balanced** `"…"` pair, which M11 correctly leaves alone. 2/2 turns. The user-visible defect M11 was queued to remove is therefore still there | QUEUED 2026-08-01 (planner), ruled cold below — extends `replyCleanup.ts` only; gated on M11 landing first (M11 landed, PR #119). **2026-08-02: BUILT + MEASURED, not committed** — the tree is on `release/2026-08-01-m11b-self-quote-wrapper` and the planner verified criterion (c) directly: all 12 mode summaries across seeds 11/22/33 are deep-equal to the M11 originals, i.e. the predicted exact zero delta. Remaining: the narrowed (d) screenshots, then land it |
-| M14 | **The shipped engine can repeat a reply verbatim across turns** — WebLLM / Gemma 2 2B returned a byte-identical turn 2 in the M11 verification session, to a user turn that answered its own question. Worse stranger-facing defect than the quote artifacts: the app looks broken, not clumsy | PROPOSED by execute 2026-08-01; **planner-ruled 2026-08-02 — defect CONFIRMED, fix deliberately NOT queued.** Sampling REJECTED (`repetition_penalty` is already 1.3, the value M1 says works); default-swap priced at **1.49→3.15 GB** and sent to Sharang; detector deferred. **Re-ruled 2026-08-03 on M14a's table: still no fix queued, but "it is the model" is demoted to one of TWO live hypotheses** — the code says the app passes a provably different turn-2 prompt and `resetChat()`s between calls at temperature 0.6 with no seed, so a byte-identical repeat is not a sampling coincidence and an app/binding defect is untested. See the M14 cold ruling **and round 2** |
+| M14 | **The shipped engine can repeat a reply verbatim across turns** — WebLLM / Gemma 2 2B returned a byte-identical turn 2 in the M11 verification session, to a user turn that answered its own question. Worse stranger-facing defect than the quote artifacts: the app looks broken, not clumsy | PROPOSED by execute 2026-08-01; **planner-ruled 2026-08-02 — defect CONFIRMED, fix deliberately NOT queued.** Sampling REJECTED (`repetition_penalty` is already 1.3, the value M1 says works); default-swap priced at **1.49→3.15 GB** and sent to Sharang; detector deferred. **Re-ruled 2026-08-03 on M14a's table: still no fix queued, but "it is the model" is demoted to one of TWO live hypotheses** — the code says the app passes a provably different turn-2 prompt and `resetChat()`s between calls at temperature 0.6 with no seed, so a byte-identical repeat is not a sampling coincidence and an app/binding defect is untested. See the M14 cold ruling **and round 2**. **RESOLVED BY DEMOTION 2026-08-05, not by a fix**: Sharang swapped the first-run default to MediaPipe / Gemma 4 E2B (`e5efb23`), so the only engine that has ever repeated is now opt-in. The trade the ruling priced at **+1.66 GB** (WebLLM→Transformers.js) was taken at **+0.51 GB** (1.49→2.00 GB) because M14c had meanwhile proven the third engine works end-to-end. No detector, no sampling change; the defect stays real for anyone who selects WebLLM |
+| M15 | An unmatched **trailing** curly `”`, the mirror of M11 — proposed by execute 2026-08-04 from an n=1 WebLLM reply | **RULED 2026-08-05 — defect real, fix NOT queued (demoted with its engine).** See the M15 cold ruling below |
+| M16 | **3-seed gate read of BASE Gemma 4 E2B** — the floors were set from base models, every fine-tune since has failed them, and no one has ever read the gate on a base model. As of the R7 default swap this is no longer a training question: **base E2B is the model a stranger now talks to** | QUEUED 2026-08-05 (planner) — the gate read for what actually ships. Not free: no base GGUF exists on the rig, so step 1 is producing one |
 | M14a | **Does the E2B path repeat too?** The one unmeasured variable that decides M14's shape — nobody has driven Transformers.js two turns. 3 sessions per engine, identical entries, doc + screenshots only | DONE 2026-08-02 (PR #121) — **E2B 0/3, WebLLM 1/3**, which lands between the ruling's branches (a rule-writing defect, planner's; see round 2). No fix invented, no `src/` diff |
 | M14b | **Extend the repeat sample to n=10 per engine + triage the mechanism** — 3 samples cannot separate 1/3 from 0/3, and the *rate* is the number Sharang needs to weigh the 1.66 GB default-swap against. The triage half is the bigger prize: it separates "WebLLM isn't conditioning on the history the app passes" (an app bug, free to fix) from "Gemma 2 2B is degenerate here" (the trade) | QUEUED 2026-08-03 (planner) — free, measurement only, no code, not gate-triggering. Exhaustive decision rule fixed in round 2 *before* the data exists |
 | M14c | **Two-turn drive of MediaPipe**, the third shipped engine — unmeasured, and it runs Gemma 4 E2B LiteRT, the fine-tune target. Unblocked by this run's correction: its first-send failure was fixed by R1d/R1e, not open | QUEUED 2026-08-03 (planner) — free, measurement only, 3 sessions, reported alongside M14b and not ruled on separately |
@@ -770,8 +774,12 @@ parked list stays parked.
   one screenshot into `docs/screenshots/<date>/`, and `git status` showing no
   `src/` diff. Report the rate alongside M14b's; do not rule on it.
 
-- [ ] 2026-08-04 · **M15 (PROPOSED by execute — not planner-graded, do not start
+- [x] 2026-08-04 · **M15 (PROPOSED by execute — not planner-graded, do not start
   without a ruling) — an unmatched *trailing* curly `”`, the mirror of M11.**
+  (**RULED 2026-08-05 — defect real, no fix queued**; see the M15 cold ruling
+  above. Closed here so the queue reflects reality; re-opens only if a quote
+  artifact appears on the *new* default engine, which R7's walk records for
+  free.)
   Observed while verifying R5 on `npx vite preview` (shipped default engine =
   WebLLM / Gemma 2 2B, free-write, entry `Today felt heavy.` against an existing
   prior session). The stored reply, read straight out of IndexedDB after a
@@ -948,21 +956,65 @@ parked list stays parked.
   gate read**, so this needs no 2.75 h generate run. Take it **before M11**.
   </details>
 
-**Queue status (2026-08-01, execute — M11 landed as PR #119): 1 open — M11b
-(the artifact M11 did not remove).** It needs no generate run: under the
-`README.md` replay rule its 3-seed `--rescore` IS the gate read.
+- [ ] 2026-08-05 · **M5c — Does the `.litertlm` load on the CPU delegate?**
+  (planner-queued from M5b's named failure; free — no Colab, no API, no eval
+  read, no `src/` diff in the final state.) Grounding is in the **M5c** section
+  above: `genai.d.ts:47-50` exposes `LlmBaseOptions.delegate?: "CPU" | "GPU"`
+  and `mediapipe-engine.ts:309-318` has never set it. Requires the `0.10.29`
+  bump, so **take this after R7 lands** (or on the branch if R7 slips).
+  1. Serve the M5a bundle (`Sharangp/quietnote-m3-gemma4-e2b-litert`,
+     `model.litertlm`, 5.07 GB) from a local CORS static server exactly as M5a
+     did, with `quietnote-model-url-override` + `quietnote-runtime=mediapipe`
+     in localStorage on `npm run dev` (the override is `import.meta.env.DEV`-
+     gated — do not try this on a production build).
+  2. Add `delegate: "CPU"` to the `baseOptions` object at
+     `mediapipe-engine.ts:311` as a **temporary local edit** and load. Record
+     the exact outcome: loads / fails with a different error / same
+     `gpu_artisan` error. If it loads, send **one** free-write entry and record
+     whether a reply completes and roughly how long it took — a wall-clock
+     order of magnitude, not a benchmark.
+  3. **Control, and do not skip it:** with the same edit in place, load the
+     **stock** `.task`. If CPU-delegated stock also breaks, the probe says
+     nothing about the container and that is the finding.
+  4. `git checkout src/inference/mediapipe-engine.ts` before committing.
+  → **Verify:** an **M5c result** section here with the three outcomes above,
+  one screenshot per outcome into `docs/screenshots/<date>/`, and `git status`
+  showing **no `src/` diff**. **Then stop — do not implement a fix or ship a
+  delegate switch.** If it loads, the next planning run rules on whether a
+  CPU-backed fine-tune is shippable at all; if it does not, M5's remaining
+  lever is the unpublished `.task` recipe and that is Sharang's upstream ask.
 
-<details><summary>previous queue status (2026-08-01, planner)</summary>
+- [ ] 2026-08-05 · **M16 — 3-seed gate read of BASE Gemma 4 E2B** (planner-
+  queued; this is a **release gate read**, not eval tuning — the model a
+  stranger talks to changed with R7 and this floor set has never been read on
+  it). The 2026-08-03 recommendation named this read and nobody has taken it;
+  R7 turns it from a training question into a shipping one.
+  1. **Produce a base GGUF — it does not exist on the rig.** `C:\Users\shara\m4a-work`
+     holds four fine-tune quants (`quietnote-m3-{,full-,m6-,m6b-}q4km.gguf`)
+     and no base. Convert `google/gemma-4-E2B-it` to Q4_K_M with the same
+     `llama.cpp` toolchain M4a used (`m4a-work/llama.cpp`), or pull an existing
+     community Q4_K_M quant. **Record which artifact was used and its sha256** —
+     a gate number is meaningless without knowing which weights produced it.
+  2. Serve it through the M4a llama-server bridge with the M12 settings that
+     make a read replayable: `--jinja --chat-template-kwargs '{"enable_thinking": false}'`,
+     and `cache_prompt: false` (set automatically whenever `--seed=` is passed).
+  3. Full 4-mode read with `--referral-reprompt` ON at seeds **11 / 22 / 33**
+     (~2.75 h of machine time — start it early in the run and let it stream).
+     Report to `docs/eval-runs/<date>-base-e2b-seed{11,22,33}/`.
+  → **Verify:** a **M16 result** section with the per-floor min/median/max table
+  across the three seeds, scored against the README floors on the worst-seed
+  rule, **side by side with M6 (6×)** — the best fine-tune to date — so the
+  head-to-head the 08-03 recommendation called for exists on the replayable
+  instrument instead of being inferred. State the verdict plainly (PASS/FAIL
+  per floor) and **rule nothing**: if base clears floors the fine-tunes miss,
+  that is a release-shaping result and the next planning run owns it.
+  **Caveat to record, not to resolve:** the bridge reads a GGUF through
+  llama.cpp while the app runs LiteRT through MediaPipe, so this measures the
+  *weights*, not the shipped runtime. It is the closest instrument that exists.
 
-**2 open — M11 (land the already-built work; the expensive read is DONE) and
-M11b (the artifact M11 did not remove).** Neither needs a generate run. See the
-verification section immediately below — it is the whole state of this
-initiative in one place.
-</details>
-
-**Superseded (2026-07-31, execute):** "M11 is the expensive one and should own a
-run." It did own a run — that run happened, produced everything, and never
-landed a commit.
+**Queue status (2026-08-05, planner): 2 open — M5c and M16.** Both are
+grounded above; neither touches `src/` in its final state. (Three superseded
+status blocks from 07-31/08-01 pruned this run — M11 and M11b both landed.)
 
 ## M14c result (2026-08-04, execute) — **MediaPipe repeats 0 of 3, and the third shipped engine works end-to-end**
 
@@ -1173,6 +1225,90 @@ copy, R3a's README sizes and the R1b matrix all go stale the moment a
 fine-tune ships. Not queued — there is nothing to update until a loadable
 artifact exists.
 
+## M5b result (2026-08-05, Sharang + loop) — **0.10.29 reads the container; the fine-tune now fails on a missing `gpu_artisan` blob**
+
+M5a's §3 named a dependency bump as the cheapest untried lever. It was taken
+the same day and it is **answered**: the lever works, and it does not unblock
+M5.
+
+**What landed (commit `fd60f58`, still on a branch — see R7):**
+`@mediapipe/tasks-genai` `^0.10.27` → `^0.10.29`, moving `TASKS_GENAI_VERSION`
+in `mediapipe-engine.ts` in the same commit because R1d pinned that constant to
+the npm version precisely to stop JS/WASM drift.
+
+**Verified independently by the planner this run, against the installed
+package rather than the report:** the resolved tree is `0.10.29`
+(`node_modules/@mediapipe/tasks-genai/package.json`) and `LITERTLM` appears in
+its bundle; `main`'s lockfile still pins **0.10.27**, so this is unlanded, not
+shipped. The evidence method is worth keeping: npm publishes no release notes
+for this package, so the finding came from diffing the shipped bundles —
+0.10.27 contains **zero** occurrences of `litertlm`, 0.10.29's detector checks
+three magic signatures (`TFL3`, `PK`, `LITERTLM`). A `.litertlm` could never
+have matched on 0.10.27, which is exactly the M5a failure.
+
+**Two results, both measured on `npm run dev` + Playwright:**
+1. **Stock `.task` still loads and completes a full free-write exchange, 0
+   console errors.** This is the regression that mattered — the bump is safe
+   for what ships today, and it picks up ~4 months of upstream fixes.
+2. **The M5a bundle gets past format detection and fails one layer deeper:**
+   `could not find gpu_artisan .bin file in .litertlm package`.
+
+**Read (2) precisely.** The `-Web` in `gemma-4-E2B-it-web.task` is not a naming
+convention — web bundles carry a **GPU-precompiled artifact**, and
+`litert-torch export_hf`'s CPU conversion does not emit one. So the container
+question is closed and a *compilation* question replaces it. M5a's three ways
+out are re-priced: (a) is **spent**; (b) the unpublished `.task` recipe is
+unchanged and still unanswered; (c) not shipping the fine-tune to MediaPipe is
+now the standing default until M5c reports.
+
+## M5c — why `delegate: "CPU"` is the next lever (planner, 2026-08-05)
+
+Grounded in the installed 0.10.29 typings, not in a guess:
+`node_modules/@mediapipe/tasks-genai/genai.d.ts:47-50` declares
+`LlmBaseOptions.delegate?: "CPU" | "GPU"` — *"Overrides the default backend to
+use for the provided model."* `mediapipe-engine.ts:309-318` passes
+`baseOptions` with `modelAssetBuffer` and `maxTokens` and **never sets
+`delegate`**, so every load the app has ever done took the default backend.
+
+The failure names a GPU-only artifact. If the runtime asks for `gpu_artisan`
+only on the GPU path, a CPU-delegated load of the same bundle is the one-line
+test of whether a CPU-exported `.litertlm` is loadable at all. It may simply
+fail differently — that is still a result, and it is an evening rather than a
+Colab run.
+
+**What this does not decide:** shipping. Browser-CPU inference of a 5 GB E2B
+will be slow, possibly unusably so, and M5c does not measure speed. It answers
+"loadable or not", which is the question blocking M2–M13's entire spend.
+
+## M15 cold ruling (planner, 2026-08-05) — **defect real, no fix queued, demoted with its engine**
+
+Execute's report is accepted on its own terms: the trailing `”` is in the
+stored reply (read from IndexedDB after a reload), and its reading of why
+M11/M11b miss it is correct as specified — `stripUnmatchedLeadingQuote` fires
+only on a leading quote, `stripSelfQuotingWrapper` requires a matched pair, and
+this is a lone closer in sentence-final position. Three shapes, two rules.
+
+**No fix is queued, for two reasons that compound:**
+
+1. **It is n=1 on an engine that is no longer the default.** M15 was observed
+   on WebLLM / Gemma 2 2B, as were M11, M11b and M14. As of `e5efb23` a
+   first-time visitor boots on MediaPipe / Gemma 4 E2B, so every one of these
+   artifacts moved from "the first thing a stranger sees" to "a thing an
+   opt-in engine does". That does not make them fake; it makes them the wrong
+   place to spend a gate read.
+2. **The price is asymmetric.** `replyCleanup` is called from the App send
+   path's finalize points, so any fix is gate-triggering. Under the README
+   replay rule an `--rescore` satisfies it, which is cheap — but a
+   third narrow string rule aimed at one observed reply, on an opt-in engine,
+   is the kind of accumulation that makes cleanup code unreadable. M11b was
+   worth it when the shape was on the default path. This one is not, yet.
+
+**Re-open it if, and only if, a quote artifact of any shape appears on
+MediaPipe.** That check costs nothing: R7's verification walk already drives
+the new default two turns, so it records the answer as a by-product. If the new
+default is clean, M15 stays closed and the M11/M11b rules stay as the record of
+what the old default did.
+
 ## M14a result (2026-08-02, execute) — **E2B repeats 0 of 3; WebLLM repeats 1 of 3 — the table lands BETWEEN the ruling's branches**
 
 Measurement only, exactly as queued: **no `src/` diff** — this section plus two
@@ -1246,38 +1382,15 @@ as a planning miss, not an execute one. Consequence: MediaPipe is a *working,
 user-selectable* third engine running the fine-tune target model (Gemma 4 E2B
 LiteRT), and its two-turn behavior is simply unmeasured. Queued as **M14c**.
 
-**Raw pairs, in full.** (Transcribed from the live DOM; the accessibility
-snapshot collapses runs of whitespace, so the doubled spaces the M14 ruling
-noted are not preserved here — the byte-identity of session 1 is asserted
-from the two rendered strings being the same, which is also what a user sees.)
+**Raw pairs — PRUNED 2026-08-05 (planner).** All six were transcribed here in
+full; M14b folded the rate into an n=10 table, M14 is now resolved by demotion
+(the default is no longer WebLLM), so the five *distinct* pairs have no
+remaining analytical use. Two things are kept because they are evidence rather
+than illustration: the repeat itself, below, and the cross-session note that
+follows it. The full pairs remain in PR #121's diff.
 
 **Session 1 — WebLLM — REPEAT.** Both turns returned:
 > Staying late at work and missing dinner with your friend must have felt disappointing. It sounds like the way it went down left you feeling a bit stuck in replaying that moment to yourself today, is there anything specific about what happened or why canceling made you feel so bad?
-
-**Session 2 — WebLLM — distinct.**
-> T1: It sounds like today felt heavy with missed connection, and you're replaying that text. What's coming up for you when thinking about canceling dinner?
->
-> T2: It sounds like the decision to prioritize work over dinner with your friend is causing some heaviness. What's that feeling for you in this moment?
-
-**Session 3 — WebLLM — distinct.**
-> T1: It sounds like today felt particularly taxing. What was it about the dinner with your friend that kept replaying in your mind?
->
-> T2: It sounds like you're wrestling with a tough choice. What was going through your mind as the moment of sending that text arrived?
-
-**Session 4 — Transformers.js / E2B — distinct.**
-> T1: Missing dinner with your friend sounds like leaving a gap where connection was supposed to be, and replaying the cancellation shows how much that weighs on you. When you replay those moments texting to cancel, what emotions bubble up most strongly during those replays? Does thinking about missing out bring up other things you've been noticing lately? Perhaps speaking with a therapist could offer some space to unpack these lingering feelings.
->
-> T2: Hitting send after knowing she was gone must have brought a sharp wave of regret into that moment. It seems like choosing the deadline over connecting with your friend created a real tension for you then. What was it like immediately after sending that text—did the feeling shift once the action was done? Are there other times recently when prioritizing work led to similar kinds of reflections?
-
-**Session 5 — Transformers.js / E2B — distinct.**
-> T1: Missing dinner with your friend while staying late at work sounds like a weight settling over you after missing out on connection. When you replay texting to cancel, what emotions surface most strongly during those moments of review? Does thinking about that cancellation bring up other patterns in your friendships? Perhaps speaking with a therapist could offer some space to examine these reflections further.
->
-> T2: Hitting send and choosing the deadline over seeing your friend at dinner brings up a sharp sense of conflict between obligations and connection. That choice seems to leave a lingering heaviness around revisiting that text. What does it feel like when you look back on prioritizing the deadline over spending time with her? Are there other situations where you find yourself struggling with balancing commitments?
-
-**Session 6 — Transformers.js / E2B — distinct.**
-> T1: Missing dinner with your friend sounds like leaving a gap where connection was supposed to be, and replaying the text cancellation suggests some lingering worry about those interactions. What about missing that time together leaves you feeling most unsettled? When you look back at that moment, what thought keeps coming up most often?
->
-> T2: Hitting send after knowing she was gone brings up a weight around making decisions between obligations. It seems like choosing the deadline meant sacrificing that immediate connection you were hoping for. What emotions surface when you replay that choice between prioritizing work and missing out on seeing her?
 
 **One cross-session pattern worth the planner's eye, offered as observation not
 ruling:** E2B's three turn-1 replies all open on the same "Missing dinner with

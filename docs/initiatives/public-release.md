@@ -32,6 +32,19 @@ decisions, release gate, queue format).
   "email" separated by `·` spans; room for one more quiet link in the same
   pattern (R3b). `FEEDBACK_ISSUES_URL`/`FEEDBACK_MAILTO` confirmed in
   `src/utils/feedbackLinks.ts` (no query params, bare constants).
+- **The default engine changed on 2026-08-05 (Sharang, interactive) and it is
+  NOT on `main` yet — see R7.** A first-time visitor with no
+  `quietnote-runtime` key now boots on **MediaPipe / Gemma 4 E2B** rather than
+  WebLLM / Gemma 2 2B. Verified in the files this run: `main` still has
+  `createEngine(runtime: RuntimeId = "webllm")` (`src/inference/index.ts:12`)
+  and `getStoredRuntime()` falling back to `"webllm"`
+  (`src/hooks/useInferenceEngine.ts:19-22`); the branch
+  `fix/2026-08-05-tasks-genai-litertlm` (pushed, **no PR**) flips both to
+  `"mediapipe"` and bumps `tasks-genai` 0.10.27 → 0.10.29 in `package.json`,
+  the lockfile and `TASKS_GENAI_VERSION`. **Everything below that quotes a
+  default-engine size or model name is stale the moment R7 lands** — R8 is
+  the sweep, and the one number that moves for a stranger is the first-run
+  download: **1.49 GB → 2.00 GB**.
 - 3 backends: WebLLM (Gemma 2 2B, WebGPU), Transformers.js v4 (Gemma 4 E2B
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
@@ -88,6 +101,8 @@ decisions, release gate, queue format).
 | R2b | Download-size honesty on the loading card | DONE (PR #88) |
 | R3a | README rewrite for strangers | DONE (PR #81) |
 | R3b | In-app footer link to the repo ("open source — verify it yourself") | DONE (PR #90) |
+| R7 | **Land the default-engine swap + the `tasks-genai` bump** (branch `fix/2026-08-05-tasks-genai-litertlm`, 2 commits, pushed, no PR) and close the test gap the swap's own commit message flags: nothing pins the default runtime | QUEUED 2026-08-05 (planner) — the code is written and Sharang verified it interactively; what is missing is a PR, a test pin, and the doc sweep (R8) |
+| R8 | **Size + engine honesty sweep for the new default** — `README.md:33`, the F2 WELCOME outline and the R1b matrix all name Gemma 2 2B / ~1.5 GB as what a stranger gets | QUEUED 2026-08-05 (planner), gated on R7 — copy/docs only |
 | R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | blocked on Sharang |
 
 ## Task queue
@@ -153,7 +168,80 @@ left off" card splices the raw first 8 words of the previous entry into the
 middle of a sentence, producing ungrammatical, double-punctuated copy on the
 first screen a returning user sees.
 
-- [ ] 2026-08-03 · **R6 — Add the MIT LICENSE file** (planner-queued on
+- [ ] 2026-08-05 · **R7 — Land the default-engine swap and the `tasks-genai`
+  bump, and pin the default with a test.** The two commits on
+  `fix/2026-08-05-tasks-genai-litertlm` (`fd60f58`, `e5efb23`) are Sharang's
+  interactive work from 2026-08-05, already verified on `npm run dev` +
+  Playwright with build and 1208 tests green. **Do not rewrite, squash or
+  re-derive them** — this item is the PR and the missing test, nothing else.
+  1. Open a PR from the existing branch (`gh pr create --base main --head
+     fix/2026-08-05-tasks-genai-litertlm`). Body: both commit messages'
+     evidence, and the **known trade stated plainly** — MediaPipe has no
+     repetition-penalty knob, and M1b measured it at 7/10 no-echo (mean
+     overlap 0.22, one hard fail at 0.84 on `echo-fw-3`, the exact reply that
+     started model-quality). This buys out M14's repeat and M11/M11b/M15's
+     quote artifacts (all WebLLM) at the price of echo risk; it is a one-word
+     flip back if echo proves worse in practice.
+  2. Add the missing pin — the swap's own commit message calls it out: *"no
+     test pinned the default engine — that gap let this be a two-line change
+     with no failing test."* Assert **both** halves in one test file
+     (`src/inference/__tests__/` beside the existing suites): `createEngine`'s
+     default parameter and `getStoredRuntime()`'s no-key fallback resolve to
+     the same `RuntimeId`, and that id is `"mediapipe"`. A test that pins only
+     one half lets them drift apart, which is the actual failure mode.
+  3. Re-verify from a **cleared** localStorage on `npx vite preview` (the
+     production build, not `npm run dev` — the swap has only been driven on
+     dev): first paint boots MediaPipe, the loading card shows the MediaPipe
+     size, a full free-write exchange completes, 0 console errors.
+  4. **Free by-product, record it in the PR body:** drive a **second turn** and
+     say whether turn 2 is distinct and whether any quote artifact (leading,
+     wrapping, or a lone trailing `”`) appears. That single observation is the
+     re-open condition for **M15** and another MediaPipe sample for M14c.
+  → **Verify:** PR merged; `npm run build` + `npm run test` green with the new
+  pin; screenshots of the cleared-storage first boot and both turns into
+  `docs/screenshots/<date>/`; a ledger row here and one in `model-quality.md`
+  for M5b. **Gate:** not gate-triggering by the README's file list — nothing in
+  `src/prompts/`, the send path, the safety utils or `evalRunner.ts` is touched.
+  Recorded honestly: it *does* change which model answers a stranger, and the
+  floors have never been read on that model — that read is queued as
+  **model-quality M16**, and it is a soft-launch blocker, not a merge blocker.
+
+- [ ] 2026-08-05 · **R8 — Size + engine honesty sweep for the new default**
+  (gated on R7 — do not take it first; if R7 does not land, every edit here is
+  wrong). Docs and copy only, no `src/` logic. Three known-stale places,
+  verified in the files this run:
+  1. `README.md:33` — reads *"the default model (Gemma 2 2B via WebLLM) is
+     about 1.5 GB … Optional alternative engines … roughly 3 GB."* Both halves
+     invert. Rewrite: the default is **Gemma 4 E2B via MediaPipe, ~2.0 GB**;
+     the alternatives are **~1.5 GB (WebLLM / Gemma 2 2B)** and **~3.2 GB
+     (Transformers.js / Gemma 4 E2B)**. Keep the honest "downloaded once and
+     cached by your browser" framing.
+  2. `human-feedback.md`'s F2 WELCOME outline, item 2 — same numbers, same
+     direction; edit the outline in place (F2 itself stays gated on R4).
+  3. The R1b smoke matrix in this doc — add a line saying which row is the
+     default as of R7. **Do not restate the measurements**; they are still
+     correct per-engine, only the label "default" moved.
+  **Leave `MODEL_DOWNLOAD_SIZES` alone** — it is keyed by runtime and R2b's
+  card already reads the *active* runtime's size, so it needed no change and
+  the `DownloadSizeHonesty` pins stay green. → **Verify:** `npm run build` +
+  `npm run test` green; no size string in any doc names a number that
+  `src/inference/types.ts:60-64` does not carry; screenshot of the loading card
+  on a cleared profile showing the size the README now claims.
+
+**Unfiled leftovers noticed 2026-08-05 (planner) — NOT queued, and deliberately
+not committed.** The working tree carries three untracked screenshots,
+`docs/screenshots/2026-08-05/audit-{two-turn-freewrite,reload-continuity-card,
+thoughtrecord-step-desync}.png`, with no accompanying doc section anywhere.
+They are from a walk this loop did not record, so the planner cannot attest to
+what they show and will not commit them as evidence. One filename —
+`thoughtrecord-step-desync` — reads like a defect nobody filed. **Whoever's run
+produced them owns reconciling them**: either write the walk up (and the defect,
+if it is one, as a proposed queue item under the queue-empty rule) or delete
+them. Do not treat the filenames as a finding; a filename is not a measurement.
+
+<details><summary>R6 — MIT LICENSE (moved to Blocked on Sharang 2026-08-05, unchanged)</summary>
+
+- 2026-08-03 · **R6 — Add the MIT LICENSE file** (planner-queued on
   Sharang's explicit 2026-08-03 go; the 2026-07-12 note required it and it is
   now given). Add a standard `LICENSE` at the repo root: the verbatim MIT
   text, `Copyright (c) 2026 Sharang Pai` — no modifications, no added clauses,
@@ -172,7 +260,19 @@ first screen a returning user sees.
   Not gate-triggering (no `src/`, no send path, no safety util).
 
 **R6 NOT TAKEN 2026-08-04 (execute) — left open deliberately, not skipped by
-accident.** The execute task file carries a standing hard rule: *"LICENSE and
+accident.**
+</details>
+
+**R6 moved out of the queue 2026-08-05 (planner).** It sat open for two runs
+because execute is right to refuse it: its task file's standing rule ("never
+add a LICENSE file on his behalf") governs the runner, and a queue item cannot
+override it. An item nothing in the loop is permitted to take is by definition
+**Blocked on Sharang**, and the README's queue rule says those live in that
+section, not the queue. Nothing about R6's content changed — the full item is
+preserved above and the unblock conditions are unchanged.
+
+<details><summary>execute's 2026-08-04 refusal, in full</summary>
+ The execute task file carries a standing hard rule: *"LICENSE and
 tester outreach are Sharang's — never add a LICENSE file … on his behalf."*
 That rule governs this runner directly, and a queue item in a doc does not
 override it, even one recording Sharang's interactive go — the runner cannot
@@ -182,6 +282,7 @@ R6 is ready and the item is unchanged. **To unblock it, either Sharang adds the
 file himself, or the standing hard rule in the execute task file is amended to
 carve out a planner-queued LICENSE with his recorded go.** The rest of the
 2026-08-04 run took R5, M14b and M14c instead.
+</details>
 
 ### R5 cold ruling (planner, 2026-08-04) — defect CONFIRMED, fix QUEUED
 
@@ -296,35 +397,8 @@ walk, not a true fresh-profile cold start — the fresh-profile matrix stays the
 2026-07-12 R2 read, to be re-run on the live URL at R4. Screenshots:
 `docs/screenshots/2026-07-29/`.
 
-**Queue-empty audit (2026-07-27, execute — `npm run build` (green) +
-`npm run test` (1066 green) + `npx vite preview` on `:4173`, WebLLM default,
-Chromium via Playwright):** every non-gated item across all four initiatives
-is DONE (M6/M7 shipped 2026-07-25, PR #112; last non-gated work anywhere) and
-only Sharang-gated work remains (R4/LICENSE here, F2, M6 Colab rerun → M4
-rerun, M5a Colab run, WebLLM go/no-go, personalization gated on the quality
-bar), so per the queue-empty rule an audit walk ran instead of inventing work.
-Walked load → writing surface → first exchange → reload persistence: loading
-card shows the R2b "~1.5 GB" size line + `0%` progress; mode strip renders in
-the shipped order (Free Write · Gratitude · Check-in · Thought Record) and the
-footer carries all four calm links (Share feedback → `issues/new/choose`,
-email → `mailto:`, open source → repo, hrefs correct in the DOM). A fresh
-free-write entry ("I got passed over for a promotion at work today and I can't
-stop replaying the meeting in my head…") returned a supportive, non-parroting
-single-question reply ("It sounds like the disappointment from not getting
-that promotion is weighing on your mind… What are some of these specific
-moments you keep going over?") with the AI-limitations disclaimer + Crisis
-resources button present; the session persisted through a full reload (sidebar
-entry "I got passed over for a promotion…" + "Pick up where you left off" card
-referencing it + fully restored two-turn transcript on re-open). **0 console
-errors** (one benign Chromium `powerPreference`-ignored WebGPU warning,
-crbug.com/369219127). **No defects found — nothing to file.** Same scope
-caveat as 07-21/07-22/07-26: the Playwright profile was persistent (prior
-sessions present), so this was a returning-user walk, not a true fresh-profile
-cold start — the fresh-profile matrix stays the 2026-07-12 R2 read, to be
-re-run on the live URL at R4. Screenshots: `docs/screenshots/2026-07-27/`.
-
-**Superseded audit walks (2026-07-21 / 07-22 / 07-26, execute) — pruned
-2026-08-04, full text in git history.** All three were queue-empty walks on
+**Superseded audit walks (2026-07-21 / 07-22 / 07-26 / 07-27, execute) — pruned
+2026-08-04 and 2026-08-05, full text in git history.** All four were queue-empty walks on
 `npx vite preview` (WebLLM default, Chromium via Playwright) that reported
 the same shape as the 07-27 walk above: loading card with the R2b "~1.5 GB"
 line and real progress, disclaimer + Crisis button present, a supportive
@@ -332,8 +406,11 @@ non-parroting single-question reply, session surviving a full reload, 0
 console errors, **no defects found**, and the same persistent-profile caveat
 (returning-user walks, not fresh-profile cold starts — the fresh-profile
 matrix stays the 2026-07-12 R2 read below). Screenshots remain at
-`docs/screenshots/2026-07-{21,22,26}/`. Read alongside R5: these walks
-screenshotted the continuity-card splice without flagging it.
+`docs/screenshots/2026-07-{21,22,26,27}/`. Read alongside R5: these walks
+screenshotted the continuity-card splice without flagging it. The 07-27 walk
+additionally recorded that every non-gated item across all four initiatives was
+DONE at that date — true then, superseded by R5/R6/R7/R8 and the model-quality
+queue since.
 
 **R2 cold-start audit matrix (2026-07-12, `npm run build` + `npx vite
 preview`, Chromium via Playwright; screenshots in
@@ -367,7 +444,7 @@ and styling — the disclosure is honesty, not a warning.
 
 | backend | model | download (measured) | result |
 |---|---|---|---|
-| WebLLM (default) | Gemma 2 2B q4f16 | **1.49 GB** model + 5.3 MB wasm (Cache Storage `webllm/*`) | ✅ progress UI visible → full exchange streamed → reload → session persisted (IndexedDB) |
+| WebLLM (**was** the default; MediaPipe becomes it at R7) | Gemma 2 2B q4f16 | **1.49 GB** model + 5.3 MB wasm (Cache Storage `webllm/*`) | ✅ progress UI visible → full exchange streamed → reload → session persisted (IndexedDB) |
 | Transformers.js | Gemma 4 E2B ONNX q4f16 | **3.15 GB** (Cache Storage `transformers-cache`; ~7 min on test connection) | ✅ full exchange streamed (engine switch persists via `quietnote-runtime` localStorage; model loads on next boot, not immediately at switch) |
 | MediaPipe | Gemma 4 E2B LiteRT (`gemma-4-E2B-it-web.task`, ~3 GB) | downloads + engine initializes; **no Cache Storage entry → likely re-downloads every load** | ❌ first send fails: `INVALID_ARGUMENT: CalculatorGraph::Run() failed` / `[newSession] Inference failed`; no reply rendered → queued R1d |
 
@@ -398,6 +475,13 @@ Cross-cutting: Lora serif font broken in production build (missing woff2 in
   is met** (Sharang 2026-07-12): the soft launch is now gated on
   model-quality's 10-turn quality bar; he'll decide R4 after that.
 - ~~**LICENSE choice**~~ **DECIDED 2026-08-03 (Sharang, interactive): MIT.**
-  Queued as **R6** below — execute now has the explicit go the 2026-07-12 note
-  required. Note this is the *choice* only: adding the file does not publish
-  anything while the repo is private, and it does **not** advance R4.
+  Note this is the *choice* only: adding the file does not publish anything
+  while the repo is private, and it does **not** advance R4.
+- **R6 — writing the MIT LICENSE file (moved here 2026-08-05).** The decision
+  is made and the item is fully specified in the queue section above; the loop
+  is simply not permitted to write it. **Two ways to unblock, either works:**
+  (a) add the three-line change yourself — `LICENSE` with the canonical MIT
+  text and `Copyright (c) 2026 Sharang Pai`, `"license": "MIT"` in
+  `package.json`, a short License section in `README.md`; or (b) amend the
+  execute task file's standing rule to carve out a planner-queued LICENSE
+  carrying your recorded go. Until then it will keep being correctly refused.
