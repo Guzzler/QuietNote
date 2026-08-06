@@ -33,18 +33,16 @@ decisions, release gate, queue format).
   pattern (R3b). `FEEDBACK_ISSUES_URL`/`FEEDBACK_MAILTO` confirmed in
   `src/utils/feedbackLinks.ts` (no query params, bare constants).
 - **The default engine changed on 2026-08-05 (Sharang, interactive) and it is
-  NOT on `main` yet — see R7.** A first-time visitor with no
-  `quietnote-runtime` key now boots on **MediaPipe / Gemma 4 E2B** rather than
-  WebLLM / Gemma 2 2B. Verified in the files this run: `main` still has
-  `createEngine(runtime: RuntimeId = "webllm")` (`src/inference/index.ts:12`)
-  and `getStoredRuntime()` falling back to `"webllm"`
-  (`src/hooks/useInferenceEngine.ts:19-22`); the branch
-  `fix/2026-08-05-tasks-genai-litertlm` (pushed, **no PR**) flips both to
-  `"mediapipe"` and bumps `tasks-genai` 0.10.27 → 0.10.29 in `package.json`,
-  the lockfile and `TASKS_GENAI_VERSION`. **Everything below that quotes a
-  default-engine size or model name is stale the moment R7 lands** — R8 is
-  the sweep, and the one number that moves for a stranger is the first-run
-  download: **1.49 GB → 2.00 GB**.
+  now ON `main` — R7 landed as PR #125.** A first-time visitor with no
+  `quietnote-runtime` key boots on **MediaPipe / Gemma 4 E2B**, not
+  WebLLM / Gemma 2 2B. Both halves — `createEngine`'s default parameter
+  (`src/inference/index.ts`) and `getStoredRuntime()`'s no-key fallback
+  (`src/hooks/useInferenceEngine.ts`) — now read `"mediapipe"` and are pinned
+  together by `src/inference/__tests__/DefaultEngine.test.ts`, so they cannot
+  drift apart again. `tasks-genai` is 0.10.29 in `package.json`, the lockfile
+  and `TASKS_GENAI_VERSION` (also pinned by that test). The one number that
+  moved for a stranger is the first-run download: **1.49 GB → 2.00 GB**;
+  R8 (PR #126) swept the docs that quoted the old default.
 - 3 backends: WebLLM (Gemma 2 2B, WebGPU), Transformers.js v4 (Gemma 4 E2B
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
@@ -101,8 +99,8 @@ decisions, release gate, queue format).
 | R2b | Download-size honesty on the loading card | DONE (PR #88) |
 | R3a | README rewrite for strangers | DONE (PR #81) |
 | R3b | In-app footer link to the repo ("open source — verify it yourself") | DONE (PR #90) |
-| R7 | **Land the default-engine swap + the `tasks-genai` bump** (branch `fix/2026-08-05-tasks-genai-litertlm`, 2 commits, pushed, no PR) and close the test gap the swap's own commit message flags: nothing pins the default runtime | QUEUED 2026-08-05 (planner) — the code is written and Sharang verified it interactively; what is missing is a PR, a test pin, and the doc sweep (R8) |
-| R8 | **Size + engine honesty sweep for the new default** — `README.md:33`, the F2 WELCOME outline and the R1b matrix all name Gemma 2 2B / ~1.5 GB as what a stranger gets | QUEUED 2026-08-05 (planner), gated on R7 — copy/docs only |
+| R7 | **Land the default-engine swap + the `tasks-genai` bump** (branch `fix/2026-08-05-tasks-genai-litertlm`, 2 commits, pushed, no PR) and close the test gap the swap's own commit message flags: nothing pins the default runtime | **DONE 2026-08-05 (PR #125)** — both commits landed unrewritten; `DefaultEngine.test.ts` pins both halves of the default and their agreement, plus the `TASKS_GENAI_VERSION` ↔ `package.json` match |
+| R8 | **Size + engine honesty sweep for the new default** — `README.md:33`, the F2 WELCOME outline and the R1b matrix all name Gemma 2 2B / ~1.5 GB as what a stranger gets | **DONE 2026-08-05 (PR #126)** — all three rewritten; `MODEL_DOWNLOAD_SIZES` untouched, its values were already right |
 | R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | blocked on Sharang |
 
 ## Task queue
@@ -213,7 +211,10 @@ first screen a returning user sees.
   floors have never been read on that model — that read is queued as
   **model-quality M16**, and it is a soft-launch blocker, not a merge blocker.
 
-- [ ] 2026-08-05 · **R8 — Size + engine honesty sweep for the new default**
+- [x] 2026-08-05 · **R8 — Size + engine honesty sweep for the new default**
+  (DONE 2026-08-05, PR #126 — see Ledger. All three places rewritten; gate
+  respected, R7 landed first. `MODEL_DOWNLOAD_SIZES` left alone as instructed
+  — the three values were already correct, only the *default* moved.)
   (gated on R7 — do not take it first; if R7 does not land, every edit here is
   wrong). Docs and copy only, no `src/` logic. Three known-stale places,
   verified in the files this run:
@@ -451,17 +452,26 @@ and styling — the disclosure is honesty, not a warning.
 
 | backend | model | download (measured) | result |
 |---|---|---|---|
-| WebLLM (**was** the default; MediaPipe becomes it at R7) | Gemma 2 2B q4f16 | **1.49 GB** model + 5.3 MB wasm (Cache Storage `webllm/*`) | ✅ progress UI visible → full exchange streamed → reload → session persisted (IndexedDB) |
+| WebLLM (**was** the default until R7) | Gemma 2 2B q4f16 | **1.49 GB** model + 5.3 MB wasm (Cache Storage `webllm/*`) | ✅ progress UI visible → full exchange streamed → reload → session persisted (IndexedDB) |
 | Transformers.js | Gemma 4 E2B ONNX q4f16 | **3.15 GB** (Cache Storage `transformers-cache`; ~7 min on test connection) | ✅ full exchange streamed (engine switch persists via `quietnote-runtime` localStorage; model loads on next boot, not immediately at switch) |
-| MediaPipe | Gemma 4 E2B LiteRT (`gemma-4-E2B-it-web.task`, ~3 GB) | downloads + engine initializes; **no Cache Storage entry → likely re-downloads every load** | ❌ first send fails: `INVALID_ARGUMENT: CalculatorGraph::Run() failed` / `[newSession] Inference failed`; no reply rendered → queued R1d |
+| MediaPipe (**the default since R7**, 2026-08-05) | Gemma 4 E2B LiteRT (`gemma-4-E2B-it-web.task`) | at the time of this smoke: downloaded + initialized but left **no Cache Storage entry**. Both halves were later fixed and measured — see R1d/R1e | ❌ *as of 2026-07-10* first send failed: `INVALID_ARGUMENT: CalculatorGraph::Run() failed` / `[newSession] Inference failed`; no reply rendered → queued R1d. **Both defects are since fixed** (R1d PR #83, R1e PR #84) and the path was driven two turns in M14c |
+
+**Which row is the default (added 2026-08-05, R8):** the **MediaPipe** row, as
+of R7 (PR #125). The per-backend measurements above are unchanged and still
+correct — only the label "default" moved. The authoritative size for each
+engine is `MODEL_DOWNLOAD_SIZES` in `src/inference/types.ts`; this table is a
+dated smoke record, not the source of truth, and the 2026-07-10 ❌ in the
+MediaPipe row is history, not current behavior.
 
 Cross-cutting: Lora serif font broken in production build (missing woff2 in
-`dist/`) → queued R1c. Total storage with two model caches: ~4.65 GB.
+`dist/`) → queued R1c. Total storage with two model caches: ~4.65 GB (all
+three now resident is ≈6.65 GB — M14c).
 
 ## Ledger
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-05 | R8 — Size + engine honesty sweep for the new default | #126 | Docs and copy only — **no `src/` diff**, and `MODEL_DOWNLOAD_SIZES` deliberately untouched (its three values were already right; only the label "default" moved, so R2b's card and the `DownloadSizeHonesty` pins needed no change). Three places fixed: (1) `README.md:33` — both halves inverted, now "the default model (Gemma 4 E2B via MediaPipe) is about **2.0 GB**" with the alternates named individually (**~1.5 GB** WebLLM / Gemma 2 2B, **~3.2 GB** Transformers.js / Gemma 4 E2B) instead of the old lumped "roughly 3 GB"; the honest "downloaded once and cached by your browser" framing kept. (2) `human-feedback.md`'s F2 WELCOME outline §2 — same numbers, same direction, plus a standing rule that whoever writes `WELCOME.md` re-reads them off `src/inference/types.ts` rather than copying the outline, since it has now gone stale once. The share-message draft's "about 1.5 GB" → "about 2 GB". The F1a verification note above it was **also** stale in an instructive way and is corrected in place: the three sizes it checked were right, the *default* was what moved, which is exactly why a July check passed and the copy still went wrong. (3) The R1b smoke matrix — added a line naming the MediaPipe row as the default as of R7, without restating any measurement; the MediaPipe row's stale "~3 GB" parenthetical (a number `types.ts` does not carry) was dropped in favour of a pointer to R1e's measured 2.00 GB, and its 2026-07-10 ❌ is now marked as history, since R1d/R1e fixed both halves and M14c drove the path two turns. → **Verify:** `npm run build` + `npm run test` green (1213, 73 files); a sweep of `README.md` + both initiative docs found no size string outside dated historical records that `src/inference/types.ts:60-64` does not carry. Loading-card evidence for the size the README now claims is the R7 screenshot `docs/screenshots/2026-08-05/r7-cleared-storage-first-boot-mediapipe.png` — a cleared-`quietnote-runtime` boot showing **"~2.0 GB"**; not re-taken, since R8 changes no code that could alter it. Not gate-triggering. |
 | 2026-08-05 | R7 — Default-engine swap + `tasks-genai` bump landed and pinned | #125 | Sharang's two commits (`fd60f58`, `e5efb23`) landed **unrewritten** — this PR added only the missing pin and the doc rows. New `src/inference/__tests__/DefaultEngine.test.ts` (5 tests) asserts *both* halves and their agreement: `createEngine`'s default parameter (`src/inference/index.ts`) and `getStoredRuntime()`'s no-key fallback (`src/hooks/useInferenceEngine.ts`) each resolve to `"mediapipe"`, **and equal each other** — the drift case the swap's own commit message flagged. It also pins `TASKS_GENAI_VERSION` to the `package.json` dependency so the CDN WASM fileset cannot drift from the bundled JS API. Guard verified, not assumed: flipping `getStoredRuntime` back to `"webllm"` fails 2 of the 5. Build green, **1213 tests green** (73 files). Verified on `npx vite preview` against the production build with `quietnote-runtime` **removed** from localStorage (true first-time visitor): first paint booted MediaPipe, the loading card read **"~2.0 GB"** (R2b's per-runtime copy, no edit needed), ready in **13.3 s** from an existing `mediapipe-cache`, and a two-turn free-write exchange completed with **0 console errors** (2 benign warnings: Chromium `powerPreference`, WGSL subgroup support). Screenshots: `docs/screenshots/2026-08-05/r7-*.png`. Not gate-triggering by the README file list. **Free by-product (R7 step 4), recorded for M15 and M14c:** turn 2 was **distinct** and turn-aware, and there was **no quote artifact of any kind** — no leading `"`, no wrapper, no lone trailing `”`. |
 | 2026-08-04 | R5 — Continuity card quotes the entry instead of splicing it | #122 | Implemented the planner's ruling verbatim in `src/utils/continuityPrompt.ts` only. `extractShortTopic` now applies the fragment rule: >8 words → first 8 joined, trailing `.,;:!?-—"'’”` stripped, `…` appended; ≤8 words → the trimmed message kept with its own punctuation; either way capped at 80 chars on the last space before the cut. The `last-session` `body`/`suggestedInput` use the decided copy with curly quotes; `recurring-theme`, `mood-followup`, `themeExtractor.ts`, `ContinuityCard.tsx`, `ChatPanel.tsx` untouched. Test at `continuityPrompt.test.ts:53` updated off `"revisit"`; 5 new fragment tests (>8 words, ≤8 words, punctuation-before-truncation, >80-char cap, and a loop asserting no `…".` join and balanced quotes in both strings). Build green, **1208 tests green** (72 files). Verified on `npx vite preview` (Chromium/Playwright, WebLLM, real IndexedDB data — both branches hit on the real path): long → `Earlier today, you wrote: “My sister called tonight to say our dad…” How are you feeling about that today?`, short → `Earlier today, you wrote: “Today felt heavy.” How are you feeling about that today?`, and the prefill reads `Earlier today I wrote: “Today felt heavy.” I want to come back to that. `. 0 console errors. Screenshots: `docs/screenshots/2026-08-04/r5-*.png`. Not gate-triggering (no `src/prompts/`, no send path, no safety util — the prefill is ordinary textarea text per the planner's fact 1). **One unrelated defect seen during the walk — filed as model-quality M15 (proposed):** the reply carried an unmatched trailing curly `”`. |
 | 2026-07-14 | R3b — Footer "open source" repo link | #90 | Added a fourth `·`-separated quiet link "open source" → `https://github.com/Guzzler/QuietNote` (`target="_blank" rel="noopener noreferrer"`, same classes as "Share feedback") in the App.tsx footer; URL hoisted as `REPO_URL` beside `FEEDBACK_ISSUES_URL` in `src/utils/feedbackLinks.ts`. `FeedbackChannelGuards` extended (2 tests: href pinned + no query string; footer renders the link). Link 404s for outsiders while the repo is private — accepted dormancy, activates at R4. Verified on `vite preview`: all three footer hrefs correct in DOM, calm rendering (screenshot `docs/screenshots/2026-07-14/`). Build green, 1350 tests. This was the LAST non-gated public-release increment — initiative is release-ready, waiting on R4. |
