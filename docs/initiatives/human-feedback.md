@@ -91,7 +91,13 @@ live URL at R4):**
    journaling companion that runs entirely in your browser — the AI model
    downloads to your device and your writing never leaves it. You're one of
    the first ~10 people to use it; rough edges expected.
-2. **What you need**: Chrome or Edge 113+ (or Chrome for Android 121+) with
+2. **What you need** — ⚠️ **STALE as of 2026-08-05; public-release R8 rewrites
+   this item.** The default engine flipped to **MediaPipe / Gemma 4 E2B
+   (~2.0 GB)**, so the first-visit number below is wrong and the two
+   "alternate" engines are now WebLLM (~1.5 GB) and Transformers.js (~3.2 GB).
+   Do not copy these numbers into `WELCOME.md`; take them from
+   `src/inference/types.ts` at the time F2 is written.
+   Chrome or Edge 113+ (or Chrome for Android 121+) with
    WebGPU; ~1.5 GB one-time model download on first visit (Wi-Fi
    recommended; the two alternate engines under **Settings → Privacy & your
    data → Inference Engine** are ~2.0–3.2 GB — path corrected 2026-07-23);
