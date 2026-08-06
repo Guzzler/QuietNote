@@ -19,7 +19,7 @@ function getStoredRuntime(): RuntimeId {
   } catch {
     // localStorage unavailable
   }
-  return "webllm";
+  return "mediapipe";
 }
 
 export function useInferenceEngine() {

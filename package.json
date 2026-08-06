@@ -20,7 +20,7 @@
   "dependencies": {
     "@fontsource-variable/lora": "^5.2.8",
     "@huggingface/transformers": "^4.0.1",
-    "@mediapipe/tasks-genai": "^0.10.27",
+    "@mediapipe/tasks-genai": "^0.10.29",
     "@mlc-ai/web-llm": "^0.2.80",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.546.0",
