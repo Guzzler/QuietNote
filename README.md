@@ -30,7 +30,7 @@ QuietNote is an **AI journaling companion — not therapy, not a therapist, and 
 ## What you need to run it
 
 - **A WebGPU-capable browser**: recent Chrome or Edge on desktop are the reliable choices today. Firefox and Safari support is still uneven; unsupported browsers get an honest message rather than a broken app.
-- **A one-time model download**: the default model (Gemma 2 2B via WebLLM) is about **1.5 GB**, downloaded once and cached by your browser. Optional alternative engines (Gemma 4 E2B via Transformers.js or MediaPipe) run larger — roughly **3 GB**.
+- **A one-time model download**: the default model (Gemma 4 E2B via MediaPipe) is about **2.0 GB**, downloaded once and cached by your browser. Two alternative engines are available under Settings → Privacy & your data → Inference Engine: Gemma 2 2B via WebLLM (**~1.5 GB**) and Gemma 4 E2B via Transformers.js (**~3.2 GB**).
 - **A reasonably capable device**: local inference is real work; a laptop or desktop with a decent GPU gives the best experience. Mobile is not the target right now.
 - Sessions persist across reloads — close the tab, come back, pick up where you left off.
 

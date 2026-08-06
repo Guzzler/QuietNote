@@ -31,10 +31,14 @@ it ships correct the moment R4 lands:
   (`JournalingModeSelector.tsx:15-26`); the outline listed freewrite /
   check-in / thought record / gratitude. Corrected below so a tester reading
   the one-pager sees the same order as the mode strip.
-- **Download sizes (outline §2) — exact.** `MODEL_DOWNLOAD_SIZES`
-  (`src/inference/types.ts:60-64`) is webllm `~1.5 GB` / transformersjs
-  `~3.2 GB` / mediapipe `~2.0 GB`, matching "~1.5 GB … alternates are
-  ~2.0–3.2 GB" verbatim.
+- **Download sizes (outline §2) — exact *as of 2026-07-23*, re-checked
+  2026-08-05.** `MODEL_DOWNLOAD_SIZES` (`src/inference/types.ts:60-64`) is
+  unchanged — webllm `~1.5 GB` / transformersjs `~3.2 GB` / mediapipe
+  `~2.0 GB` — but **which one a first-time visitor pays moved** when R7 made
+  MediaPipe the default. The three values were right and the *default* was
+  the stale part, which is why the check passed in July and the copy still
+  went wrong. Outline §2 rewritten by R8; the numbers themselves needed no
+  correction.
 - **Privacy dashboard (outline §5) — correct.** `SettingsPanel.tsx:160-173`
   has the "Privacy & your data" row ("Export or erase your entries") opening
   `PrivacyDashboard`.
@@ -91,18 +95,19 @@ live URL at R4):**
    journaling companion that runs entirely in your browser — the AI model
    downloads to your device and your writing never leaves it. You're one of
    the first ~10 people to use it; rough edges expected.
-2. **What you need** — ⚠️ **STALE as of 2026-08-05; public-release R8 rewrites
-   this item.** The default engine flipped to **MediaPipe / Gemma 4 E2B
-   (~2.0 GB)**, so the first-visit number below is wrong and the two
-   "alternate" engines are now WebLLM (~1.5 GB) and Transformers.js (~3.2 GB).
-   Do not copy these numbers into `WELCOME.md`; take them from
-   `src/inference/types.ts` at the time F2 is written.
+2. **What you need** (numbers refreshed 2026-08-05 by public-release R8, after
+   the default engine flipped to MediaPipe / Gemma 4 E2B in R7):
    Chrome or Edge 113+ (or Chrome for Android 121+) with
-   WebGPU; ~1.5 GB one-time model download on first visit (Wi-Fi
+   WebGPU; **~2.0 GB** one-time model download on first visit (Wi-Fi
    recommended; the two alternate engines under **Settings → Privacy & your
-   data → Inference Engine** are ~2.0–3.2 GB — path corrected 2026-07-23);
+   data → Inference Engine** are **~1.5 GB** (WebLLM / Gemma 2 2B) and
+   **~3.2 GB** (Transformers.js / Gemma 4 E2B) — path corrected 2026-07-23);
    a few GB free disk.
    Live URL: https://guzzler.github.io/QuietNote/ (insert at R4).
+   **Standing rule for whoever writes `WELCOME.md`:** re-read these three
+   numbers off `src/inference/types.ts` (`MODEL_DOWNLOAD_SIZES`) at the time
+   F2 is written rather than copying them from here — this outline has now
+   gone stale once, when the default moved underneath it.
 3. **What to try** — one bullet per mode, **in the app's own order and with
    its own labels** (corrected 2026-07-23 against
    `JournalingModeSelector.tsx`): **Free Write** (just write what's on your
@@ -139,7 +144,7 @@ DM as-is, ~110 words, no links besides the two the tester needs:
 > https://guzzler.github.io/QuietNote/
 >
 > Two things to know before you open it: you'll need Chrome or Edge on a
-> laptop, and the first visit downloads about 1.5 GB (one time, then it's
+> laptop, and the first visit downloads about 2 GB (one time, then it's
 > instant) — so do it on Wi-Fi.
 >
 > Write about something real if you can, and go a few messages back and
