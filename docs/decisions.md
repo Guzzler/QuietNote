@@ -180,3 +180,44 @@ loses the artifact silently.
 still forbids it, unchanged from 2026-08-04), M5c (needs the 5.07 GB
 `.litertlm`, not on disk) and M16 (needs a base GGUF that does not exist on
 the rig, plus ~2.75 h) — both were left for a run that can carry the fetch.
+
+## 2026-08-06 — R9/R10/R11 ruled: the guided modes are the weak surface
+
+**Planning run, no code.** All three of the 08-05 audit walk's proposals
+CONFIRMED against `src/` this run, and all three queued or answered.
+
+**R9 (queued, and it is the priority).** Grounding corrected: the reset effect
+at `App.tsx:277-283` resets the three step counters only — `journalingMode` is
+*not* in it, so the observed Free-Write landing came from the reload
+(`useState("freewrite")` on remount), while a sidebar switch *without* a reload
+keeps the mode and shows "Step 1 of 5" over a 3-turn transcript. Both halves
+real. **Fix shape decided: persist `mode?: JournalingMode` on `Session`
+(optional, no migration) and *derive* the step from the stored user-message
+count — do not persist the counters.** A derived step cannot drift from the
+transcript and it makes the `> 5` save condition reachable on a resumed
+session, which is what fixes the silent loss of the Thought Record rather than
+just its display. Not gate-triggering; hard guard recorded if the send path
+turns out to be involved.
+
+**R10 (confirmed, fix deliberately NOT queued).** Verified: no step reaches the
+model anywhere. But every real fix touches `src/prompts/` or context assembly,
+i.e. a fresh 3-seed generate read (~2.75 h), and the single sighting was on
+WebLLM — the engine R7 retired. Queued **R10a** instead: measure the desync
+rate on MediaPipe across all three guided modes, 3 turns each, measurement
+only. Buying a 2.75 h gate read for an unpriced defect on a dead engine is the
+error being avoided. The UI-only variant (hide the banner during a reply) is
+REJECTED outright — it hides the contradiction without making the guidance
+true.
+
+**R11 (queued, copy decided).** The "loads instantly" line is unconditional and
+false for a cold browser process. Cache-detection REJECTED (real code and a
+real failure mode for one line of text); the uncertainty in execute's numbers
+is an argument for fixing the copy, not for measuring first. Decided:
+"After that it loads from your device — a few seconds, no download."
+
+**Also:** the 08-05 unfiled-screenshots note is resolved (commit `bb76ff1`
+committed them with the walk write-up — `thoughtrecord-step-desync` was R10,
+a real defect). `public-release.md` pruned 682 → ~574 lines (R7/R8/R5 items
+collapsed to their ledger rows; R5's ruling kept only its two binding parts).
+model-quality's queue untouched: M5c and M16 still open, both still needing an
+artifact nobody has fetched.

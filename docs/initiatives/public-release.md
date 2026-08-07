@@ -43,6 +43,15 @@ decisions, release gate, queue format).
   and `TASKS_GENAI_VERSION` (also pinned by that test). The one number that
   moved for a stranger is the first-run download: **1.49 GB → 2.00 GB**;
   R8 (PR #126) swept the docs that quoted the old default.
+- **Guided-mode state is entirely ephemeral (verified in code 2026-08-06):**
+  `journalingMode` and the three step counters are `useState` in `App.tsx`
+  (`:152-155`); `Session` (`src/types.ts:20-31`) has **no** mode or step field,
+  so nothing survives a reload, and the effect at `:277-283` resets the three
+  counters on every `currentId` change. `getSystemInstruction`
+  (`src/prompts/systemPrompts.ts:191`) takes no step argument, and the four
+  `*_SEQUENCE` constants (`src/data/journalPrompts.ts:349-385`) are imported
+  **only** by the three guide display components. This is the shared root of
+  R9 and R10.
 - 3 backends: WebLLM (Gemma 2 2B, WebGPU), Transformers.js v4 (Gemma 4 E2B
   ONNX, WebGPU/WASM), MediaPipe (Gemma 4 E2B LiteRT, WASM). Models download
   at runtime from HF/WebLLM CDNs — designed for cross-origin use (verify from
@@ -101,6 +110,10 @@ decisions, release gate, queue format).
 | R3b | In-app footer link to the repo ("open source — verify it yourself") | DONE (PR #90) |
 | R7 | **Land the default-engine swap + the `tasks-genai` bump** (branch `fix/2026-08-05-tasks-genai-litertlm`, 2 commits, pushed, no PR) and close the test gap the swap's own commit message flags: nothing pins the default runtime | **DONE 2026-08-05 (PR #125)** — both commits landed unrewritten; `DefaultEngine.test.ts` pins both halves of the default and their agreement, plus the `TASKS_GENAI_VERSION` ↔ `package.json` match |
 | R8 | **Size + engine honesty sweep for the new default** — `README.md:33`, the F2 WELCOME outline and the R1b matrix all name Gemma 2 2B / ~1.5 GB as what a stranger gets | **DONE 2026-08-05 (PR #126)** — all three rewritten; `MODEL_DOWNLOAD_SIZES` untouched, its values were already right |
+| R9 | Guided sessions are not resumable, and a mid-exercise reload silently loses the Thought Record | CONFIRMED 2026-08-06 (planner) — fix shape decided, queued |
+| R10 | The guided step banner and the model contradict each other (the model is never told the step) | CONFIRMED 2026-08-06 (planner) — structural; fix NOT queued, **R10a** measures it on the new default first |
+| R10a | Measure the guided-mode desync rate on MediaPipe (the post-R7 default), all three guided modes | queued 2026-08-06 |
+| R11 | "After that, it loads instantly" is shown to returning users unconditionally, and is false for a cold browser process | CONFIRMED 2026-08-06 (planner) — copy-only, exact copy decided, queued |
 | R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | blocked on Sharang |
 
 ## Task queue
@@ -136,6 +149,15 @@ execute:** R5 below is not an invented increment — it is an audit-walk finding
 filed under the queue-empty rule, which is the one path by which new
 public-release items may appear. It is PROPOSED and awaits a planner ruling.**)**
 
+**Queue status (2026-08-06, planner): 3 open — R9, R10a, R11**, all three from
+the 08-05 audit walk and all three ruled on this run. The 07-14 note above is
+now clearly wrong as a standing claim and should be read as history: the
+queue-empty audit rule *is* the mechanism by which this initiative acquires new
+work, and it has produced five real defects (R5, R9, R10, R11 + R10a's
+measurement) in three walks. **Priority within the queue: R9 first** — it is
+the only one that loses user data. R11 is a one-string change and can ride
+along with anything. R10a is measurement and blocks no one.
+
 **Queue-empty audit (2026-08-03, execute — `npm run build` (green) +
 `npm run test` (1203 green, 72 files) + `npx vite preview` on `:4173`, WebLLM
 default, Chromium via Playwright):** the only open checkboxes anywhere were
@@ -166,86 +188,22 @@ left off" card splices the raw first 8 words of the previous entry into the
 middle of a sentence, producing ungrammatical, double-punctuated copy on the
 first screen a returning user sees.
 
-- [x] 2026-08-05 · **R7 — Land the default-engine swap and the `tasks-genai`
-  bump, and pin the default with a test.** (DONE 2026-08-05, PR #125 — see
-  Ledger. Both commits landed unrewritten; the pin is
-  `src/inference/__tests__/DefaultEngine.test.ts` (5 tests, both halves +
-  their agreement + the WASM-version match), drift-verified by flipping
-  `getStoredRuntime` to `webllm` and watching 2 of 5 fail. Cleared-storage
-  boot on `vite preview` showed the **~2.0 GB** MediaPipe card and reached
-  ready in 13.3 s from `mediapipe-cache`; both turns distinct, **no quote
-  artifact of any kind**, 0 console errors.) The two commits on
-  `fix/2026-08-05-tasks-genai-litertlm` (`fd60f58`, `e5efb23`) are Sharang's
-  interactive work from 2026-08-05, already verified on `npm run dev` +
-  Playwright with build and 1208 tests green. **Do not rewrite, squash or
-  re-derive them** — this item is the PR and the missing test, nothing else.
-  1. Open a PR from the existing branch (`gh pr create --base main --head
-     fix/2026-08-05-tasks-genai-litertlm`). Body: both commit messages'
-     evidence, and the **known trade stated plainly** — MediaPipe has no
-     repetition-penalty knob, and M1b measured it at 7/10 no-echo (mean
-     overlap 0.22, one hard fail at 0.84 on `echo-fw-3`, the exact reply that
-     started model-quality). This buys out M14's repeat and M11/M11b/M15's
-     quote artifacts (all WebLLM) at the price of echo risk; it is a one-word
-     flip back if echo proves worse in practice.
-  2. Add the missing pin — the swap's own commit message calls it out: *"no
-     test pinned the default engine — that gap let this be a two-line change
-     with no failing test."* Assert **both** halves in one test file
-     (`src/inference/__tests__/` beside the existing suites): `createEngine`'s
-     default parameter and `getStoredRuntime()`'s no-key fallback resolve to
-     the same `RuntimeId`, and that id is `"mediapipe"`. A test that pins only
-     one half lets them drift apart, which is the actual failure mode.
-  3. Re-verify from a **cleared** localStorage on `npx vite preview` (the
-     production build, not `npm run dev` — the swap has only been driven on
-     dev): first paint boots MediaPipe, the loading card shows the MediaPipe
-     size, a full free-write exchange completes, 0 console errors.
-  4. **Free by-product, record it in the PR body:** drive a **second turn** and
-     say whether turn 2 is distinct and whether any quote artifact (leading,
-     wrapping, or a lone trailing `”`) appears. That single observation is the
-     re-open condition for **M15** and another MediaPipe sample for M14c.
-  → **Verify:** PR merged; `npm run build` + `npm run test` green with the new
-  pin; screenshots of the cleared-storage first boot and both turns into
-  `docs/screenshots/<date>/`; a ledger row here and one in `model-quality.md`
-  for M5b. **Gate:** not gate-triggering by the README's file list — nothing in
-  `src/prompts/`, the send path, the safety utils or `evalRunner.ts` is touched.
-  Recorded honestly: it *does* change which model answers a stranger, and the
-  floors have never been read on that model — that read is queued as
-  **model-quality M16**, and it is a soft-launch blocker, not a merge blocker.
-
+- [x] 2026-08-05 · **R7 — Land the default-engine swap, bump `tasks-genai`, and
+  pin the default with a test** (DONE 2026-08-05, PR #125 — full detail, the
+  drift-verification and the cleared-storage boot evidence in the Ledger).
 - [x] 2026-08-05 · **R8 — Size + engine honesty sweep for the new default**
-  (DONE 2026-08-05, PR #126 — see Ledger. All three places rewritten; gate
-  respected, R7 landed first. `MODEL_DOWNLOAD_SIZES` left alone as instructed
-  — the three values were already correct, only the *default* moved.)
-  (gated on R7 — do not take it first; if R7 does not land, every edit here is
-  wrong). Docs and copy only, no `src/` logic. Three known-stale places,
-  verified in the files this run:
-  1. `README.md:33` — reads *"the default model (Gemma 2 2B via WebLLM) is
-     about 1.5 GB … Optional alternative engines … roughly 3 GB."* Both halves
-     invert. Rewrite: the default is **Gemma 4 E2B via MediaPipe, ~2.0 GB**;
-     the alternatives are **~1.5 GB (WebLLM / Gemma 2 2B)** and **~3.2 GB
-     (Transformers.js / Gemma 4 E2B)**. Keep the honest "downloaded once and
-     cached by your browser" framing.
-  2. `human-feedback.md`'s F2 WELCOME outline, item 2 — same numbers, same
-     direction; edit the outline in place (F2 itself stays gated on R4).
-  3. The R1b smoke matrix in this doc — add a line saying which row is the
-     default as of R7. **Do not restate the measurements**; they are still
-     correct per-engine, only the label "default" moved.
-  **Leave `MODEL_DOWNLOAD_SIZES` alone** — it is keyed by runtime and R2b's
-  card already reads the *active* runtime's size, so it needed no change and
-  the `DownloadSizeHonesty` pins stay green. → **Verify:** `npm run build` +
-  `npm run test` green; no size string in any doc names a number that
-  `src/inference/types.ts:60-64` does not carry; screenshot of the loading card
-  on a cleared profile showing the size the README now claims.
+  (DONE 2026-08-05, PR #126 — docs/copy only; `MODEL_DOWNLOAD_SIZES` untouched
+  because its three values were already right. Full detail in the Ledger.)
 
-**Unfiled leftovers noticed 2026-08-05 (planner) — NOT queued, and deliberately
-not committed.** The working tree carries three untracked screenshots,
-`docs/screenshots/2026-08-05/audit-{two-turn-freewrite,reload-continuity-card,
-thoughtrecord-step-desync}.png`, with no accompanying doc section anywhere.
-They are from a walk this loop did not record, so the planner cannot attest to
-what they show and will not commit them as evidence. One filename —
-`thoughtrecord-step-desync` — reads like a defect nobody filed. **Whoever's run
-produced them owns reconciling them**: either write the walk up (and the defect,
-if it is one, as a proposed queue item under the queue-empty rule) or delete
-them. Do not treat the filenames as a finding; a filename is not a measurement.
+**Unfiled-leftovers note RESOLVED 2026-08-06 (planner).** The three untracked
+screenshots the 08-05 planning run refused to commit were reconciled the same
+evening by the run that produced them: commit `bb76ff1` committed
+`docs/screenshots/2026-08-05/audit-*.png` **together with** the walk write-up
+and the R9/R10/R11 proposals below, which is exactly the resolution that note
+asked for. The `thoughtrecord-step-desync` filename was a real defect — it is
+R10, and its mechanism is now grounded in the code (see the ruling). Nothing is
+outstanding; the note is kept only because "a filename is not a measurement"
+turned out to be the right instinct at the right cost (one run's delay).
 
 <details><summary>R6 — MIT LICENSE (moved to Blocked on Sharang 2026-08-05, unchanged)</summary>
 
@@ -291,71 +249,159 @@ transcript; all four footer links correct; **0 console errors** (one benign
 Chromium `powerPreference` warning). Screenshots:
 `docs/screenshots/2026-08-05/audit-*.png`.
 
-- [ ] 2026-08-05 · **R9 (PROPOSED by execute — not planner-graded, do not
-  start without a ruling) — the guided modes are not resumable, and the
-  Thought Record can be silently lost.** Re-opening a Thought Record session
-  from the sidebar restores the transcript but drops the exercise: the mode
-  strip resets to **Free Write** and the "Step N of 5" scaffold disappears
-  (measured: `aria-checked="true"` on Free Write, no `Step ` string in the
-  document). **Grounded in the code, not inferred:** `journalingMode` and the
-  three step counters are plain React state initialised to `"freewrite"` / `1`
-  (`src/App.tsx:152-155`), nothing persists them to the session record, and
-  `src/App.tsx:279-283` resets all three on every `currentId` change — so
-  re-opening *any* guided session lands the user in Free Write at step 1.
-  **The part that is worse than cosmetic:** the structured `ThoughtRecord` is
-  only written when `thoughtRecordStep > 5` (`src/App.tsx:287-318`), and the
-  counter is ephemeral — so a user who reloads mid-exercise and comes back can
-  never reach the save condition for that session. The CBT artifact the mode
-  exists to produce is lost, quietly. A stranger doing the one mode that most
-  looks like "real" therapy work is the one most likely to hit this.
-  **Not guessed at:** how much of this is intended (a session may be meant to
-  be one sitting), and whether the fix is persisting `journalingMode` + step on
-  the session record or deriving the step from the stored message count. Both
-  touch session shape; the choice is the planner's.
+### R9/R10/R11 cold rulings (planner, 2026-08-06) — all three CONFIRMED against the code
 
-- [ ] 2026-08-05 · **R10 (PROPOSED by execute — not planner-graded, do not
-  start without a ruling) — the guided step banner and the model contradict
-  each other, because the model is never told the step.** Observed on turn 2 of
-  the Thought Record walk: the banner had advanced to **"Step 2 of 5 — What
-  went through your mind? What were you thinking?"** while the reply asked
-  *"How does that make you feel?"* — **the identical closing question it had
-  already asked on turn 1**. So the screen simultaneously instructs the user to
-  do two different things, and one of them is a repeat. Survives a reload and a
-  sidebar re-open, so it is in the stored reply, not a render artifact.
-  **The mechanism is structural, and this is the finding:**
-  `getSystemInstruction(mode, contextBlock?, personalityDirective?)`
-  (`src/prompts/systemPrompts.ts:191`) has **no step parameter**, and
-  `THOUGHT_RECORD_SEQUENCE` (`src/data/journalPrompts.ts:379-385`) is imported
-  only by the display component `ThoughtRecordGuide.tsx`. The banner is a pure
-  UI counter incremented on each send (`src/App.tsx:323-325`, `:506-508`) while
-  the model free-associates with no knowledge of it. These two cannot stay in
-  sync except by luck — the observed desync is the default behavior, not a
-  fluke, and the same holds for Gratitude and Check-in.
-  **Related but distinct from M14/M15:** the repeated *closing question* is a
-  partial repeat (opening sentence differed), on the pre-R7 default engine.
-  **Re-measure on MediaPipe before pricing any fix** — R7 changed which model a
-  stranger gets, and this walk predates it. Any fix that feeds the step into
-  the prompt touches `src/prompts/`, i.e. **gate-triggering in the expensive
-  way** (fresh 3-seed generate read); a UI-only fix that hides the banner
-  during a reply is cheap but treats the symptom.
+Every claim below was re-read in `src/` this run, not taken from execute's
+report. The proposals were accurate; two corrections and one sharpening follow.
 
-- [ ] 2026-08-05 · **R11 (PROPOSED by execute — low severity, weakest of the
-  three, filed for completeness) — "it loads instantly" is shown to returning
-  users unconditionally.** The first-time note at `src/App.tsx:766-774` renders
-  on *every* load with no cache-awareness, so a returning visitor reads
-  *"First time: downloads the AI model (~2.0 GB) once … After that, it loads
-  instantly"* while watching a progress bar. **Measured this run, and the
-  numbers do not all support the complaint** — cached loads ranged from
-  **5.6 s / 6.3 s** (warm reload, same browser process, WebLLM) through
-  **13.3 s** (MediaPipe from `mediapipe-cache`) to roughly **40–60 s** on the
-  first load of a cold browser process. So "instantly" is fair for a warm
-  reload and false for the cold-process case that a returning stranger actually
-  experiences the next day. **What is missing before this is worth acting on:**
-  a proper cold-process measurement (this run's 40–60 s is inferred from
-  wall-clock between navigation and ready, not instrumented) — R2's fresh-profile
-  methodology is the right instrument. If the planner wants it cheap, the honest
-  copy fix is dropping the word "instantly" for something measured; it is
-  copy-only and not gate-triggering.
+**R9 — CONFIRMED, with the mechanism corrected.** Execute wrote that
+`src/App.tsx:279-283` "resets all three on every `currentId` change — so
+re-opening *any* guided session lands the user in Free Write at step 1." The
+effect (now at `:277-283`) resets the **three step counters** only;
+`journalingMode` is **not** in it. The observed Free-Write landing came from the
+reload: `journalingMode` is plain React state (`src/App.tsx:152`) that nothing
+persists, so a remount starts at `"freewrite"`. The distinction matters because
+it splits the defect in two, and **both halves are real**:
+- *After a reload* — mode is lost, so the guide disappears entirely.
+- *Without a reload*, switching sessions in the sidebar keeps the mode but
+  resets the counter to 1, so a 3-turn Thought Record re-opens showing
+  **"Step 1 of 5"** over a transcript that is plainly past step 1. Execute did
+  not see this case; it follows from the same effect and is arguably the more
+  confusing of the two.
+
+The severe half is confirmed exactly as filed: the structured `ThoughtRecord`
+is written only when `thoughtRecordStep > 5` (`src/App.tsx:287-318`, guarded by
+`thoughtRecordSaved` and requiring ≥5 user messages), and the counter is
+ephemeral — so a user who reloads mid-exercise can never reach the save
+condition for that session. **This is silent data loss in the one mode that
+most looks like real therapy work**, which outranks every cosmetic item here.
+
+**Fix shape DECIDED — persist the mode, *derive* the step. Do not persist the
+counters.** `Session` (`src/types.ts:20-31`) gains one optional field,
+`mode?: JournalingMode`, written when the session is created and read on
+`loadExisting` (`src/App.tsx:716-723`); `undefined` means `"freewrite"`, so
+every existing session in IndexedDB stays valid with no migration. The step is
+**computed from the stored transcript** — the count of user messages in the
+session, `+1`, which is exactly what the current increments produce
+(`:323-325`, `:506-508` bump once per send). Rationale, and it is not a
+preference: a derived step **cannot drift from the transcript**, and it makes
+the save condition reachable again on a resumed session — a restored 5-message
+Thought Record satisfies `> 5` on load and persists the artifact that is
+currently lost. Persisting three counters would fix the display and leave the
+data loss in place for any session that was already interrupted.
+
+**R10 — CONFIRMED, and it is structural exactly as described.** Verified this
+run: `getSystemInstruction(mode, contextBlock?, personalityDirective?)`
+(`src/prompts/systemPrompts.ts:191`) takes **no step argument**, and a
+repo-wide grep for the four `*_SEQUENCE` constants
+(`src/data/journalPrompts.ts:349-385`) returns **only** the three display
+components (`ThoughtRecordGuide`, `GratitudeGuide`, `CheckInGuide`) plus a
+comment in `conversationScripts.ts`. Nothing carries the step to the model. The
+banner and the reply are two independent processes and the desync is the
+default behavior, not a fluke — the same holds for Gratitude and Check-in.
+
+**No fix is queued this run, and that is deliberate.** Every real fix feeds the
+step into the prompt or the context block, which is **gate-triggering in the
+expensive way** (fresh 3-seed generate read, ~2.75 h) under the README's replay
+rule. Spending that on a desync measured **once**, on the **pre-R7 engine**
+that no stranger will use, would be buying a fix for an unpriced defect.
+Execute's own instinct — "re-measure on MediaPipe before pricing any fix" — is
+adopted as the ruling and queued as **R10a** below. The UI-only variant (hiding
+the banner during a reply) is **REJECTED now rather than parked**: it makes the
+contradiction harder to see without making the guidance true, which is the
+wrong trade for an app whose whole pitch is honesty.
+
+**R11 — CONFIRMED, and cheaper than execute priced it.** The note at
+`src/App.tsx:768-773` renders inside the loading card unconditionally, with no
+cache-awareness. Execute was right that its own numbers only partly support the
+complaint (5.6–13.3 s warm, ~40–60 s cold-process, the last uninstrumented).
+**Ruling: that uncertainty is an argument for fixing the copy, not for
+measuring first.** A sentence that is true for a warm reload and false the next
+morning is wrong for the case a returning stranger actually lives in, and no
+instrumented number changes the word "instantly". **Cache-detection is
+REJECTED** — reading Cache Storage to branch the copy is real code and a real
+failure mode (R1e already documents origins that skip the cache) for one line
+of text. The fix is one string that is true in every case.
+
+**Copy DECIDED (execute: use verbatim; the `{size}` interpolation stays exactly
+as it is today — `MODEL_DOWNLOAD_SIZES[runtimeId]`):**
+> First time: downloads the AI model ({size}) once, then it's stored on this
+> device. After that it loads from your device — a few seconds, no download.
+
+"a few seconds" covers the 5.6–13.3 s readings honestly and does not promise
+instant; "no download" is the claim that actually matters to someone on
+cellular, and it is unconditionally true once the cache exists.
+
+- [ ] 2026-08-06 · **R9 — Make guided sessions resumable, and stop losing the
+  Thought Record.** Implement the decided shape above, nothing more.
+  1. `src/types.ts` — add `mode?: JournalingMode` to `Session` (optional;
+     absent = `"freewrite"`, no migration).
+  2. `src/App.tsx` — write `mode: journalingMode` when a session is created in
+     `newSession`; in `loadExisting` (`:716-723`) restore it with
+     `setJournalingMode(s.mode ?? "freewrite")`.
+  3. Replace the three `useState` counters (`:153-155`) and the reset effect
+     (`:277-283`) with a **derived** step: the number of user messages across
+     `current.threads`, `+1`. Delete the three `set*Step((s) => s + 1)` calls at
+     `:323-325` and `:506-508` — the count moves on its own when the message
+     lands. Keep the `thoughtRecordSaved` ref guard as-is so the artifact is
+     still written once per session.
+  → **Verify:** (a) unit tests — a session with 3 stored user messages derives
+  step 4; a session with no `mode` derives `"freewrite"`; a restored 5-message
+  thoughtrecord session reaches the `> 5` save condition (this is the
+  data-loss regression test, and it must fail against today's code — check
+  that it does before writing the fix). (b) `npm run build` + `npm run test`
+  green. (c) On `npx vite preview`: start a Thought Record, send 2 entries,
+  **reload**, re-open from the sidebar — the mode strip must still read Thought
+  Record and the banner "Step 3 of 5"; then switch to another session and back
+  without reloading and confirm the banner does not fall back to step 1.
+  Screenshots to `docs/screenshots/<date>/`.
+  **Gate: NOT gate-triggering, and here is the reasoning.** No file on the
+  README's list is touched: no `src/prompts/`, no safety util, no
+  `evalRunner.ts`, and `buildMessages` is not edited. It does change *which*
+  system instruction a **resumed** session gets (`journalingMode` feeds
+  `getSystemInstruction` at `:384`/`:589`) — but that is restoring the mode the
+  user chose, i.e. making the shipped behavior match the four modes the gate
+  already reads separately, not altering any prompt or how messages are built.
+  **Hard guard:** if the implementation turns out to need an edit inside the
+  send path's message construction, `buildMessages`, or context assembly,
+  **stop and re-queue** — that is a different item with a different gate answer.
+
+- [ ] 2026-08-06 · **R10a — Does the guided desync happen on the default
+  engine?** (measurement only — **no `src/` diff**, no eval run, no fix.)
+  R10's single observation was on WebLLM, which R7 retired as the default. Price
+  the defect on what a stranger now gets before anyone spends a 3-seed generate
+  read on it. Production build on `npx vite preview`, Chromium via Playwright,
+  MediaPipe / Gemma 4 E2B (the post-R7 default — confirm `quietnote-runtime` is
+  absent or `mediapipe` before starting).
+  1. For **each** of the three guided modes (Thought Record, Gratitude,
+     Check-in): one session, **three** turns, one session per page load, entries
+     verbatim and recorded in the write-up so the run is repeatable.
+  2. After each send, record **the banner text as rendered** (the `Step N of M`
+     line and its prompt) and **the reply's closing question**, verbatim. Score
+     each turn `aligned` / `desynced` / `ambiguous`, and state the rule you
+     scored by — "the banner asks for X and the reply asks for Y" is a desync;
+     a reply that asks nothing is `ambiguous`, not aligned.
+  3. Record separately whether any **closing question repeats** a previous
+     turn's (that is the M14/M15 metric, and R10's original sighting had one).
+  → **Verify:** an **R10a result** section here with a 9-row table (mode × turn),
+  the desync count per mode, and one screenshot per mode into
+  `docs/screenshots/<date>/`. **Then stop — rule nothing and fix nothing.** If
+  the rate is high the next planning run prices the prompt-side fix against the
+  gate; if MediaPipe happens to track the sequence on its own, R10 may be a
+  WebLLM-era defect that R7 already closed, and that is worth knowing before
+  paying 2.75 h to find out.
+
+- [ ] 2026-08-06 · **R11 — Drop "instantly" from the first-time note.**
+  Copy-only. In `src/App.tsx:768-773`, replace the sentence with the decided
+  copy above, verbatim — keep the `MODEL_DOWNLOAD_SIZES[runtimeId]`
+  interpolation, the `Lock` icon, the classes and the placement untouched. Do
+  **not** add cache detection or a second variant of the line. Check whether
+  `DownloadSizeHonesty.test.ts` asserts on the old wording and update the
+  assertion if so (the *size* pins must stay).
+  → **Verify:** `npm run build` + `npm run test` green; a grep for "instantly"
+  across `src/` returns nothing; screenshot of the loading card on
+  `npx vite preview` showing the new line with the MediaPipe size. Not
+  gate-triggering (loading-card JSX only, as R2b established).
 
 **R6 moved out of the queue 2026-08-05 (planner).** It sat open for two runs
 because execute is right to refuse it: its task file's standing rule ("never
@@ -378,90 +424,27 @@ carve out a planner-queued LICENSE with his recorded go.** The rest of the
 2026-08-04 run took R5, M14b and M14c instead.
 </details>
 
-### R5 cold ruling (planner, 2026-08-04) — defect CONFIRMED, fix QUEUED
+### R5 cold ruling (planner, 2026-08-04) — defect CONFIRMED, fix SHIPPED (PR #122)
 
-**Grounding re-verified against the files this run** (not from execute's
-report): `continuityPrompt.ts:16-17` takes the first 8 words of the previous
-session's first non-empty user message verbatim — leading capital included —
-and appends `…` when the message was longer; `:77` splices that into
-`` `${formatWhen(days)}, you wrote about ${shortTopic}. How are you feeling
-about that today?` `` and `:78` into
-`` `I want to revisit what I wrote about ${shortTopic}. ` ``. Both defects
-execute measured follow mechanically from those two lines: a capitalized
-clause mid-sentence, and `…` immediately followed by the sentence period
-(`….`). Confirmed; the ledger of walks that screenshotted it without flagging
-it (07-22/07-26/07-27) is a reminder that "no defects found" means "none
-noticed".
+Pruned 2026-08-06; the full ruling is in git history and the implementation in
+the Ledger row. **The two durable parts, kept because they bind future work:**
 
-**Two facts execute's proposal did not have, both read from the code:**
-1. **The prefill does not reach the model as anything but ordinary typed
-   text.** `ContinuityCard.tsx:17` passes `suggestedInput` to `onClick`, and
-   `ChatPanel.tsx:394-397` does exactly `setUserInput(text)` + focus. There is
-   no auto-send, no injection into context assembly, no separate prompt path —
-   the user reads it, edits it, and presses send like any other entry.
-2. **`extractThemes` cannot carry this card.** It returns 7 coarse
-   `PromptCategory` labels (gratitude / self-reflection / goals / challenges /
-   relationships / growth / creativity), so a themes-based topic renders "you
-   wrote about relationships".
+1. **The continuity card's callback is the user's own words, quoted — never a
+   theme label.** "you wrote about relationships" was REJECTED, as was dropping
+   the fragment: both are the generic warmth the 2026-07-12 positioning
+   decision rules out. `extractThemes` returns only 7 coarse `PromptCategory`
+   labels, so it can never carry this card.
+2. **The card's `suggestedInput` is a textarea prefill, not a model input.**
+   `ContinuityCard.tsx:17` → `ChatPanel.tsx:394-397` is `setUserInput(text)` +
+   focus: no auto-send, no context injection, no separate prompt path. That is
+   why edits to `continuityPrompt.ts` are **not gate-triggering** — the same
+   reasoning any future change to that file should re-check rather than assume.
 
-**Shape decided: keep the user's own words, quote them, and make the join
-punctuation-safe.** The themes variant is **REJECTED** — "you wrote about
-relationships" is exactly the generic warmth the 2026-07-12 positioning
-decision rules out (the sell is that the app uses *this* user's details).
-Dropping the fragment entirely is **REJECTED** for the same reason: the
-callback *is* the value of the card. Quoting fixes both defects at once — a
-capital is correct inside a quotation, and a quoted fragment ends a clause, so
-nothing needs a period after it.
+Also worth keeping: three audit walks (07-22 / 07-26 / 07-27) screenshotted the
+spliced card without flagging it. "No defects found" means "none noticed".
 
-**Copy decided (execute: use verbatim, `kind: "last-session"` branch only —
-the `recurring-theme` and `mood-followup` branches are already grammatical and
-must not be touched):**
-> body: `${formatWhen(days)}, you wrote: “${fragment}” How are you feeling about that today?`
-> suggestedInput: `${formatWhen(days)} I wrote: “${fragment}” I want to come back to that. `
-
-**Fragment rule (this is the whole fix in `extractShortTopic`):** split the
-trimmed message on whitespace; if it has **more than 8 words**, join the first
-8, strip any trailing `.,;:!?-—"'` from that last word, and append `…`; if it
-has **8 or fewer**, return the trimmed message unchanged *with* its own
-punctuation (so a short entry reads `“Today felt heavy.” How are you…` and a
-long one reads `“My sister called tonight to say our dad…” How are you…` —
-never `….`). Guard a pathological entry: if the assembled fragment exceeds 80
-characters, cut at the last space before 80 and append `…`. Use **curly**
-quotes `“ ”` — straight `"` would be typographically worse *and* would sit in
-text that later flows past M11's `stripUnmatchedLeadingQuote`; curly quotes
-cannot interact with it at all.
-
-**Gate ruling: NOT gate-triggering, and here is the reasoning execute asked
-for.** `continuityPrompt.ts` is not on the gate-triggering list, and the
-`suggestedInput` worry is answered by fact 1 above — it is a textarea prefill,
-not a message the app constructs. It changes nothing about `src/prompts/`,
-context assembly, the send path's message construction, sampling, or the
-referral trigger, so neither the fresh-generate nor the `--rescore` arm of the
-replay rule applies. **Hard guard:** if the implementation turns out to need an
-edit inside `App.tsx`'s send path, `buildMessages`, or any safety util, stop
-and re-queue — that would be a different item with a different gate answer.
-
-- [x] 2026-08-04 · **R5 — Fix the continuity card's spliced entry text**
-  (DONE 2026-08-04, PR #122 — see Ledger). In
-  `src/utils/continuityPrompt.ts`: rewrite `extractShortTopic` (`:12-22`) to
-  the fragment rule above, and replace the `kind: "last-session"` `body` and
-  `suggestedInput` at `:77-78` with the decided copy verbatim. Leave the
-  `recurring-theme` and `mood-followup` branches, `themeExtractor.ts`,
-  `ContinuityCard.tsx` and `ChatPanel.tsx` untouched — this is a
-  string-construction fix in one file. **Note the existing test at
-  `src/utils/__tests__/continuityPrompt.test.ts:53` asserts
-  `suggestedInput` contains `"revisit"`**, which the new copy drops; update
-  that assertion rather than bending the copy to it.
-  → **Verify:** (a) new unit tests in `continuityPrompt.test.ts` for all four
-  fragment cases — >8 words (ends `…`, no `….` anywhere in `body`), ≤8 words
-  (keeps its own trailing period, no `…`), a last word carrying punctuation
-  before truncation (stripped), and an >80-char fragment (cut on a space,
-  ends `…`); plus one assertion that `body` contains no `“…”.` sequence and
-  one that the quotes are balanced. (b) `npm run build` + `npm run test`
-  green. (c) On `npx vite preview`: write an entry, reload into a *new*
-  session so the card renders, screenshot the card **and** the textarea after
-  clicking it — both must read as ordinary English. Screenshots to
-  `docs/screenshots/2026-08-04/`. Not gate-triggering.
+- [x] 2026-08-04 · **R5 — Quote the entry on the continuity card instead of
+  splicing it** (DONE 2026-08-04, PR #122 — see Ledger)
 
 **Audit walk (2026-07-29, execute — `npm run build` (green) +
 `npm run test` (1099 green, 68 files) + `npx vite preview` on `:4173`, WebLLM
