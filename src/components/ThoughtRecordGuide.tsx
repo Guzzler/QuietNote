@@ -1,13 +1,15 @@
 import { Brain } from "lucide-react";
 import { motion } from "framer-motion";
-import { THOUGHT_RECORD_SEQUENCE } from "../data/journalPrompts";
+import { GUIDE_SCAFFOLD_NOTE, THOUGHT_RECORD_SEQUENCE } from "../data/journalPrompts";
 
 interface Props {
   currentStep: number; // 1-based (1 through 5)
   compact?: boolean;
+  /** R12 — when supplied, the step prompt becomes something the writer can use. */
+  onUsePrompt?: (prompt: string) => void;
 }
 
-export default function ThoughtRecordGuide({ currentStep, compact }: Props) {
+export default function ThoughtRecordGuide({ currentStep, compact, onUsePrompt }: Props) {
   const step = THOUGHT_RECORD_SEQUENCE[Math.min(currentStep - 1, THOUGHT_RECORD_SEQUENCE.length - 1)];
   const total = THOUGHT_RECORD_SEQUENCE.length;
   const displayStep = Math.min(currentStep, total);
@@ -42,6 +44,15 @@ export default function ThoughtRecordGuide({ currentStep, compact }: Props) {
           </div>
           {isComplete ? (
             <p className="font-serif text-xs text-slate-500 truncate">Complete — notice how your perspective may have shifted.</p>
+          ) : onUsePrompt ? (
+            <button
+              type="button"
+              onClick={() => onUsePrompt(step.prompt)}
+              aria-label={`Use this prompt: ${step.prompt}`}
+              className="font-serif text-xs text-slate-500 truncate block w-full text-left rounded hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 transition-colors"
+            >
+              {step.prompt}
+            </button>
           ) : (
             <p className="font-serif text-xs text-slate-500 truncate">{step.prompt}</p>
           )}
@@ -87,7 +98,19 @@ export default function ThoughtRecordGuide({ currentStep, compact }: Props) {
           <p className="text-xs text-slate-400 mb-1">
             Step {displayStep} of {total}
           </p>
-          <p className="font-serif text-[15px] text-slate-600 font-medium">{step.prompt}</p>
+          {onUsePrompt ? (
+            <button
+              type="button"
+              onClick={() => onUsePrompt(step.prompt)}
+              aria-label={`Use this prompt: ${step.prompt}`}
+              className="font-serif text-[15px] text-slate-600 font-medium rounded px-1 hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 transition-colors"
+            >
+              {step.prompt}
+            </button>
+          ) : (
+            <p className="font-serif text-[15px] text-slate-600 font-medium">{step.prompt}</p>
+          )}
+          <p className="text-xs text-slate-400 mt-2">{GUIDE_SCAFFOLD_NOTE}</p>
         </>
       )}
     </motion.div>

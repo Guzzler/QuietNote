@@ -343,6 +343,17 @@ export default function ChatPanel({
     setPromptDismissCount((prev) => prev + 1);
   }, [activePromptSuggestion]);
 
+  // R12 — a guided step prompt is a writing scaffold: tapping it prefills the
+  // textarea and focuses it, exactly as the continuity card already does. It is
+  // ordinary textarea text, never a model input.
+  const useGuidePrompt = useCallback(
+    (prompt: string) => {
+      setUserInput(prompt);
+      textareaRef.current?.focus();
+    },
+    [setUserInput],
+  );
+
   // Auto-resize textarea based on content
   const autoResizeTextarea = useCallback(() => {
     const el = textareaRef.current;
@@ -381,11 +392,11 @@ export default function ChatPanel({
       {!current ? (
         <div className="flex-1 grid place-items-center text-slate-600">
           {journalingMode === "gratitude" ? (
-            <GratitudeGuide currentStep={gratitudeStep} />
+            <GratitudeGuide currentStep={gratitudeStep} onUsePrompt={useGuidePrompt} />
           ) : journalingMode === "checkin" ? (
-            <CheckInGuide currentStep={checkinStep} />
+            <CheckInGuide currentStep={checkinStep} onUsePrompt={useGuidePrompt} />
           ) : journalingMode === "thoughtrecord" ? (
-            <ThoughtRecordGuide currentStep={thoughtRecordStep} />
+            <ThoughtRecordGuide currentStep={thoughtRecordStep} onUsePrompt={useGuidePrompt} />
           ) : (
             <WelcomeEmptyState
               greeting={personalizedWelcome.greeting}
@@ -421,9 +432,9 @@ export default function ChatPanel({
             <>
               {journalingMode !== "freewrite" && (
                 <div className="sticky top-0 z-10 mb-2 pb-2 border-b border-slate-100 bg-white/80 backdrop-blur-sm rounded-t-xl">
-                  {journalingMode === "gratitude" && <GratitudeGuide currentStep={gratitudeStep} compact />}
-                  {journalingMode === "checkin" && <CheckInGuide currentStep={checkinStep} compact />}
-                  {journalingMode === "thoughtrecord" && <ThoughtRecordGuide currentStep={thoughtRecordStep} compact />}
+                  {journalingMode === "gratitude" && <GratitudeGuide currentStep={gratitudeStep} compact onUsePrompt={useGuidePrompt} />}
+                  {journalingMode === "checkin" && <CheckInGuide currentStep={checkinStep} compact onUsePrompt={useGuidePrompt} />}
+                  {journalingMode === "thoughtrecord" && <ThoughtRecordGuide currentStep={thoughtRecordStep} compact onUsePrompt={useGuidePrompt} />}
                 </div>
               )}
               <div className="flex-1 overflow-auto space-y-3 pb-2">

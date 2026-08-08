@@ -343,6 +343,19 @@ export const JOURNAL_PROMPTS: PromptData[] = [
 ];
 
 /**
+ * The one line that says whose the step sequence is (R12, 2026-08-07).
+ *
+ * The guided banner used to read as the AI's question, which it never was —
+ * the model is not told the step, so the reply contradicted the banner on
+ * every scoreable turn (R10a: 0 of 7 aligned). This sentence makes the
+ * shipped surface honest: the sequence is the writer's guide, and the
+ * companion responds to what the writer actually wrote. Shared by all three
+ * guides so the wording cannot drift between them.
+ */
+export const GUIDE_SCAFFOLD_NOTE =
+  "These steps are a writing guide. Your companion responds to whatever you write.";
+
+/**
  * Structured 3-step gratitude journaling sequence.
  * Used by the guided gratitude mode to walk users through a reflection.
  */
