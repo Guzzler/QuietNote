@@ -221,3 +221,48 @@ a real defect). `public-release.md` pruned 682 → ~574 lines (R7/R8/R5 items
 collapsed to their ledger rows; R5's ruling kept only its two binding parts).
 model-quality's queue untouched: M5c and M16 still open, both still needing an
 artifact nobody has fetched.
+
+## 2026-08-06 (actual outcome) — the guided-mode queue is empty, and R10 got a price
+
+**R9 shipped as decided (PR #127).** `Session` gained `mode?: JournalingMode`
+and the three step counters were replaced by a step derived from the stored
+user-message count. Verified on the real app: two Thought Record entries, full
+reload, re-open — mode and "Step 3 of 5" both restored. The half execute never
+saw in the 08-05 walk (switching sessions *without* a reload used to fall back
+to step 1) is fixed by the same change and was driven too. The wiring guards in
+the new test fail against pre-fix `App.tsx`, so the regression is pinned.
+
+**R11 shipped as decided (PR #128), copy verbatim.** One thing worth keeping:
+the existing `DownloadSizeHonesty` test asserted the *entire* pre-R2b sentence,
+which itself contained "instantly" — so the obvious tree-wide guard would have
+been defeated by the test file that was supposed to enforce it. The assertion
+was narrowed to that sentence's first half. A guard that trips over its own
+source is worth checking for whenever a word, not a behavior, is being banned.
+
+**R10a answered the question, and the answer is bad (PR #129).** On the shipped
+default (MediaPipe / Gemma 4 E2B), **0 of 7 scoreable turns aligned** across the
+three guided modes. R10 is not a WebLLM-era defect and R7 did not close it. The
+shape differs per mode and that matters for whoever prices the fix: Thought
+Record runs exactly **one step behind** the banner (a sequencing failure — the
+model is following the transcript, not the guide), Gratitude wanders off the
+step entirely, and Check-in **asks no question at all** — 3 of 3 replies were
+declarative sentences ending in `?`. Check-in's zero desyncs are therefore an
+artifact of having nothing to be out of step with, not evidence of health.
+
+**Consequence for the ruling that deferred R10.** Deferring was right — the
+defect was unpriced and the sighting was on a retired engine. It is priced now:
+100 % on what a stranger gets. The next planning run owns the decision to spend
+the fresh 3-seed generate read (~2.75 h) on a prompt-side fix, with one new
+constraint from the measurement — the guide **stops rendering past its last
+step**, so any fix that feeds the step to the model must decide what to send on
+turns beyond the sequence, which R10's single sighting never surfaced.
+
+**Two findings recorded, not ruled on** (they belong to model-quality, and
+R10a's instruction was to stop): Check-in's question-less replies, and a
+Gratitude comprehension miss that read a neighbour shovelling the driveway as
+"the inconvenience of having someone else work on your driveway".
+
+**Process note.** All three PRs were pushed and opened but **not merged** —
+`gh pr merge` was denied by the environment's permission classifier this run,
+so #128 is stacked on #127 and #129 on #128. Bases retarget as each lands; the
+three need merging in order.

@@ -112,7 +112,7 @@ decisions, release gate, queue format).
 | R8 | **Size + engine honesty sweep for the new default** — `README.md:33`, the F2 WELCOME outline and the R1b matrix all name Gemma 2 2B / ~1.5 GB as what a stranger gets | **DONE 2026-08-05 (PR #126)** — all three rewritten; `MODEL_DOWNLOAD_SIZES` untouched, its values were already right |
 | R9 | Guided sessions are not resumable, and a mid-exercise reload silently loses the Thought Record | **DONE 2026-08-06 (PR #127)** — mode persisted on `Session`, step derived from the transcript; both halves (reload and no-reload session switch) verified on `vite preview` |
 | R10 | The guided step banner and the model contradict each other (the model is never told the step) | CONFIRMED 2026-08-06 (planner) — structural; fix NOT queued, **R10a** measures it on the new default first |
-| R10a | Measure the guided-mode desync rate on MediaPipe (the post-R7 default), all three guided modes | queued 2026-08-06 |
+| R10a | Measure the guided-mode desync rate on MediaPipe (the post-R7 default), all three guided modes | **DONE 2026-08-06 (PR #129)** — it reproduces: **0 of 7 scoreable turns aligned**. R10 is not a WebLLM-era defect; R7 did not close it |
 | R11 | "After that, it loads instantly" is shown to returning users unconditionally, and is false for a cold browser process | **DONE 2026-08-06 (PR #128)** — decided copy shipped verbatim; the word is now absent from all of `src/` and a test keeps it that way |
 | R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | blocked on Sharang |
 
@@ -157,6 +157,17 @@ work, and it has produced five real defects (R5, R9, R10, R11 + R10a's
 measurement) in three walks. **Priority within the queue: R9 first** — it is
 the only one that loses user data. R11 is a one-string change and can ride
 along with anything. R10a is measurement and blocks no one.
+
+**Queue status (2026-08-06, execute — end of run): 0 open.** All three items
+shipped this run in that order (R9 #127, R11 #128, R10a #129). What remains in
+this initiative is R4 (Sharang-gated) and R6 (Blocked on Sharang), plus **R10
+itself, which is now priced and not queued**: R10a proved the desync is 100 %
+on the shipped default, so the fix is a real prompt-side change and the next
+planning run owns the decision to spend the 3-seed generate read on it. One
+process note for that run: the three PRs above were **pushed and opened but not
+merged** — `gh pr merge` was denied by the environment's permission classifier,
+so #128 is stacked on #127 and #129 on #128, and their bases retarget as each
+lands.
 
 **Queue-empty audit (2026-08-03, execute — `npm run build` (green) +
 `npm run test` (1203 green, 72 files) + `npx vite preview` on `:4173`, WebLLM
@@ -367,8 +378,10 @@ cellular, and it is unconditionally true once the cache exists.
   send path's message construction, `buildMessages`, or context assembly,
   **stop and re-queue** — that is a different item with a different gate answer.
 
-- [ ] 2026-08-06 · **R10a — Does the guided desync happen on the default
-  engine?** (measurement only — **no `src/` diff**, no eval run, no fix.)
+- [x] 2026-08-06 · **R10a — Does the guided desync happen on the default
+  engine?** (DONE 2026-08-06, PR #129 — **result section below**. Answer: yes,
+  and worse than R10 recorded — see the table.) (measurement only — **no
+  `src/` diff**, no eval run, no fix.)
   R10's single observation was on WebLLM, which R7 retired as the default. Price
   the defect on what a stranger now gets before anyone spends a 3-seed generate
   read on it. Production build on `npx vite preview`, Chromium via Playwright,
@@ -391,6 +404,74 @@ cellular, and it is unconditionally true once the cache exists.
   gate; if MediaPipe happens to track the sequence on its own, R10 may be a
   WebLLM-era defect that R7 already closed, and that is worth knowing before
   paying 2.75 h to find out.
+
+### R10a result (2026-08-06, execute) — the desync reproduces on the default engine
+
+**Setup.** Production build of the R9+R11 branch on `npx vite preview` (`:4173`),
+Chromium via Playwright, `quietnote-runtime` **absent** → **MediaPipe / Gemma 4
+E2B**, the post-R7 default (confirmed before starting). One session per mode,
+**one page load per session**, three turns each, `temperature` 0.6 as shipped.
+Neither R9 nor R11 touches `src/prompts/`, `buildMessages`, context assembly or
+sampling, so the model saw exactly what `main` would have sent it.
+
+**Scoring rule, stated so the run is repeatable.** After each send, the banner
+rendered *above* the transcript is the step the user is being asked to write
+**next** — and so is the reply's closing question. They are directly
+comparable. `aligned` = the reply's closing question asks for what the banner
+asks for. `desynced` = it asks for something else (including a different step of
+the same sequence). `ambiguous` = the reply asks nothing (a declarative
+sentence, even one ending in `?`), or it names the banner's step but its actual
+question asks for something else. Turn 3 of the two 3-step modes is `n/a`: after
+the third send the derived step is 4, past the end of the sequence, and the
+guide stops rendering — **there is no banner left to compare against.**
+
+| mode | turn | banner as rendered | reply's closing question (verbatim) | score |
+|---|---|---|---|---|
+| Thought Record | 1 | Step 2 of 5 — "What went through your mind? What were you thinking?" | "What exactly happened when you found out?" | **desynced** (asks for step 1, the situation — one step behind) |
+| Thought Record | 2 | Step 3 of 5 — "What emotions did you feel? How intense were they (1-10)?" | "What thoughts come up when you think about yourself being invisible?" | **desynced** (asks for step 2, the automatic thought — one step behind) |
+| Thought Record | 3 | Step 4 of 5 — "What evidence supports or contradicts this thought?" | "What specific things about the situation or your thoughts are leading to those feelings of humiliation and anger?" | **ambiguous** (opens with "Let's look at the evidence", matching the banner, but then asks for the *causes of the feelings*, not evidence for or against the thought) |
+| Gratitude | 1 | Step 2 of 3 — "Why does this matter to you?" | "What aspect of that experience are you reflecting on right now?" | **desynced** (generic reflection prompt, not the banner's ask) |
+| Gratitude | 2 | Step 3 of 3 — "How did it make you feel?" | "What is it about that commute that is causing you to dread it so much?" | **desynced** (chases the dread; the banner asks how the gratitude felt) |
+| Gratitude | 3 | *(none — guide stops after step 3)* | "What part of that lightness is catching your attention right now?" | n/a |
+| Check-in | 1 | Step 2 of 3 — "What went well today?" | *(none)* — "It is okay to feel worn down after a long day, even when sleep is scarce?" | **ambiguous** (declarative sentence with a stray `?`; asks nothing) |
+| Check-in | 2 | Step 3 of 3 — "What would you do differently?" | *(none)* — "It sounds like you are carrying a lot of tension right now, and I want to acknowledge how much effort that takes?" | **ambiguous** (same shape) |
+| Check-in | 3 | *(none — guide stops after step 3)* | *(none)* — "It makes sense that facing those kinds of pressures leaves you feeling fragile?" | n/a |
+
+**Desync count per mode (scoreable turns only):** Thought Record **2 desynced /
+1 ambiguous / 0 aligned** of 3; Gratitude **2 desynced / 0 aligned** of 2;
+Check-in **0 desynced / 2 ambiguous / 0 aligned** of 2. **Across all three
+modes: 0 of 7 scoreable turns aligned.** R10 is not a WebLLM-era defect and R7
+did not close it — on the engine a stranger now gets, the banner and the reply
+agreed **zero** times.
+
+**Repeats (the M14/M15 metric): none verbatim.** No closing question repeated a
+previous turn's within its session. Two shape-level near-duplicates are worth
+recording without being scored as repeats: Gratitude turns 1 and 3 are the same
+template with the noun swapped ("What aspect of that *experience* are you
+reflecting on right now?" / "What part of that *lightness* is catching your
+attention right now?"), and all three Check-in replies share one shape —
+validate, then stop.
+
+**Two observations outside R10a's question, recorded and deliberately not ruled
+on** (the task says stop, and both belong to model-quality rather than
+public-release):
+1. **Check-in never asked a question at all** — 3 of 3 replies were declarative
+   sentences terminated with `?`. That is malformed punctuation *and* a dead end
+   for a guided mode, and it is why Check-in scores 0 desyncs: there was nothing
+   to be out of step with.
+2. **One comprehension miss in Gratitude turn 1** — "My neighbour shovelled my
+   driveway before I woke up this morning" came back as "The inconvenience of
+   having someone else work on your driveway before you even wake up must feel
+   frustrating." A kindness read as an intrusion, in the mode whose entire
+   premise is noticing good things.
+
+**Stopping here as instructed — nothing ruled, nothing fixed.** The next
+planning run has what it needs to price R10's prompt-side fix against the gate
+(fresh 3-seed generate read, ~2.75 h), now knowing the rate is 100 % on the
+shipped default rather than a single WebLLM-era sighting. Screenshots:
+`docs/screenshots/2026-08-06/r10a-{thoughtrecord,gratitude,checkin}-mediapipe.png`.
+**0 console errors** across all three sessions (2 benign warnings: Chromium
+`powerPreference`, WGSL subgroups).
 
 - [x] 2026-08-06 · **R11 — Drop "instantly" from the first-time note**
   (DONE 2026-08-06, PR #128 — see Ledger).
@@ -542,6 +623,7 @@ three now resident is ≈6.65 GB — M14c).
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-06 | R10a — Guided-desync rate measured on the default engine | #129 | **Measurement only — no `src/` diff, no eval run, no fix, nothing ruled**, exactly as the item required. Nine turns driven (3 modes × 3), one session per mode, one page load per session, on a production build at `npx vite preview` with `quietnote-runtime` absent → **MediaPipe / Gemma 4 E2B**. **Result: the desync reproduces on the shipped default — 0 of 7 scoreable turns aligned.** Thought Record 2 desynced / 1 ambiguous (the two desyncs are both the model running exactly one step behind the banner); Gratitude 2 desynced; Check-in 2 ambiguous because the replies asked **no question at all** — 3 of 3 were declarative sentences terminated with `?`, which is why it scores no desyncs rather than good ones. Turn 3 of the two 3-step modes is `n/a`: the guide stops rendering past the last step, so there is no banner to compare against — a structural detail R10's single WebLLM sighting never surfaced. No verbatim repeats; two shape-level near-duplicates recorded. Two findings outside the question were recorded and deliberately **not** ruled on (Check-in's question-less replies; a Gratitude comprehension miss that read a neighbour's kindness as an inconvenience) — both belong to model-quality. Full table with verbatim banners and closing questions, the stated scoring rule, and the reusable entries is in the R10a result section above. Screenshots: `docs/screenshots/2026-08-06/r10a-*.png`. 0 console errors. Not gate-triggering (no code change of any kind). |
 | 2026-08-06 | R11 — The loading card stops promising an instant load | #128 | The decided copy shipped verbatim in `src/App.tsx`'s first-time note: "…then it's stored on this device. After that it loads from your device — a few seconds, no download." The `MODEL_DOWNLOAD_SIZES[runtimeId]` interpolation, the `Lock` icon, the classes and the placement are untouched, and no cache detection was added. `DownloadSizeHonesty.test.ts` gained two R11 guards — the new phrasing is present, and the banned word appears in **no** `.ts`/`.tsx` file under `src/` (a whole-tree walk, with the needle assembled at runtime so the guard cannot trip over its own source). One pre-existing assertion needed a matching edit and it is worth recording: the "vague no-size copy is gone" test asserted the *entire* pre-R2b sentence, which contained the banned word — it now asserts its first sentence only, so the tree-wide guard stays meaningful. Build green, **1226 tests green** (74 files). → **Verify:** screenshot of the real loading card on `npx vite preview` with the new sentence rendered. **Honest caveat on that screenshot:** it was taken on **WebLLM** (`~1.5 GB`), not the MediaPipe default, because a cached MediaPipe boot now reaches ready faster than a screenshot round-trip — three attempts on the default caught only the loaded app. The captured line is the same JSX with the same interpolation; the MediaPipe rendering of this card at **"~2.0 GB"** is evidenced by R7's `r7-cleared-storage-first-boot-mediapipe.png` and pinned by the size tests, and R11 changes no code that could alter it. Not gate-triggering (loading-card JSX only, as R2b established). |
 | 2026-08-06 | R9 — Guided sessions resume, and the Thought Record stops being lost | #127 | The planner's decided shape, implemented exactly: `Session` gained one optional `mode?: JournalingMode` (`src/types.ts`, written in `newSession`, read back in `loadExisting` via `resolveSessionMode` — `undefined` = `"freewrite"`, so every pre-08-06 session in IndexedDB stays valid with **no migration**), and the three `useState` step counters plus the `currentId` reset effect are **gone**, replaced by a single derived `guidedStep = deriveGuidedStep(current)` (`src/utils/guidedSession.ts`: user messages across all threads, `+1`). The six `set*Step((s) => s + 1)` calls in `newSession`/`replyInThread` are deleted — the count moves when the message lands. `thoughtRecordSaved` ref guard untouched, so the artifact is still written once per session; the save condition now reads the derived step, which is what makes a **resumed** 5-message Thought Record reach `> 5` instead of being permanently stuck at 1. New `guidedSession.test.ts` (11 tests): step derivation at every length 0–8, the multi-thread count, the restored-5-message save condition and the 4-message negative case, mode restore for all three guided modes + the no-`mode` free-write default, and three App-wiring source guards (mode written + restored, no `set*Step` anywhere, save condition reads `guidedStep`) — the wiring guards fail against pre-fix `App.tsx`, which is the regression check. Build green, **1224 tests green** (74 files). Verified on `npx vite preview` (production build, Chromium/Playwright, `quietnote-runtime` absent → **MediaPipe / Gemma 4 E2B**, the post-R7 default): Thought Record, two entries (banner tracked Step 2 → Step 3), **full reload**, re-opened from the sidebar → mode strip still **Thought Record**, banner still **"Step 3 of 5"**, both turns intact; then switched to a pre-R9 session (correctly falls back to Free Write, no banner) and **back without reloading** → still **"Step 3 of 5"**, which is the half execute never saw and the old reset effect would have shown as Step 1. **0 console errors** (2 benign warnings: Chromium `powerPreference`, WGSL subgroups). Screenshots: `docs/screenshots/2026-08-06/r9-*.png`. **Not gate-triggering** and the hard guard held: no `src/prompts/`, no safety util, no `evalRunner.ts`, and `buildMessages`/context assembly were not edited — the only prompt-adjacent effect is that a resumed session gets back the mode its author chose. |
 | 2026-08-05 | R8 — Size + engine honesty sweep for the new default | #126 | Docs and copy only — **no `src/` diff**, and `MODEL_DOWNLOAD_SIZES` deliberately untouched (its three values were already right; only the label "default" moved, so R2b's card and the `DownloadSizeHonesty` pins needed no change). Three places fixed: (1) `README.md:33` — both halves inverted, now "the default model (Gemma 4 E2B via MediaPipe) is about **2.0 GB**" with the alternates named individually (**~1.5 GB** WebLLM / Gemma 2 2B, **~3.2 GB** Transformers.js / Gemma 4 E2B) instead of the old lumped "roughly 3 GB"; the honest "downloaded once and cached by your browser" framing kept. (2) `human-feedback.md`'s F2 WELCOME outline §2 — same numbers, same direction, plus a standing rule that whoever writes `WELCOME.md` re-reads them off `src/inference/types.ts` rather than copying the outline, since it has now gone stale once. The share-message draft's "about 1.5 GB" → "about 2 GB". The F1a verification note above it was **also** stale in an instructive way and is corrected in place: the three sizes it checked were right, the *default* was what moved, which is exactly why a July check passed and the copy still went wrong. (3) The R1b smoke matrix — added a line naming the MediaPipe row as the default as of R7, without restating any measurement; the MediaPipe row's stale "~3 GB" parenthetical (a number `types.ts` does not carry) was dropped in favour of a pointer to R1e's measured 2.00 GB, and its 2026-07-10 ❌ is now marked as history, since R1d/R1e fixed both halves and M14c drove the path two turns. → **Verify:** `npm run build` + `npm run test` green (1213, 73 files); a sweep of `README.md` + both initiative docs found no size string outside dated historical records that `src/inference/types.ts:60-64` does not carry. Loading-card evidence for the size the README now claims is the R7 screenshot `docs/screenshots/2026-08-05/r7-cleared-storage-first-boot-mediapipe.png` — a cleared-`quietnote-runtime` boot showing **"~2.0 GB"**; not re-taken, since R8 changes no code that could alter it. Not gate-triggering. |
