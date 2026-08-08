@@ -306,3 +306,23 @@ previous note assumed was gone.
 permission classifier denied execute's `gh pr merge`. The planner does not merge
 code PRs. Nothing in the loop can land them; Sharang merges in order or the
 runner gets `gh pr merge` on `release/*`. R12 cannot start until #127 lands.
+
+**Correction, same run:** the three PRs above merged while this run was in
+progress (#127 and #129 merged; #128 superseded by #130, also merged), so the
+"nothing in the loop can land them" blocker was stale before it was written and
+is struck in the doc. The durable lesson is kept: execute cannot merge its own
+PRs, and `main` can move under a planning run between its first `git log` and
+its commit — re-read before writing queue status.
+
+**R13 filed (CONFIRMED in code, fix deliberately not decided).** The saved
+`ThoughtRecord` maps the session's first five user messages **by position** onto
+`situation` / `automaticThought` / `emotions` / `evidenceFor` /
+`alternativeThought` (`src/App.tsx:281-315`), and `ThoughtRecordHistory` renders
+three of them under CBT terms of art. Nothing checks that the *n*th message
+answered the *n*th step — and R10a measured that the reply asks for something
+else every turn, Thought Record specifically running one step behind, so a user
+following the conversation produces a mislabelled artifact. R9 correctly made
+this *more* reachable by making resumed sessions savable. No fix priced: R12 is
+the upstream change and will move the magnitude, so **R13a** (two arms —
+scaffold-followed vs conversation-followed, both read off the history card) runs
+after R12 lands and the next run rules. Queue is 2 open: R12, then R13a.

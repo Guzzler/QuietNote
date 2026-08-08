@@ -658,18 +658,17 @@ three now resident is ≈6.65 GB — M14c).
   `package.json`, a short License section in `README.md`; or (b) amend the
   execute task file's standing rule to carve out a planner-queued LICENSE
   carrying your recorded go. Until then it will keep being correctly refused.
-- **Merging PRs #127 / #128 / #129 (new 2026-08-07).** All three of this
-  initiative's open queue items are **built, green and pushed** — R9 (#127),
-  R11 (#128), R10a (#129), stacked in that order — and all three are sitting
-  unmerged because the environment's permission classifier denied execute's
-  `gh pr merge` on the run that produced them. The planner does not merge code
-  PRs either (it writes docs, per the README's loop description), so nothing in
-  the loop can land them. **Merge them in order — #127, then #128, then #129;
-  the bases retarget to `main` automatically as each lands.** Until they do,
-  execute's queue is three items deep in work it has already finished, and R12
-  below cannot start (it builds directly on R9's `deriveGuidedStep`). If this
-  recurs, the durable fix is allowing `gh pr merge` for the execute runner on
-  `release/*` branches rather than merging by hand each time.
+- ~~**Merging PRs #127 / #128 / #129**~~ **RESOLVED mid-run 2026-08-07/08.**
+  All three landed while this planning run was in progress: **#127 (R9)** and
+  **#129 (R10a)** merged, and **#128 (R11) was superseded by #130**, which also
+  merged — `main` is now `923fce2`. The merge-permission block execute hit is
+  therefore not a standing blocker and nothing is queued against it. Worth
+  keeping for one run: **execute cannot merge its own PRs**, so any run that
+  ships a stack leaves it for a human, and a planning run reading `git log`
+  early can be looking at a `main` that moves under it — this run's first read
+  showed three PRs open and its last showed all three merged. Re-read `main`
+  before writing queue status, which is why the queue below is dated to the
+  post-merge state.
 
 ## R10 fix ruling (planner, 2026-08-07) — the prompt-side fix is REJECTED on coverage, not cost; R12 is the fix
 
@@ -722,8 +721,10 @@ theirs and that the AI follows *them*. That is the honest version of what the
 app actually does, which is the standard R2a and R11 were held to.
 
 - [ ] 2026-08-07 · **R12 — Make the guided step a writing scaffold, not a
-  promise about the reply.** UI only. **Do not start until #127 merges** — this
-  builds on R9's `src/utils/guidedSession.ts` and R9's ChatPanel wiring.
+  promise about the reply.** UI only. **Unblocked** — R9 is on `main` as of
+  `c8d0fbf`, so `src/utils/guidedSession.ts` and the single derived
+  `guidedStep` (`src/App.tsx:280`, passed to all three guides at `:929-931`)
+  are the state this builds on.
   1. `src/components/{ThoughtRecordGuide,GratitudeGuide,CheckInGuide}.tsx` —
      add an optional `onUsePrompt?: (prompt: string) => void` prop. When it is
      supplied, render the step's prompt line as a `<button type="button">`
@@ -756,6 +757,61 @@ app actually does, which is the standard R2a and R11 were held to.
   **Gate: NOT gate-triggering.** No `src/prompts/`, no send path, no safety
   util, no `evalRunner.ts`; the prefill is ordinary textarea text per R5's
   fact 2, which is the same reasoning that cleared `continuityPrompt.ts`.
+
+## R13 — the saved Thought Record labels entries by position, and R10a says the positions are wrong (planner, 2026-08-07, CONFIRMED in code)
+
+Found while grounding R12; it is the downstream consequence of R10 and it
+touches stored user data, so it is recorded here rather than left implicit.
+
+**The mechanism, read on `main` this run.** The artifact effect
+(`src/App.tsx:281-315`) takes the session's first five user messages **by
+position** and assigns them: `[0]` → `situation`, `[1]` → `automaticThought`,
+`[2]` → `emotions` (via `parseEmotions`), `[3]` → `evidenceFor`, `[4]` →
+`alternativeThought`. `ThoughtRecordHistory.tsx:136-160` then renders three of
+them under CBT terms of art — **"Situation"**, **"Automatic thought"**,
+**"Alternative thought"**. Nothing anywhere checks that the user's *n*th message
+answered the *n*th step.
+
+**Why R10a makes this more than theoretical.** The positional mapping is only
+true if the user answers the sequence in order. R10a measured that the reply
+asks for something else on **every** guided turn — Thought Record specifically
+runs one step behind, so a user following the *conversation* (the natural thing
+to do) answers step *n-1* while the banner shows step *n*. Two short entries for
+one step shift everything after it by one. The result is a stored artifact whose
+clinical labels do not match its contents, surfaced later in a history view as
+if it were a real thought record. Note the ordering: **R9 made this more
+reachable, correctly** — resumed sessions can now reach the save condition that
+used to be unreachable, so more of these get written, not fewer. That is an
+argument for fixing the labelling, not for undoing R9.
+
+**No fix is decided this run, deliberately.** R12 is the upstream change: once
+the step prompt is what the user clicks and writes into, the positional mapping
+becomes substantially more likely to be true, and the size of whatever remains
+is unknown until then. Deciding a labelling fix now would be pricing a defect
+whose magnitude R12 is about to change. **The trigger is stated instead** — R13a
+below measures it right after R12 lands, and the next planning run rules.
+
+- [ ] 2026-08-07 · **R13a — Does the saved Thought Record match its labels?**
+  (measurement only — **no `src/` diff**, no fix, no eval run.) **Run this after
+  R12 has landed**, on a production build on `npx vite preview`, Chromium via
+  Playwright, MediaPipe default.
+  1. **Scaffold-followed run:** one Thought Record session, five turns, each
+     entry written by clicking R12's step prompt and answering *that* step.
+     Record the five entries verbatim.
+  2. **Conversation-followed run:** a second session, five turns, each entry
+     answering **the reply's closing question** instead — the natural user
+     behaviour R10a documented. Record those five verbatim too.
+  3. For each session, open the Thought Record history
+     (`ThoughtRecordHistory`) and record what is displayed under **Situation**,
+     **Automatic thought** and **Alternative thought**, verbatim.
+  → **Verify:** an **R13a result** section here with both sessions' entries, both
+  history cards, and a per-field `matches` / `mislabelled` judgement against the
+  step each field claims — plus one screenshot of each history card into
+  `docs/screenshots/<date>/`. **Then stop — rule nothing and fix nothing.** The
+  two arms are the point: if the scaffold-followed run labels correctly and only
+  the conversation-followed run mislabels, R12 has already done most of the work
+  and the residue is a copy problem; if both misalign, the mapping itself is
+  wrong and needs replacing with something that does not assume order.
 
 **What R12 does not claim.** It does not make the model follow the sequence, and
 it is not a substitute for that if the sequence is ever meant to be binding. It
