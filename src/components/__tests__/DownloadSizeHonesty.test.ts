@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { MODEL_DOWNLOAD_SIZES } from "../../inference/types";
@@ -13,6 +14,15 @@ import type { RuntimeId } from "../../inference/types";
 
 const read = (rel: string) =>
   readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf-8");
+
+// Every source file under src/, for the R11 whole-tree copy guard.
+function srcFiles(dir = fileURLToPath(new URL("../..", import.meta.url))): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const full = join(dir, e.name);
+    if (e.isDirectory()) return srcFiles(full);
+    return /\.(ts|tsx)$/.test(e.name) ? [full] : [];
+  });
+}
 
 describe("Download-size honesty (R2b)", () => {
   it("declares a size for every runtime", () => {
@@ -38,9 +48,28 @@ describe("Download-size honesty (R2b)", () => {
     });
 
     it("the vague no-size copy is gone", () => {
-      expect(source).not.toContain(
-        "First time takes a few minutes. After that, it loads instantly.",
+      // Pre-R2b copy. Asserted on its first sentence only, so the R11 guard
+      // below stays meaningful across the whole of src/.
+      expect(source).not.toContain("First time takes a few minutes.");
+    });
+
+    // R11 (2026-08-06) — the note renders unconditionally, including for a
+    // returning visitor, and the instant-load promise is false for a cold
+    // browser process (measured 5.6–13.3 s warm, ~40–60 s cold). The claim
+    // that actually matters to someone on cellular is "no download", and that
+    // one is unconditionally true once the model is cached.
+    it("promises no download rather than an instant load", () => {
+      expect(source).toContain("it loads from");
+      expect(source).toContain("a few seconds, no download");
+    });
+
+    it("the instant-load promise appears nowhere in src/", () => {
+      // Assembled so this guard does not trip over its own source.
+      const banned = "instant" + "ly";
+      const offenders = srcFiles().filter((f) =>
+        readFileSync(f, "utf-8").includes(banned),
       );
+      expect(offenders).toEqual([]);
     });
   });
 });

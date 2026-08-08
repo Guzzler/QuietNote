@@ -762,8 +762,8 @@ export default function App() {
             <Lock className="h-3 w-3" />
             <span>
               First time: downloads the AI model ({MODEL_DOWNLOAD_SIZES[runtimeId]})
-              once, then it's stored on this device. After that, it loads
-              instantly.
+              once, then it's stored on this device. After that it loads from
+              your device — a few seconds, no download.
             </span>
           </div>
         </div>
