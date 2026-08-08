@@ -50,3 +50,11 @@ npx vite preview # serve the production build locally
 ```
 
 The safety-relevant modules (`src/prompts/`, `src/utils/crisisDetection.ts`, `src/utils/responseGuardrails.ts`, `src/utils/responseShaping.ts`, `src/utils/referralReprompt.ts`) are load-bearing and gate releases; changes there run a full eval read before merging.
+
+---
+
+## License
+
+[MIT](LICENSE) — © 2026 Sharang Pai.
+
+The models QuietNote downloads at runtime carry their own separate terms (the Gemma models are covered by Google's Gemma Terms of Use); this license covers the application code only.
