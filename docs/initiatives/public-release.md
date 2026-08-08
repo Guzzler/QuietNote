@@ -658,3 +658,120 @@ three now resident is ≈6.65 GB — M14c).
   `package.json`, a short License section in `README.md`; or (b) amend the
   execute task file's standing rule to carve out a planner-queued LICENSE
   carrying your recorded go. Until then it will keep being correctly refused.
+- **Merging PRs #127 / #128 / #129 (new 2026-08-07).** All three of this
+  initiative's open queue items are **built, green and pushed** — R9 (#127),
+  R11 (#128), R10a (#129), stacked in that order — and all three are sitting
+  unmerged because the environment's permission classifier denied execute's
+  `gh pr merge` on the run that produced them. The planner does not merge code
+  PRs either (it writes docs, per the README's loop description), so nothing in
+  the loop can land them. **Merge them in order — #127, then #128, then #129;
+  the bases retarget to `main` automatically as each lands.** Until they do,
+  execute's queue is three items deep in work it has already finished, and R12
+  below cannot start (it builds directly on R9's `deriveGuidedStep`). If this
+  recurs, the durable fix is allowing `gh pr merge` for the execute runner on
+  `release/*` branches rather than merging by hand each time.
+
+## R10 fix ruling (planner, 2026-08-07) — the prompt-side fix is REJECTED on coverage, not cost; R12 is the fix
+
+R10a answered the question it was queued to answer: **0 of 7 scoreable turns
+aligned**, on the engine a stranger actually gets. R10 is not a WebLLM-era
+defect and R7 did not close it. Three of the four shipped modes show a banner
+that promises a structure the reply does not follow, 100 % of the time. That is
+squarely a core-usefulness defect and it deserves a fix.
+
+**The obvious fix — tell the model the step — is rejected, and the reason is
+not the 2.75 h gate read.** The grounding bullet added this run establishes
+that every eval path reads `getBaseSystemInstruction`, and the app's
+`getSystemInstruction` is read by nothing outside `App.tsx`. So a step directive
+added to the app branch would ship a system-prompt path that **no gate read can
+see**: the fresh 3-seed generate read the replay rule demands would reproduce
+byte-identically (M11/M12's 900-of-900 result is the evidence) and would
+therefore certify nothing about the change, while the change itself would alter
+what three of four modes ask the model on every guided turn — unmeasured. Paying
+2.75 h for a read that is provably blind to the diff is worse than not paying
+it. **Making it visible is a much larger item** (the step would have to reach
+`getBaseSystemInstruction` and the eval cases would have to carry a step, which
+is new eval cases — parked by standing decision — plus `run-eval.ts`, itself
+gate-triggering). Not now, and not as a side effect of a UI defect.
+
+**Rejected too, again and for the record:** hiding the banner during a reply
+(R10's own ruling — conceals the contradiction without making the guidance
+true), and dropping the sequences outright (it would delete the structure R9
+just made durable — the Thought Record artifact save is defined in terms of the
+step, so removing steps re-opens the data loss R9 closed).
+
+**DECIDED — R12: the guided step becomes a scaffold the user acts on, not a
+promise about what the AI will ask.** The contradiction exists because the
+banner sits above the transcript making a second-person request the model was
+never told about, so a reader reasonably hears it as the AI's question. Fix the
+implicature, not the model: make the step's prompt something the *writer* uses,
+and say plainly whose it is. Then the banner is true — the sequence really is
+the user's writing guide — and the reply, which responds to whatever the user
+wrote, stops contradicting it. Precedent that this is cheap and safe: R5's
+fact 2 — a textarea prefill (`setUserInput` + focus) is ordinary text, **not a
+model input**, so it is not gate-triggering. `ChatPanel` already owns
+`setUserInput` (`:61`, `:395`) and already passes it to the continuity card.
+
+**Copy DECIDED (execute: use verbatim).** One quiet line under the full-size
+guide only — the compact sticky banner has no room (its prompt line is already
+`truncate`) and needs no wording change once the prompt is tappable:
+> These steps are a writing guide. Your companion responds to whatever you write.
+
+Two sentences, both true, neither hedging: it tells the reader the sequence is
+theirs and that the AI follows *them*. That is the honest version of what the
+app actually does, which is the standard R2a and R11 were held to.
+
+- [ ] 2026-08-07 · **R12 — Make the guided step a writing scaffold, not a
+  promise about the reply.** UI only. **Do not start until #127 merges** — this
+  builds on R9's `src/utils/guidedSession.ts` and R9's ChatPanel wiring.
+  1. `src/components/{ThoughtRecordGuide,GratitudeGuide,CheckInGuide}.tsx` —
+     add an optional `onUsePrompt?: (prompt: string) => void` prop. When it is
+     supplied, render the step's prompt line as a `<button type="button">`
+     that calls `onUsePrompt(step.prompt)`; keep the exact text, font and
+     colour classes, add only a hover/focus affordance and
+     `aria-label={`Use this prompt: ${step.prompt}`}`. When it is absent, render
+     the `<p>` exactly as today. Do this in **both** the compact and full-size
+     branches. In the `isComplete` branch, render the completion line as plain
+     text as today — **no button** (there is no step to write).
+  2. Full-size branch only, all three guides: add the decided copy above as one
+     quiet line under the step prompt (match the `text-xs text-slate-400`
+     scale already used by the `Step N of M` line). Not in the compact branch.
+  3. `src/components/ChatPanel.tsx` — pass
+     `onUsePrompt={(p) => { setUserInput(p); textareaRef.current?.focus(); }}`
+     to all six render sites (`:384-388`, `:424-426`), i.e. the same handler
+     `WelcomeEmptyState`'s `onUseContinuity` already uses at `:394-397`.
+  **Scope guards:** no `src/prompts/` edit, no `getSystemInstruction` change, no
+  new state, no change to `deriveGuidedStep` or to the sequences themselves.
+  If the implementation starts wanting to send the step to the model, **stop** —
+  that is the rejected item above, not this one.
+  → **Verify:** (a) unit tests — clicking the step prompt in each of the three
+  guides calls `onUsePrompt` with that step's exact `prompt` string; the
+  `isComplete` branch renders no button; the decided sentence is present in the
+  full-size branch and absent from the compact one. (b) `npm run build` +
+  `npm run test` green. (c) On `npx vite preview` (MediaPipe default): open
+  Thought Record, click the step prompt, confirm the textarea is prefilled with
+  it verbatim and focused; send it; confirm the banner advances and its new
+  prompt is clickable too. Screenshots (full-size guide with the new line, and
+  the prefilled textarea) to `docs/screenshots/<date>/`.
+  **Gate: NOT gate-triggering.** No `src/prompts/`, no send path, no safety
+  util, no `evalRunner.ts`; the prefill is ordinary textarea text per R5's
+  fact 2, which is the same reasoning that cleared `continuityPrompt.ts`.
+
+**What R12 does not claim.** It does not make the model follow the sequence, and
+it is not a substitute for that if the sequence is ever meant to be binding. It
+makes the shipped surface honest at zero gate cost, which is the right first
+move; if human feedback later says the guided modes need the AI to actually run
+the exercise, that is a priced, scoped item for after the soft launch — and it
+starts with making the eval read able to see the app's system instruction at
+all, which is the real blocker the grounding bullet uncovered.
+
+**Two R10a observations that belong to model-quality, routed not queued.**
+(1) Check-in asked **no question in 3 of 3 replies** — declarative sentences
+terminated with `?`. This is not new: it is the "checkin declarative padding"
+item on the README's **Parked while in RELEASE** list (gate-triggered only), and
+it stays parked — what R10a adds is that it now has live-app evidence on the
+post-R7 default, not just eval evidence, which is worth knowing whenever the
+gate next opens it. (2) The Gratitude turn-1 comprehension miss (a neighbour
+shovelling the driveway read back as an inconvenience) is ordinary base-model
+comprehension error and is exactly what model-quality's M4 fine-tune exists to
+move; it is one observation and is not a new item.

@@ -266,3 +266,43 @@ Gratitude comprehension miss that read a neighbour shovelling the driveway as
 `gh pr merge` was denied by the environment's permission classifier this run,
 so #128 is stacked on #127 and #129 on #128. Bases retarget as each lands; the
 three need merging in order.
+
+## 2026-08-07 (planner) — R10's fix is rejected on coverage, not cost; R12 queued; three finished PRs cannot land
+
+**The gate cannot see the app's system instruction (grounded this run, and it
+decides R10).** Every eval path reads `getBaseSystemInstruction` — `run-eval.ts`
+:261/:395/:462/:496, `run-m1-baseline.ts`, `m1BrowserRunner.ts`,
+`capture-harm-intent-bodies.ts`. The three-argument `getSystemInstruction` that
+carries the context block and personality directive is read **only** by
+`App.tsx` and `EvalPanel.tsx`. So a step directive added to the app branch would
+be invisible to a gate read in both directions: the fresh 3-seed generate the
+replay rule demands would reproduce byte-identically (M11/M12, 900 of 900) and
+certify nothing, while the change altered what three of four modes ask on every
+guided turn. **REJECTED** — not for the 2.75 h, but because 2.75 h buys a read
+that is provably blind to the diff. Making it visible means the step reaching
+`getBaseSystemInstruction` plus eval cases carrying a step: new eval cases
+(parked) and `run-eval.ts` (gate-triggering). That is a post-soft-launch item,
+not a side effect of a UI defect.
+
+**R12 queued instead — expected outcome: the banner stops lying at zero gate
+cost.** The contradiction is an implicature: a second-person request sitting
+above the transcript reads as the AI's question. Make the step's prompt tappable
+into the textarea (R5's fact 2 — a prefill is not a model input, hence not
+gate-triggering) and say whose it is. Decided copy: "These steps are a writing
+guide. Your companion responds to whatever you write." Full-size guide only.
+Also rejected again: hiding the banner during a reply (conceals without fixing)
+and dropping the sequences (would re-open the data loss R9 just closed, since
+the Thought Record save condition is defined in terms of the step).
+
+**One correction to R10a's write-up.** It recorded that the guide "stops
+rendering past its last step" — it does not. `currentStep > total` sets
+`isComplete` and the banner still renders, dropping the `Step N of M` span and
+swapping the prompt for a completion line. The `n/a` scoring was right; the
+mechanism was not, and R12's `isComplete` branch has to handle a surface the
+previous note assumed was gone.
+
+**Blocked, and it is the run's real bottleneck:** PRs #127 (R9), #128 (R11) and
+#129 (R10a) are built, green and pushed, and all three are unmerged because the
+permission classifier denied execute's `gh pr merge`. The planner does not merge
+code PRs. Nothing in the loop can land them; Sharang merges in order or the
+runner gets `gh pr merge` on `release/*`. R12 cannot start until #127 lands.
