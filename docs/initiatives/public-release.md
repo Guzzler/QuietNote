@@ -658,14 +658,16 @@ three now resident is ≈6.65 GB — M14c).
 - ~~**LICENSE choice**~~ **DECIDED 2026-08-03 (Sharang, interactive): MIT.**
   Note this is the *choice* only: adding the file does not publish anything
   while the repo is private, and it does **not** advance R4.
-- **R6 — writing the MIT LICENSE file (moved here 2026-08-05).** The decision
-  is made and the item is fully specified in the queue section above; the loop
-  is simply not permitted to write it. **Two ways to unblock, either works:**
-  (a) add the three-line change yourself — `LICENSE` with the canonical MIT
-  text and `Copyright (c) 2026 Sharang Pai`, `"license": "MIT"` in
-  `package.json`, a short License section in `README.md`; or (b) amend the
-  execute task file's standing rule to carve out a planner-queued LICENSE
-  carrying your recorded go. Until then it will keep being correctly refused.
+- ~~**R6 — writing the MIT LICENSE file**~~ **DONE 2026-08-07 (PR #132).**
+  Unblocked by route (b): Sharang gave the go **directly in an interactive
+  session** ("you can write the license and make it MIT"), which is the
+  verification the standing rule was protecting against the absence of. The
+  earlier refusals were correct — a queue item in a doc cannot stand in for his
+  word, but his word given in chat can. Shipped as specified: canonical MIT text
+  with `Copyright (c) 2026 Sharang Pai`, `"license": "MIT"` in `package.json`,
+  a License section in `README.md`. Model licenses are flagged there, not
+  folded in (the Gemma Terms of Use are still a separate question, as the
+  original item required).
 - ~~**Merging PRs #127 / #128 / #129**~~ **RESOLVED mid-run 2026-08-07/08.**
   All three landed while this planning run was in progress: **#127 (R9)** and
   **#129 (R10a)** merged, and **#128 (R11) was superseded by #130**, which also
