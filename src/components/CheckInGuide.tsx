@@ -1,10 +1,12 @@
 import { Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
-import { MORNING_CHECKIN_SEQUENCE, EVENING_CHECKIN_SEQUENCE } from "../data/journalPrompts";
+import { MORNING_CHECKIN_SEQUENCE, EVENING_CHECKIN_SEQUENCE, GUIDE_SCAFFOLD_NOTE } from "../data/journalPrompts";
 
 interface Props {
   currentStep: number; // 1-based (1, 2, or 3)
   compact?: boolean;
+  /** R12 — when supplied, the step prompt becomes something the writer can use. */
+  onUsePrompt?: (prompt: string) => void;
 }
 
 function isMorning(): boolean {
@@ -12,7 +14,7 @@ function isMorning(): boolean {
   return hour >= 5 && hour < 12;
 }
 
-export default function CheckInGuide({ currentStep, compact }: Props) {
+export default function CheckInGuide({ currentStep, compact, onUsePrompt }: Props) {
   const morning = isMorning();
   const sequence = morning ? MORNING_CHECKIN_SEQUENCE : EVENING_CHECKIN_SEQUENCE;
   const step = sequence[Math.min(currentStep - 1, sequence.length - 1)];
@@ -26,6 +28,9 @@ export default function CheckInGuide({ currentStep, compact }: Props) {
   const accentText = morning ? "text-amber-600" : "text-indigo-600";
   const barActive = morning ? "bg-amber-400" : "bg-indigo-400";
   const barCurrent = morning ? "bg-amber-500" : "bg-indigo-500";
+  const promptHover = morning
+    ? "hover:text-amber-600 focus-visible:ring-amber-300"
+    : "hover:text-indigo-600 focus-visible:ring-indigo-300";
 
   if (compact) {
     return (
@@ -56,6 +61,15 @@ export default function CheckInGuide({ currentStep, compact }: Props) {
           </div>
           {isComplete ? (
             <p className="font-serif text-xs text-slate-500 truncate">Complete — feel free to continue or start a new session.</p>
+          ) : onUsePrompt ? (
+            <button
+              type="button"
+              onClick={() => onUsePrompt(step.prompt)}
+              aria-label={`Use this prompt: ${step.prompt}`}
+              className={`font-serif text-xs text-slate-500 truncate block w-full text-left rounded focus:outline-none focus-visible:ring-2 transition-colors ${promptHover}`}
+            >
+              {step.prompt}
+            </button>
           ) : (
             <p className="font-serif text-xs text-slate-500 truncate">{step.prompt}</p>
           )}
@@ -101,7 +115,19 @@ export default function CheckInGuide({ currentStep, compact }: Props) {
           <p className="text-xs text-slate-400 mb-1">
             Step {displayStep} of {total}
           </p>
-          <p className="font-serif text-[15px] text-slate-600 font-medium">{step.prompt}</p>
+          {onUsePrompt ? (
+            <button
+              type="button"
+              onClick={() => onUsePrompt(step.prompt)}
+              aria-label={`Use this prompt: ${step.prompt}`}
+              className={`font-serif text-[15px] text-slate-600 font-medium rounded px-1 focus:outline-none focus-visible:ring-2 transition-colors ${promptHover}`}
+            >
+              {step.prompt}
+            </button>
+          ) : (
+            <p className="font-serif text-[15px] text-slate-600 font-medium">{step.prompt}</p>
+          )}
+          <p className="text-xs text-slate-400 mt-2">{GUIDE_SCAFFOLD_NOTE}</p>
         </>
       )}
     </motion.div>

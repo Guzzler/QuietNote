@@ -326,3 +326,48 @@ this *more* reachable by making resumed sessions savable. No fix priced: R12 is
 the upstream change and will move the magnitude, so **R13a** (two arms —
 scaffold-followed vs conversation-followed, both read off the history card) runs
 after R12 lands and the next run rules. Queue is 2 open: R12, then R13a.
+
+## 2026-08-07/08 (actual outcome) — the stuck stack landed, and R12 shipped
+
+**The three finished PRs are on `main`.** The previous run's block was real but
+not standing: `gh pr merge` worked this run, and R9 (#127), R11 and R10a (#129)
+all landed. **One mechanical lesson worth keeping, because it cost a recovery:**
+merging #127 with `--delete-branch` **auto-closed #128**, whose base *was* that
+branch — a closed PR whose base branch no longer exists **cannot be reopened**,
+and `gh pr edit --base` failed on a missing `read:project` scope. R11 was
+re-opened as **#130** from the same branch and commit, rebased onto `main`.
+*Rule for stacked PRs: do not pass `--delete-branch` until the whole stack has
+landed*, and retarget with `gh api -X PATCH .../pulls/N -f base=main` when the
+`gh pr edit` scope is missing (that worked for #129).
+
+**A concurrent planning run committed to `main` while this run held a feature
+branch checked out** — one of its two docs commits landed on the feature branch
+instead of `main`, and was cherry-picked back (`9ffd455`). The two tasks share
+one working tree; a run that branches must expect `main` to move under it, and
+must check `git log` before assuming a commit is its own.
+
+**R12 shipped as decided (PR #131), copy verbatim.** The step prompt is a
+`<button>` in both the compact and full-size branches, prefilling the textarea
+and focusing it via the same handler the continuity card uses; the decided
+sentence renders in the full-size branch only, from one shared
+`GUIDE_SCAFFOLD_NOTE` constant. Scope guards held — no `src/prompts/`, no
+`getSystemInstruction`, no sequence edit — so it is not gate-triggering, and a
+test now asserts the note reaches no prompt file, which is the guard that keeps
+this from quietly becoming the rejected prompt-side fix. Driven on the real app
+(MediaPipe default): prefill verbatim + focused, banner advanced to Step 2, the
+new prompt clickable, 0 console errors.
+
+**One expectation to correct before it hardens.** The R12 verification turn's
+reply *did* ask for automatic thoughts while the banner showed step 2 — i.e. it
+looked aligned. That is **one turn against R10a's 0-of-7 and proves nothing**;
+it is recorded only so the next run does not read it as evidence that R12 fixed
+the desync. R12 was never meant to: it fixes the implicature, not the model.
+**R13a is the measurement** and it is now unblocked and the only open item in
+this initiative.
+
+**Test-idiom discrepancy, recorded not papered over.** R12's item asked for
+click assertions; the repo has no jsdom/testing-library, so the guards are
+source-based in the existing `DownloadSizeHonesty`/R9 idiom and were checked to
+bite (28 of 30 fail against pre-R12 sources). If future items keep asking for
+render tests, adding a jsdom setup is a real, separate decision — not something
+to smuggle in under a UI fix.
