@@ -115,7 +115,8 @@ decisions, release gate, queue format).
 | R10a | Measure the guided-mode desync rate on MediaPipe (the post-R7 default), all three guided modes | **DONE 2026-08-06 (PR #129)** — it reproduces: **0 of 7 scoreable turns aligned**. R10 is not a WebLLM-era defect; R7 did not close it |
 | R11 | "After that, it loads instantly" is shown to returning users unconditionally, and is false for a cold browser process | **DONE 2026-08-06 (PR #130)** — decided copy shipped verbatim; the word is now absent from all of `src/` and a test keeps it that way. (Authored as #128; that PR was auto-closed when its base branch was deleted on #127's merge, and the same branch/commit landed as **#130**.) |
 | R12 | The guided banner reads as the AI's question, which it never was — make the step a writing scaffold the user acts on | **DONE 2026-08-07 (PR #131)** — the step prompt is tappable in both branches (prefills the textarea, never a model input) and one line says whose the sequence is. No `src/prompts/` diff; R10a's desync is unchanged by design |
-| R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | blocked on Sharang |
+| R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | **DONE 2026-08-07** — Sharang triggered it interactively. Repo is **public**, Pages enabled (`build_type=workflow`), deploy job un-gated itself and ran green, and **https://guzzler.github.io/QuietNote/ is live and smoked end-to-end** on a true fresh-origin cold start. See the R4 result below |
+| R6 | MIT LICENSE | **DONE 2026-08-07 (PR #132)** — on Sharang's direct interactive go |
 
 ## Task queue
 
@@ -625,6 +626,55 @@ MediaPipe row is history, not current behavior.
 Cross-cutting: Lora serif font broken in production build (missing woff2 in
 `dist/`) → queued R1c. Total storage with two model caches: ~4.65 GB (all
 three now resident is ≈6.65 GB — M14c).
+
+## R4 result (2026-08-07) — the app is live, and the cold start was real
+
+**Sharang triggered R4 interactively.** Repo flipped to **public**, Pages
+created with `build_type=workflow`, and the `deploy` job's
+`if: ${{ !github.event.repository.private }}` gate un-gated itself exactly as
+designed — **no workflow edit was needed on release day**, which is what the
+2026-07-21/27 grounding predicted. Run `31237871784`: `build` success, `deploy`
+success.
+
+**Live-URL smoke — https://guzzler.github.io/QuietNote/ — genuine fresh-origin
+cold start.** Unlike every audit walk since 07-21, this was not a warm profile:
+`guzzler.github.io` is a different origin from `localhost`, so Cache Storage
+started empty and the **full 2.0 GB MediaPipe download ran for real** (11% →
+54% → 85% → ready, ~7 min on the test connection). This is the first time the
+fresh-profile download path has been exercised anywhere but R2's 2026-07-12
+local read.
+
+| check | result |
+|---|---|
+| Pages serves the app at `base: /QuietNote/` | PASS — first paint, correct title, no 404s |
+| Loading card copy on the live origin | PASS — R2b size line reads **"~2.0 GB"** (MediaPipe default) and **R11's** new sentence renders: "After that it loads from your device — a few seconds, no download." |
+| Real byte-level progress cross-origin from the HF CDN | PASS — R1e's app-owned fetch works from a Pages origin; **no COOP/COEP problem materialised** |
+| `mediapipe-cache` populated on the Pages origin | PASS — `caches.keys()` returns `mediapipe-cache`; the second load needed **no download**, which makes R11's copy true in production |
+| Full journal exchange | PASS — entry + a supportive, turn-aware, non-parroting reply, both persisted |
+| Reload persistence on the live origin | PASS — session survived a full reload and re-opened |
+| R5's continuity card | PASS — `Earlier today, you wrote: "I finally shipped something I have been working…"` — grammatical, no splice |
+| R9's `mode` field in production | PASS — the stored session carries `mode: "freewrite"` |
+| Footer "open source" link | Now resolves — the repo is public, ending the accepted dormancy noted in R3b |
+| Console | 0 errors (the usual 2 benign warnings) |
+
+**One thing observed and NOT explained — recorded, not diagnosed.** The tab went
+to `about:blank` immediately after the first reply was generated, during the
+screenshot call. The exchange itself completed and **both messages were already
+written to IndexedDB**, so nothing was lost and the reload recovered cleanly.
+Most likely a Playwright/headless memory ceiling under a freshly-loaded 2.0 GB
+model rather than an app fault — the same class of thing the loop's environment
+notes already record for the embedded pane. **It is one sighting on an
+automation profile, not a reproduction on a human's browser, and it should not
+be written up as a defect until someone sees it in a real Chrome.** Flagging it
+because a stranger's first visit is exactly this path.
+
+**Not run: the release gate.** R4's original definition calls for the full
+4-mode eval read before the first share. That was not taken this run — the flip
+was Sharang's interactive call and the gate is a ~2.75 h read. `model-quality`
+remains the pacing initiative and its quality bar is still unmet; **R10a's 0-of-7
+guided desync and the unmeasured R13a labelling question ship as-is.** Free
+Write is the surface that has been walked repeatedly; the guided modes have not
+earned the same confidence.
 
 ## Ledger
 

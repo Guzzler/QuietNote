@@ -371,3 +371,45 @@ source-based in the existing `DownloadSizeHonesty`/R9 idiom and were checked to
 bite (28 of 30 fail against pre-R12 sources). If future items keep asking for
 render tests, adding a jsdom setup is a real, separate decision — not something
 to smuggle in under a UI fix.
+
+## 2026-08-07 (actual outcome) — R4 fired: QuietNote is public and live
+
+**Sharang triggered the release interactively.** Repo public, Pages enabled,
+`https://guzzler.github.io/QuietNote/` live and smoked end-to-end. The deploy
+gate un-gated itself with no workflow edit, exactly as the 07-21/27 grounding
+predicted — that prediction is now confirmed rather than assumed.
+
+**The cold start was real for the first time since 2026-07-12.** A Pages origin
+is not `localhost`, so Cache Storage started empty and the full 2.0 GB
+downloaded live: R1e's app-owned fetch works cross-origin from GitHub Pages,
+`mediapipe-cache` populated, and the second load needed no download — which is
+what makes R11's shipped copy true in production rather than merely plausible.
+**The COOP/COEP risk the initiative has carried since July did not materialise.**
+
+**A credential finding gated the flip, and it was the right gate.** Two
+`hf_`-shaped tokens sat in the two root prototype notebooks from `852033e`
+(2026-03-12, pre-loop). The notebooks were removed (PR #133), but the decisive
+fact is that **removal from HEAD is not removal from GitHub**: `git ls-remote`
+showed **133 retained `refs/pull/*/head`**, all with the initial commit in their
+ancestry, and those survive any force-push and are fetchable once public. A
+`filter-repo` rewrite was therefore **started and abandoned** — it would have
+rewritten every hash and broken every SHA reference in these docs while leaving
+the strings reachable. Revocation was the only remedy, Sharang did it, and the
+flip followed. **Rule worth keeping: on GitHub, history rewriting does not
+remediate a leaked secret; revocation does.** A full-history scan found no other
+secret of any shape, and `.env*` was never committed.
+
+**R6 landed the same session (PR #132)** on Sharang's direct go — the
+verification the standing rule was protecting against the absence of.
+
+**What shipped unmeasured, stated plainly.** The release gate's 4-mode eval read
+was **not** run; the flip was Sharang's call. `model-quality`'s bar is still
+unmet, R10a's 0-of-7 guided desync is live, and R13a's labelling question is
+unanswered. Free Write is the walked surface; the guided modes are not.
+
+**One unexplained sighting, deliberately not written up as a defect.** The
+automation tab went to `about:blank` right after the first reply on the live
+URL. Both messages were already in IndexedDB and the reload recovered fully. One
+sighting on a Playwright profile under a fresh 2.0 GB model is not a
+reproduction in a human's Chrome, and calling it a defect on that evidence would
+repeat the mistake R10a was queued to avoid.
