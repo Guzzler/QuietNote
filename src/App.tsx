@@ -17,6 +17,7 @@ import { stripUnmatchedLeadingQuote, stripSelfQuotingWrapper } from "./utils/rep
 import { isBareDeflection, withDeflectionReprompt } from "./utils/responseShaping";
 import { shouldAttemptReferralReprompt, withReferralReprompt } from "./utils/referralReprompt";
 import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
+import { deriveGuidedStep, resolveSessionMode } from "./utils/guidedSession";
 import { generateReflection, shouldRegenerate } from "./utils/sessionReflection";
 import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personalityPrompt";
 import {
@@ -148,11 +149,9 @@ export default function App() {
   const [userInput, setUserInput] = useState("");
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
 
-  // Journaling mode state
+  // Journaling mode state. The mode is persisted on the session (R9) so a
+  // reload resumes the exercise the user was actually doing.
   const [journalingMode, setJournalingMode] = useState<JournalingMode>("freewrite");
-  const [gratitudeStep, setGratitudeStep] = useState(1); // 1-based step counter
-  const [checkinStep, setCheckinStep] = useState(1); // 1-based step counter
-  const [thoughtRecordStep, setThoughtRecordStep] = useState(1); // 1-based step counter
 
   // Crisis detection state
   const [showCrisisResources, setShowCrisisResources] = useState(false);
@@ -275,19 +274,17 @@ export default function App() {
     })();
   }, []);
 
-  // Reset guided mode steps when session changes
-  useEffect(() => {
-    setGratitudeStep(1);
-    setCheckinStep(1);
-    setThoughtRecordStep(1);
-  }, [currentId]);
+  // R9 — the guided step is derived from the stored transcript, not tracked
+  // separately: one step per user message already sent, plus the one being
+  // written now. It cannot drift from the messages and it survives a reload.
+  const guidedStep = useMemo(() => deriveGuidedStep(current), [current]);
 
   // Persist structured ThoughtRecord when the 5-step flow completes
   const thoughtRecordSaved = useRef<string | null>(null);
   useEffect(() => {
     if (
       journalingMode !== "thoughtrecord" ||
-      thoughtRecordStep <= 5 ||
+      guidedStep <= 5 ||
       !current ||
       thoughtRecordSaved.current === current.id
     ) return;
@@ -315,14 +312,11 @@ export default function App() {
 
     thoughtRecordSaved.current = current.id;
     saveThoughtRecord(record).catch(console.error);
-  }, [thoughtRecordStep, journalingMode, current]);
+  }, [guidedStep, journalingMode, current]);
 
   // Start a new session with the first user entry
   const newSession = async (firstMessage: string) => {
     if (!firstMessage.trim()) return;
-    if (journalingMode === "gratitude") setGratitudeStep((s) => s + 1);
-    if (journalingMode === "checkin") setCheckinStep((s) => s + 1);
-    if (journalingMode === "thoughtrecord") setThoughtRecordStep((s) => s + 1);
 
     // Check for crisis content - only show resources for critical/high severity
     const crisisResult = detectCrisis(firstMessage);
@@ -359,6 +353,7 @@ export default function App() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       model,
+      mode: journalingMode,
     };
 
     setCurrent(sess);
@@ -503,9 +498,6 @@ export default function App() {
   // Follow-ups: now includes full conversation history so AI remembers context
   const replyInThread = async (threadId: string, text: string) => {
     if (!current) return;
-    if (journalingMode === "gratitude") setGratitudeStep((s) => s + 1);
-    if (journalingMode === "checkin") setCheckinStep((s) => s + 1);
-    if (journalingMode === "thoughtrecord") setThoughtRecordStep((s) => s + 1);
 
     // Check for crisis content - only show resources for critical/high severity
     const crisisResult = detectCrisis(text);
@@ -719,6 +711,8 @@ export default function App() {
       setCurrent(s);
       setCurrentId(id);
       setSelectedThread(s.threads[0]?.id ?? null);
+      // R9 — resume the exercise this session was written in (absent = free write)
+      setJournalingMode(resolveSessionMode(s));
     }
   };
 
@@ -931,15 +925,10 @@ export default function App() {
             sessions={sessions}
             moods={allMoods}
             journalingMode={journalingMode}
-            onJournalingModeChange={(mode: JournalingMode) => {
-              setJournalingMode(mode);
-              setGratitudeStep(1);
-              setCheckinStep(1);
-              setThoughtRecordStep(1);
-            }}
-            gratitudeStep={gratitudeStep}
-            checkinStep={checkinStep}
-            thoughtRecordStep={thoughtRecordStep}
+            onJournalingModeChange={(mode: JournalingMode) => setJournalingMode(mode)}
+            gratitudeStep={guidedStep}
+            checkinStep={guidedStep}
+            thoughtRecordStep={guidedStep}
           />
         }
         right={

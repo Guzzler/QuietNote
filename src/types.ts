@@ -1,3 +1,5 @@
+import type { JournalingMode } from "./components/JournalingModeSelector";
+
 // Core chat types
 export type Role = "system" | "user" | "assistant";
 
@@ -28,6 +30,12 @@ export interface Session {
   model: ModelRef;
   reflection?: string;
   reflectionUpdatedAt?: number;
+  /**
+   * The journaling mode this session was written in (R9). Optional: sessions
+   * stored before 2026-08-06 have no mode and are treated as "freewrite", so
+   * no IndexedDB migration is needed.
+   */
+  mode?: JournalingMode;
 }
 
 export interface ModelRef {
