@@ -2,7 +2,7 @@
 
 **QuietNote** is a private AI journal that runs entirely in your browser. The language model downloads to your device and every word you write stays in local browser storage — nothing you type is ever sent to a server. It's open source so you don't have to take that claim on faith.
 
-**Live app:** `https://guzzler.github.io/QuietNote/` *(activating at release)*
+**Live app:** [https://guzzler.github.io/QuietNote/](https://guzzler.github.io/QuietNote/) — runs in Chrome or Edge; the first visit downloads the model (~2.0 GB) once.
 
 ![QuietNote writing surface](docs/screenshots/2026-07-10/r1a-preview-app-shell.png)
 
