@@ -82,7 +82,7 @@ it ships correct the moment R4 lands:
 |---|---|---|
 | F1 | Feedback channel: issue templates + in-app "Share feedback" link-out | DONE (PR #85) — one copy defect found 2026-07-23, filed as F1a |
 | F1a | Issue templates point testers at "Settings → engine"; the picker is in the Privacy dashboard | DONE (PR #109) |
-| F2 | Soft-launch kit: tester one-pager + share message for Sharang | **UNGATED 2026-08-08** — R4 fired 08-07, the live URL exists and is verified 200. Queued below |
+| F2 | Soft-launch kit: tester one-pager + share message for Sharang | **DONE 2026-08-08 (PR #135)** — `docs/beta/WELCOME.md`, 79 lines, all six sections; README linked. Sharing remains Sharang's |
 | F1b | Re-check the shipped feedback path from the live origin (the half of F1's "re-check at R4" the loop can actually do) | queued 2026-08-08 |
 | F3 | Field-notes intake convention + weekly issue→field-note triage | after first feedback exists |
 | F4 | Feedback-driven iteration: human reports outrank queue items | activates with F3 |
@@ -99,7 +99,13 @@ it ships correct the moment R4 lands:
   templates** (DONE 2026-07-23, PR #109 — see Ledger. Chooser rendering
   stays unverifiable until the repo is public — re-check at R4 with the
   rest of F1.)
-- [ ] 2026-08-08 · **F2 — Soft-launch kit** (**ungated** — R4 fired 2026-08-07;
+- [x] 2026-08-08 · **F2 — Soft-launch kit** (DONE 2026-08-08, PR #135 — see
+  Ledger. All six sections shipped, sizes re-read off the code, README linked
+  with the decided line. **R14 had not landed when this was written, so line 5's
+  hedge was left alone as the item instructs** — R14 owns it and is the next PR
+  this run. **Nothing was shared with anyone**: the share message is in the PR
+  body and the ntfy, and sending it stays Sharang's.)
+- [x] 2026-08-08 · **F2 — Soft-launch kit** (**ungated** — R4 fired 2026-08-07;
   `docs/beta/` does not exist yet, verified this run). Write
   `docs/beta/WELCOME.md` per the decided outline below — which is a spec, not a
   draft: follow its six sections in order, in its stated tone, under ~80 lines,
@@ -250,6 +256,7 @@ task (outline corrected, share message decided) the moment R4 lands.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-08 | F2 — Soft-launch kit | #135 | `docs/beta/WELCOME.md` written to the decided outline as a spec: all six sections in order (welcome / what you need / what to try / honest limits / your data / telling me what happened), **79 lines**, warm-and-plain tone, no screenshots, no deadline and no survey-flavoured language. **Every number re-read off the code at write time per the standing rule, not copied from the outline:** `MODEL_DOWNLOAD_SIZES` (`src/inference/types.ts:60-64`) is `~1.5 GB` / `~3.2 GB` / `~2.0 GB` and `createEngine`'s default parameter (`src/inference/index.ts:12`) is `"mediapipe"`, so the headline "about 2.0 GB" is right; the browser line ("Chrome or Edge 113+, Chrome for Android 121+, Firefox/Safari not yet") matches `WebGPUFallback.tsx:45-54` verbatim in substance; the four mode labels and their order match `JournalingModeSelector.tsx`. The live URL appears once, unhedged, as `https://guzzler.github.io/QuietNote/`. README linked with the decided line — `If you're one of the first testers, start with [the welcome note](docs/beta/WELCOME.md).` — placed in the "An honest note on what this is" section. **README line 5's "activating at release" hedge was deliberately left alone:** public-release R14 owns that line and had not landed when this was written, and the item says to say so rather than edit line 5 twice. One judgement call recorded: §4 "Honest limits" adds a sentence inviting testers to report *false* crisis triggers, because R14 (crisis false positive, this run's R13a walk) means a tester can meet one on ordinary text — it is honest about a known live defect, and it costs nothing if the defect is fixed. Build green, 1256 tests green. Docs-only, not gate-triggering. **Nothing was sent anywhere** — the decided share message is reproduced verbatim in the PR body and pointed at in the ntfy; sharing is Sharang's action. |
 | 2026-07-23 | F1a — Correct the engine-picker path in both issue templates | #109 | Both `backend` dropdown labels now read `Which AI engine were you using (Settings → Privacy & your data → Inference Engine)?` — the picker is the "Inference Engine" section in `PrivacyDashboard.tsx:320-341`, reached via Settings → "Privacy & your data"; `SettingsPanel.tsx` has no engine control at all. Templates only, no `src/` runtime change (not gate-triggering); every other field, the option list, and the don't-paste-your-journal guard untouched. `FeedbackChannelGuards.test.ts` gained a 4-test F1a block: both templates contain the corrected label and no longer contain `(Settings → engine)`, plus two UI-anchor assertions (PrivacyDashboard has "Inference Engine", SettingsPanel does not) so the copy can't drift from the UI again. Both files parse as YAML (`js-yaml`, `backend` label read back verbatim). Build green, 1057 tests green. Chooser rendering itself stays unverifiable while the repo is private — re-check at R4 with the rest of F1. |
 | 2026-07-12 | F1 — Feedback channel | #85 | Issue templates per the decided spec verbatim (`feedback.yml`, `bug.yml`, `config.yml` with mailto contact link) + calm footer affordance beside the privacy lock: "Share feedback" → `issues/new/choose` (new tab, noopener) · "email" → `mailto:`. Static links only, no query params, nothing prefilled — `FeedbackChannelGuards` (10 tests) pins hrefs, no-fetch, and the don't-paste-your-journal guard in both templates. Verified rendered footer + DOM hrefs on `vite preview` (screenshot). Template chooser rendering itself is only verifiable once the repo is public (F2/R4) — re-check then, incl. that GitHub accepts the `mailto:` contact link. 1336 tests green. |
 

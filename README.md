@@ -27,6 +27,8 @@
 
 QuietNote is an **AI journaling companion — not therapy, not a therapist, and not crisis support**. It's built with guardrails (crisis detection, response limits, a persistent disclaimer), but it is software, not care. If you're in crisis, please reach out to a professional or a crisis line; the app will point you to resources, and means it.
 
+If you're one of the first testers, start with [the welcome note](docs/beta/WELCOME.md).
+
 ## What you need to run it
 
 - **A WebGPU-capable browser**: recent Chrome or Edge on desktop are the reliable choices today. Firefox and Safari support is still uneven; unsupported browsers get an honest message rather than a broken app.
