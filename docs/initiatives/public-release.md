@@ -199,7 +199,18 @@ smoke results**, both superseded by R4's live read, once R13a has closed. Not
 done this run because R13a is unanswered and the R2 matrix is what its result
 gets compared against.
 
-**Queue status (2026-08-07/08, execute — end of run): 1 open — R13a**, which
+**Queue status (2026-08-08, execute — end of run): 1 open — R14a (PROPOSED,
+needs a planner ruling; do not start it).** R13a shipped this run (#134) and its
+two-arm result is below: the scaffold-followed run labels 3/3 correctly, the
+conversation-followed run mislabels 2/3, so R12 closed most of R13's exposure and
+what remains is conditional on a user behaviour the UI now steers away from —
+**ruled nothing, per the item.** The same walk found a defect that outranks
+everything else open here: **R14**, an unanchored substring match that fires the
+988 crisis intervention on the word "cutting" inside "cutting everyone short", on
+the live public app. It is written up below with its mechanism; the fix is
+gate-triggering and is *not* taken by execute.
+
+**Queue status (2026-08-07/08, execute — earlier run): 1 open — R13a**, which
 this run unblocked by landing R12 (#131) and deliberately did **not** take: it
 is measurement, it blocks no one, and this run's 3-PR budget went to landing the
 08-06 stack (#127, #130, #129) plus R12. Everything else in this initiative is
@@ -571,6 +582,7 @@ earned the same confidence.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-08 | R13a — Does the saved Thought Record match its labels? | #134 | **Measurement only — no `src/` diff, no fix, no eval run, nothing ruled**, as the item required. Two five-turn Thought Record sessions on a production build at `npx vite preview`, Chromium via Playwright, **MediaPipe / Gemma 4 E2B** (the profile's stale `quietnote-runtime=webllm` was reset to `mediapipe`; the `.task` came from the existing `mediapipe-cache`, so warm-model / empty-IndexedDB, not a first-download cold start), IndexedDB cleared first so the history held only these two records. **Result: the two arms separate cleanly.** Arm 1 (every entry written by clicking R12's step prompt): SITUATION / AUTOMATIC THOUGHT / ALTERNATIVE THOUGHT all **match** — 3 of 3 correct, even though R10a's desync was present on every turn of that arm too. Arm 2 (every entry answering the reply's closing question, the behaviour R10a says the model invites): **2 of 3 mislabelled** — "Automatic thought" holds a second helping of *situation*, "Alternative thought" holds an *emotion intensity rating*, and the user's real automatic thought landed at position `[2]`, was stored as `emotions`, and is **displayed nowhere on the card**. So R12 closed most of R13's exposure and the residue is now conditional on conversation-following rather than universal. Both sessions' five entries verbatim, both history cards verbatim, and the per-field judgements are in the R13a result section above. Screenshots: `docs/screenshots/2026-08-08/r13a-arm{1,2}-*.png`. **0 console errors.** Not gate-triggering (no code change of any kind). **The walk also found R14** — a benign entry containing "cutting everyone short" fires the full 988 crisis intervention via an unanchored `includes("cutting")` in `crisisDetection.ts:140/:31`, on the live public app. Filed with mechanism, reproduction and a screenshot; **deliberately not fixed** (load-bearing safety surface, gate-triggering) and proposed as R14a for a planner ruling. |
 | 2026-08-07 | R12 — The guided step becomes a writing scaffold, not a promise about the reply | #131 | The planner's decided shape, implemented as specified. All three guides (`ThoughtRecordGuide`, `GratitudeGuide`, `CheckInGuide`) take an optional `onUsePrompt?: (prompt: string) => void`; when supplied, the step prompt renders as a `<button type="button">` carrying the same text/font/colour classes plus a hover + `focus-visible` ring in each guide's own accent (indigo / pink / amber-or-indigo by time of day) and `aria-label={`Use this prompt: ${step.prompt}`}`, in **both** the compact and full-size branches. Absent the handler it is still a `<p>`, and the `isComplete` branch renders **no** button in either branch — there is no step left to write. The decided sentence ships **verbatim** in the full-size branch only (the compact banner's prompt line is already `truncate`), hoisted to one shared `GUIDE_SCAFFOLD_NOTE` constant in `src/data/journalPrompts.ts` so the wording cannot drift across three files. `ChatPanel.tsx` gained one `useGuidePrompt` callback — `setUserInput(prompt)` + `textareaRef.current?.focus()`, the identical handler `WelcomeEmptyState`'s `onUseContinuity` already uses — passed to all six render sites. **Scope guards held:** no `src/prompts/` edit, no `getSystemInstruction` change, no new state, no change to `deriveGuidedStep` or to any `*_SEQUENCE` (a test pins all four sequences verbatim, and another asserts `GUIDE_SCAFFOLD_NOTE` appears in no file under `src/prompts/` or `sessionContext.ts` — if it ever does, the change became the rejected prompt-side fix). New `GuidedStepScaffold.test.ts` (30 tests). Build green, **1256 tests green** (75 files); `eslint` on the six touched files is clean (ChatPanel's 2 errors + 1 warning are pre-existing and untouched). **Test-idiom discrepancy, recorded rather than papered over:** the item asked for click assertions, but the repo has no jsdom/testing-library — every component test here is logic- or source-based — so the guards are source-based in the `DownloadSizeHonesty`/R9 idiom. They were verified to bite: against pre-R12 sources **28 of 30 fail** (the 2 that pass are the sequence-verbatim guards, correctly). Verified on `npx vite preview` against the production build, Chromium via Playwright, `quietnote-runtime` **absent** → **MediaPipe / Gemma 4 E2B**: opened Thought Record, clicked the step-1 prompt → textarea prefilled `What happened? Describe the situation briefly.` verbatim **and focused**; sent a real step-1 entry; the banner advanced to **Step 2 of 5** and its compact prompt was clickable too → prefilled `What went through your mind? What were you thinking?` and focused. Gratitude and Check-in both render the note exactly once with a tappable step-1 prompt. **0 console errors** (the same 2 benign warnings as R7: Chromium `powerPreference`, WGSL subgroups). Screenshots: `docs/screenshots/2026-08-07/r12-*.png`. **Not gate-triggering** — no `src/prompts/`, no send path, no safety util, no `evalRunner.ts`; the prefill is ordinary textarea text per R5's fact 2. **One free observation, not a measurement:** on this single turn the reply *did* ask for automatic thoughts while the banner showed step 2 — one aligned turn proves nothing against R10a's 0-of-7, and R13a is the measurement. |
 | 2026-08-06 | R10a — Guided-desync rate measured on the default engine | #129 | **Measurement only — no `src/` diff, no eval run, no fix, nothing ruled**, exactly as the item required. Nine turns driven (3 modes × 3), one session per mode, one page load per session, on a production build at `npx vite preview` with `quietnote-runtime` absent → **MediaPipe / Gemma 4 E2B**. **Result: the desync reproduces on the shipped default — 0 of 7 scoreable turns aligned.** Thought Record 2 desynced / 1 ambiguous (the two desyncs are both the model running exactly one step behind the banner); Gratitude 2 desynced; Check-in 2 ambiguous because the replies asked **no question at all** — 3 of 3 were declarative sentences terminated with `?`, which is why it scores no desyncs rather than good ones. Turn 3 of the two 3-step modes is `n/a`: the guide stops rendering past the last step, so there is no banner to compare against — a structural detail R10's single WebLLM sighting never surfaced. No verbatim repeats; two shape-level near-duplicates recorded. Two findings outside the question were recorded and deliberately **not** ruled on (Check-in's question-less replies; a Gratitude comprehension miss that read a neighbour's kindness as an inconvenience) — both belong to model-quality. Full table with verbatim banners and closing questions, the stated scoring rule, and the reusable entries is in the R10a result section above. Screenshots: `docs/screenshots/2026-08-06/r10a-*.png`. 0 console errors. Not gate-triggering (no code change of any kind). |
 | 2026-08-06 | R11 — The loading card stops promising an instant load | #128 | The decided copy shipped verbatim in `src/App.tsx`'s first-time note: "…then it's stored on this device. After that it loads from your device — a few seconds, no download." The `MODEL_DOWNLOAD_SIZES[runtimeId]` interpolation, the `Lock` icon, the classes and the placement are untouched, and no cache detection was added. `DownloadSizeHonesty.test.ts` gained two R11 guards — the new phrasing is present, and the banned word appears in **no** `.ts`/`.tsx` file under `src/` (a whole-tree walk, with the needle assembled at runtime so the guard cannot trip over its own source). One pre-existing assertion needed a matching edit and it is worth recording: the "vague no-size copy is gone" test asserted the *entire* pre-R2b sentence, which contained the banned word — it now asserts its first sentence only, so the tree-wide guard stays meaningful. Build green, **1226 tests green** (74 files). → **Verify:** screenshot of the real loading card on `npx vite preview` with the new sentence rendered. **Honest caveat on that screenshot:** it was taken on **WebLLM** (`~1.5 GB`), not the MediaPipe default, because a cached MediaPipe boot now reaches ready faster than a screenshot round-trip — three attempts on the default caught only the loaded app. The captured line is the same JSX with the same interpolation; the MediaPipe rendering of this card at **"~2.0 GB"** is evidenced by R7's `r7-cleared-storage-first-boot-mediapipe.png` and pinned by the size tests, and R11 changes no code that could alter it. Not gate-triggering (loading-card JSX only, as R2b established). |
@@ -749,7 +761,10 @@ is unknown until then. Deciding a labelling fix now would be pricing a defect
 whose magnitude R12 is about to change. **The trigger is stated instead** — R13a
 below measures it right after R12 lands, and the next planning run rules.
 
-- [ ] 2026-08-07 · **R13a — Does the saved Thought Record match its labels?**
+- [x] 2026-08-07 · **R13a — Does the saved Thought Record match its labels?**
+  (DONE 2026-08-08, PR #134 — **R13a result** section below. Scaffold-followed
+  labels 3/3 correctly; conversation-followed mislabels 2/3. One unrelated and
+  more severe defect found on the same walk, filed as **R14**.)
   (measurement only — **no `src/` diff**, no fix, no eval run.) **Run this after
   R12 has landed** — **unblocked 2026-08-07: R12 is on `main` as PR #131, so the
   step prompt is clickable and arm 1 below is now performable as written** — on a
@@ -851,3 +866,142 @@ gate next opens it. (2) The Gratitude turn-1 comprehension miss (a neighbour
 shovelling the driveway read back as an inconvenience) is ordinary base-model
 comprehension error and is exactly what model-quality's M4 fine-tune exists to
 move; it is one observation and is not a new item.
+
+## R13a result (2026-08-08, execute) — **the scaffold labels correctly; the conversation mislabels 2 of 3**
+
+Measurement only, **no `src/` diff**. Production build of `main` served by
+`npx vite preview` on `:4173`, Chromium via Playwright, **MediaPipe / Gemma 4
+E2B** (the post-R7 default — the profile carried a stale
+`quietnote-runtime=webllm` from pre-R7 walks and it was set to `mediapipe` for
+this read; the `.task` loaded from the existing `mediapipe-cache`, so this is a
+warm-model, **empty-IndexedDB** walk, not a first-download cold start).
+IndexedDB was cleared first so the Thought Record history contains only these
+two sessions. **0 console errors** across both sessions (2 benign warnings).
+Screenshots: `docs/screenshots/2026-08-08/`.
+
+### Arm 1 — scaffold-followed (every entry written by clicking R12's step prompt)
+
+| # | banner at time of writing | entry (verbatim) |
+|---|---|---|
+| 1 | Step 1 — *What happened? Describe the situation briefly.* | In this morning's standup my manager skipped over my update and moved straight to the next person without saying anything about it. |
+| 2 | Step 2 — *What went through your mind? What were you thinking?* | I thought: he has already decided I am not worth listening to, and everyone on that call noticed it. |
+| 3 | Step 3 — *What emotions did you feel? How intense were they (1-10)?* | Embarrassed 7, anxious 6, and a flat kind of sad about 5. |
+| 4 | Step 4 — *What evidence supports or contradicts this thought?* | For: he cut me off. Against: he was watching the clock the whole call, he asked me to lead the migration review last week, and two other people got skipped too. |
+| 5 | Step 5 — *What's a more balanced way to think about this?* | A more balanced read: the standup was running long and he was cutting everyone short, so this was about the clock and not about whether my work matters to him. |
+
+**History card, verbatim**
+(`docs/screenshots/2026-08-08/r13a-arm1-scaffold-followed-history.png`):
+
+| field | displayed | judgement |
+|---|---|---|
+| SITUATION | "In this morning's standup my manager skipped over my update…" | **matches** |
+| AUTOMATIC THOUGHT | "I thought: he has already decided I am not worth listening to…" | **matches** |
+| ALTERNATIVE THOUGHT | "A more balanced read: the standup was running long…" | **matches** |
+
+**3 of 3 correct.** R10a's desync was present throughout this arm anyway — the
+reply asked for step 1 again at banner-step 2, jumped to evidence (step 4) at
+banner-step 3, and asked for sadness intensity at banner-step 4 — but because
+the *user* followed the scaffold rather than the reply, the positional mapping
+held. That is the mechanism R12 was betting on, and the bet paid.
+
+### Arm 2 — conversation-followed (every entry answers the reply's closing question)
+
+| # | banner | what the reply asked for | entry (verbatim) |
+|---|---|---|---|
+| 1 | Step 1 | — (opening turn) | I sent my landlord a message about the broken heater four days ago and he still has not replied. |
+| 2 | Step 2 (automatic thought) | *"Let's identify the situation and see what happened next?"* → **step 1** | What happened next is that I texted him again on Wednesday and it showed as read, and then nothing came back. |
+| 3 | Step 3 (emotions) | *"What automatic thoughts are running through your mind right now?"* → **step 2** | The thought running through my mind is that he is ignoring me on purpose because he thinks I am a tenant who complains too much. |
+| 4 | Step 4 (evidence) | *"Let's examine the evidence for and against that thought?"* → **step 4** | Evidence for: he read the message and said nothing. Evidence against: he fixed the leak in March within a day, and his mother has been in the hospital this month. |
+| 5 | Step 5 (balanced thought) | *"What is the intensity of your emotion right now?"* → **step 3** | Right now the frustration is about a 6 out of 10, and underneath it there is a 4 of feeling small. |
+
+**History card, verbatim**
+(`docs/screenshots/2026-08-08/r13a-arm2-conversation-followed-history.png`):
+
+| field | displayed | judgement |
+|---|---|---|
+| SITUATION | "I sent my landlord a message about the broken heater four days ago…" | **matches** |
+| AUTOMATIC THOUGHT | "What happened next is that I texted him again on Wednesday…" | **mislabelled** — this is more *situation*; it is not a thought at all |
+| ALTERNATIVE THOUGHT | "Right now the frustration is about a 6 out of 10, and underneath it there is a 4 of feeling small." | **mislabelled** — this is an *emotion rating*; nothing about it is a balanced alternative thought |
+
+**2 of 3 mislabelled.** The user's actual automatic thought ("he is ignoring me
+on purpose…") *was* written, landed at position `[2]`, was stored as `emotions`,
+and **is not displayed anywhere on the card** — the one field a thought record
+exists to capture is silently dropped.
+
+### What the two arms say (recorded, not ruled)
+
+The two arms separate cleanly, which is exactly the outcome R13a was shaped to
+distinguish: **R12 did most of the work.** A user who takes the scaffold gets a
+correctly-labelled record; a user who follows the conversation — the behaviour
+R10a says the model invites on every turn — gets clinical labels over the wrong
+contents plus one dropped field. The residue is real but it is now conditional
+on a user behaviour the shipped UI actively steers away from, rather than on
+every guided session. **Ruling nothing per the item's instruction**; the next
+planning run owns whether that residue is a copy problem, a mapping problem, or
+acceptable.
+
+One observation for whoever prices it: the failure is quiet in the worst way —
+nothing on the card signals low confidence, so a mislabelled record reads
+exactly like a correct one.
+
+## R14 — a benign entry containing the word "cutting" fires the full crisis intervention (execute, 2026-08-08, CONFIRMED in code and on the live path)
+
+**Found on the R13a walk; unrelated to R13a and more severe.** Arm 1's fifth
+entry was:
+
+> A more balanced read: the standup was running long and he was **cutting**
+> everyone short, so this was about the clock and not about whether my work
+> matters to him.
+
+The model's reply was replaced by the crisis intervention ("I'm deeply concerned
+about what you've shared. Your life matters… **Call or text 988**…") **and** the
+"Immediate Support Available" modal auto-opened over the writing surface.
+Screenshot: `docs/screenshots/2026-08-08/r13a-crisis-false-positive-modal.png`.
+
+**Mechanism, read in the code.** `detectCrisis`
+(`src/utils/crisisDetection.ts:140`) tests every keyword with a bare
+`lowerText.includes(keyword)` — an unanchored substring test with no word
+boundary. `"cutting"` is a `HIGH_SEVERITY_KEYWORDS` entry (`:31`), so
+`"cutting everyone short"` scores `severity: "high"`,
+`recommendedAction: "immediate_help"`, the branch that suppresses the model
+reply entirely. Verified by isolating the keyword lists against the entry text:
+the sole match is `cutting`.
+
+This is not a one-off phrase. The same unanchored test makes ordinary journaling
+language fire the 988 wall: *cutting back on coffee*, *cutting corners*,
+*cost-cutting at work*, *cutting my hair*, *the team is cutting scope*. Other
+entries carry the same shape — `"ending it"` inside *ending it on a good note*,
+`"give up"` (medium) inside *I won't give up on this*, `"crisis"` (low) inside
+*the housing crisis*.
+
+**Why it matters now, specifically.** The app has been public and live since R4
+(2026-08-07) and the soft launch (F2) is the next thing to happen. A tester
+writing about cutting back on caffeine being told their life matters and to call
+a suicide hotline is the most likely single way this build loses a stranger's
+trust — and it is the *safety* surface doing it, the surface whose credibility
+costs the most to spend. Not a P0 by this initiative's definition (the journal
+exchange still completes), but it is the highest-severity open defect on the
+live app.
+
+**Deliberately NOT fixed this run.** `crisisDetection.ts` is a load-bearing
+safety surface and any change to it is gate-triggering; narrowing a matcher
+could in principle let a real signal through, so it needs a planner ruling and a
+gate read, not an execute-run patch. Filed with the mechanism and the
+reproduction so the ruling can be made on evidence.
+
+- [ ] 2026-08-08 · **R14a — Word-boundary the crisis keyword match** (PROPOSED —
+  needs a planner ruling before anyone starts; gate-triggering.) The shape that
+  is plausibly one-directional-safe: keep every list and every entry exactly
+  as-is, and change the **single-word** keyword tests from
+  `lowerText.includes(k)` to a word-boundary regex (`\b…\b`), leaving the
+  multi-word phrases on `includes` since they cannot false-positive the same
+  way. That strictly *shrinks* the matched set, which is why it needs a ruling
+  rather than a patch: it can also drop a real hit inside a compound
+  ("cuttingmyself"), so the ruling owes an explicit answer on
+  hyphen/punctuation handling and on whether any entry is intentionally a stem.
+  → **Verify:** every existing `crisisDetection` test still green with **no test
+  deleted or loosened**; new cases pinning both directions (*cutting everyone
+  short* → `none`; *I have been cutting again* → `high`); full 4-mode 3-seed gate
+  read at seeds 11/22/33 with `--referral-reprompt` ON, numbers vs the README
+  floors in the PR body. **A fresh generate read, not a `--rescore`** — the
+  crisis/referral trigger is on the replay rule's must-generate list.
