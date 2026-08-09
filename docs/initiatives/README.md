@@ -40,6 +40,17 @@ the planner no longer writes daily plan files).
    until M4 clears it; its feasibility signal comes free from M1's
    personalization rubric.
 
+**Priority updated 2026-08-08 (planner), because R4 fired.** The app is public
+and live at https://guzzler.github.io/QuietNote/ (re-verified from outside this
+run), which retires the "public-release before human-feedback until the app is
+live" ordering — that condition is met. **`human-feedback` is now the working
+initiative**: F2 ungated the moment the live URL existed, and zero humans have
+still used the app, which is the exact gap PHASE.md set `RELEASE` to close.
+`public-release` keeps two small items (R13a measurement, R14 copy) and is
+otherwise done. `model-quality` remains the **pacing** initiative for *sending*
+the soft-launch message — Sharang's 2026-07-12 bar gates the send, not the
+preparation, and F2 has always ended at "hand it to Sharang".
+
 `model-quality` is now the pacing initiative for the soft launch;
 `public-release` items (R1e, R2) stay workable in parallel since the release
 machinery is needed either way; `human-feedback` unblocks as noted in that

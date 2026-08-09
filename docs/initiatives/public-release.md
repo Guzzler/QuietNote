@@ -67,13 +67,27 @@ decisions, release gate, queue format).
   backend breaks on the live origin, the fix ladder is: `coi-serviceworker`
   shim (self-contained, privacy-neutral) → honest per-backend UI note. Never
   silently ship a broken backend picker.
-- **Repo is PRIVATE and stays private until release day** (Sharang deferred
-  the go-public flip on 2026-07-10; the loop must NEVER change visibility).
-  GitHub Free cannot serve Pages from a private repo → there is no live URL
-  yet. Everything below is built release-ready now and activates at
-  release day (see R4). Production behavior is verified locally via
-  `npm run build` + `npx vite preview` (serves `dist/` at the configured
-  `base`).
+- **~~Repo is PRIVATE and stays private until release day~~ — R4 FIRED
+  2026-08-07. The repo is PUBLIC, Pages is live, and the whole "dormant until
+  release day" frame above is now history** (kept because several items below
+  are only readable against it). **Re-verified from outside on 2026-08-08
+  (planner), not assumed:** `gh repo view` → `visibility: PUBLIC`,
+  `isPrivate: false`, `licenseInfo: MIT` (R6 is visible to GitHub, not just
+  present as a file); `gh api …/pages` → `html_url:
+  https://guzzler.github.io/QuietNote/`, `build_type: workflow`,
+  `source: main /`, `https_enforced: true`; an anonymous
+  `curl` of the live URL returns **200** and serves `index-*.js` /
+  `index-*.css` under `/QuietNote/`, so R1a's `base` is correct on the real
+  origin. **Two consequences the loop must now carry:** production behaviour is
+  verifiable on the live URL and no longer only via `vite preview`, and
+  **anything wrong in this repo is wrong in public** — which is how R14 below
+  was found. Repo *visibility* remains untouchable by the loop in both
+  directions: never flip it back either.
+- **Repo metadata is empty on a now-public repo (verified 2026-08-08):**
+  `gh repo view --json description,homepageUrl` returns `""` for both. A
+  stranger arriving from the in-app "open source" footer link (R3b) — which now
+  resolves for real — gets a repo with no one-line description and no link back
+  to the live app. Cheap, stranger-facing, and folded into R14.
 - **Deploy-gate re-verified against the live file 2026-07-27** (was
   2026-07-21 — unchanged): `.github/workflows/deploy.yml`'s `deploy` job
   (line 39) still carries `if: ${{ !github.event.repository.private }}`, so it
@@ -117,6 +131,8 @@ decisions, release gate, queue format).
 | R12 | The guided banner reads as the AI's question, which it never was — make the step a writing scaffold the user acts on | **DONE 2026-08-07 (PR #131)** — the step prompt is tappable in both branches (prefills the textarea, never a model input) and one line says whose the sequence is. No `src/prompts/` diff; R10a's desync is unchanged by design |
 | R4 | **Release-day activation (Sharang-triggered):** flip repo public → enable Pages (`gh api repos/Guzzler/QuietNote/pages -X POST -f build_type=workflow`) → deploy runs → live-URL smoke (all backends, full exchange, reload persistence) → release gate → hand to human-feedback F2 | **DONE 2026-08-07** — Sharang triggered it interactively. Repo is **public**, Pages enabled (`build_type=workflow`), deploy job un-gated itself and ran green, and **https://guzzler.github.io/QuietNote/ is live and smoked end-to-end** on a true fresh-origin cold start. See the R4 result below |
 | R6 | MIT LICENSE | **DONE 2026-08-07 (PR #132)** — on Sharang's direct interactive go |
+| R13a | Does the saved Thought Record match its labels? (measurement) | queued 2026-08-07, unblocked by R12 — **still the only open measurement** |
+| R14 | The public front page still says the app isn't live yet, and the repo has no description | queued 2026-08-08 (planner) — found by re-verifying R4's own outcome from outside |
 
 ## Task queue
 
@@ -160,6 +176,29 @@ measurement) in three walks. **Priority within the queue: R9 first** — it is
 the only one that loses user data. R11 is a one-string change and can ride
 along with anything. R10a is measurement and blocks no one.
 
+**Queue status (2026-08-08, planner — current): 2 open — R13a, then R14.**
+Order is deliberate and it is not severity order: R13a first because it is
+measurement of a defect that touches **stored user data** (a saved artifact
+whose clinical labels may not match its contents) and its answer is what the
+next ruling needs; R14 is a one-line copy fix plus one command, ships in
+minutes, and can ride along with anything. **This initiative is no longer the
+pacing one** — the app is live, so `human-feedback` (F2, F1b) is where the
+loop's remaining leverage is, per the README's priority order. Neither item
+here blocks that. Nothing else in this initiative is open: R4 and R6 are DONE,
+and the release gate remains unrun by deliberate record (see the R4 result).
+
+**Doc size, stated rather than quietly ignored (2026-08-08).** The README caps
+initiative docs at ~200 lines and this one is **841** after this run's prune
+(902 before, and that is with ~110 lines added — four shipped sections pruned to
+their durable facts: the 07-29 and 08-03 walks, the R9/R10/R11 rulings, and the
+R9/R10a/R11 item bodies). It is still 4× the cap. The remaining bulk is real
+evidence that is still load-bearing — R10a's result table (R13a reads it), the
+R4 smoke matrix (the only fresh-origin cold start ever recorded), the R2 matrix
+and the Ledger — so the next prune should take **the R2 matrix and the R1b
+smoke results**, both superseded by R4's live read, once R13a has closed. Not
+done this run because R13a is unanswered and the R2 matrix is what its result
+gets compared against.
+
 **Queue status (2026-08-07/08, execute — end of run): 1 open — R13a**, which
 this run unblocked by landing R12 (#131) and deliberately did **not** take: it
 is measurement, it blocks no one, and this run's 3-PR budget went to landing the
@@ -177,35 +216,18 @@ merged** — `gh pr merge` was denied by the environment's permission classifier
 so #128 is stacked on #127 and #129 on #128, and their bases retarget as each
 lands.
 
-**Queue-empty audit (2026-08-03, execute — `npm run build` (green) +
-`npm run test` (1203 green, 72 files) + `npx vite preview` on `:4173`, WebLLM
-default, Chromium via Playwright):** the only open checkboxes anywhere were
-M14 (PROPOSED, explicitly "do not start without a ruling" — and the planner's
-own 2026-08-02 ruling leaves it unqueued as a fix pending the next planning
-run's read of the M14a table) and F2 (gated on R4), so the queue-empty rule
-sent this run to an audit walk. Walked load → writing surface → first exchange
-→ second turn → reload persistence → session re-open. **The Playwright profile
-had no saved sessions this time** ("No saved sessions yet." on first paint), so
-unlike every walk since 07-21 this was a genuinely empty-journal start — the
-model still loaded from an existing Cache Storage entry, so it is an
-empty-IndexedDB walk, not a true first-download cold start; the fresh-profile
-download matrix stays the 2026-07-12 R2 read. Working: model reached ready with
-the R2b "~1.5 GB" size line and real progress (0% → 35% → 94% → ready, ~2 min);
-AI-limitations disclaimer + Crisis resources button above the transcript; mode
-strip in the shipped order; all four footer links carry the correct hrefs; a
-two-turn free-write exchange came back supportive, turn-aware and **distinct**
-(turn 2 picked up the new disclosure — being four hours away, doing the math on
-taking a week off — rather than restating turn 1), with **no quote artifact of
-any kind** (M11/M11b's rules holding on the live path) and **no M14 repeat**;
-the session survived a full reload and re-opened from the sidebar with both
-turns intact. **0 console errors** (one benign Chromium `powerPreference`
-WebGPU warning, crbug.com/369219127). Screenshots:
-`docs/screenshots/2026-08-03/`.
-
-**One defect found — filed as R5 (proposed) below:** the "Pick up where you
-left off" card splices the raw first 8 words of the previous entry into the
-middle of a sentence, producing ungrammatical, double-punctuated copy on the
-first screen a returning user sees.
+**Queue-empty audit 2026-08-03 (execute) — pruned 2026-08-08, full text in git
+history.** A queue-empty walk on `vite preview` (WebLLM default) that was the
+first **empty-IndexedDB** start since 07-21 (no saved sessions on first paint;
+the model still came from an existing Cache Storage entry, so not a true
+first-download cold start — that matrix stayed R2's until R4 finally produced a
+real one). Everything checked passed: R2b size line with real progress,
+disclaimer + Crisis button, correct footer hrefs, a distinct turn-aware
+two-turn exchange with **no quote artifact and no repeat**, reload persistence,
+0 console errors. Screenshots: `docs/screenshots/2026-08-03/`. **Its one defect
+became R5** — the continuity card splicing 8 raw words of the previous entry
+mid-sentence, on the first screen a returning user sees; fixed in PR #122 and
+confirmed grammatical on the live URL at R4.
 
 - [x] 2026-08-05 · **R7 — Land the default-engine swap, bump `tasks-genai`, and
   pin the default with a test** (DONE 2026-08-05, PR #125 — full detail, the
@@ -268,150 +290,45 @@ transcript; all four footer links correct; **0 console errors** (one benign
 Chromium `powerPreference` warning). Screenshots:
 `docs/screenshots/2026-08-05/audit-*.png`.
 
-### R9/R10/R11 cold rulings (planner, 2026-08-06) — all three CONFIRMED against the code
+### R9/R10/R11 cold rulings (planner, 2026-08-06) — all three CONFIRMED, all three SHIPPED
 
-Every claim below was re-read in `src/` this run, not taken from execute's
-report. The proposals were accurate; two corrections and one sharpening follow.
+Pruned 2026-08-08; the full rulings are in git history and the implementations
+in the Ledger rows (#127, #130, #129). **The parts that bind future work, kept:**
 
-**R9 — CONFIRMED, with the mechanism corrected.** Execute wrote that
-`src/App.tsx:279-283` "resets all three on every `currentId` change — so
-re-opening *any* guided session lands the user in Free Write at step 1." The
-effect (now at `:277-283`) resets the **three step counters** only;
-`journalingMode` is **not** in it. The observed Free-Write landing came from the
-reload: `journalingMode` is plain React state (`src/App.tsx:152`) that nothing
-persists, so a remount starts at `"freewrite"`. The distinction matters because
-it splits the defect in two, and **both halves are real**:
-- *After a reload* — mode is lost, so the guide disappears entirely.
-- *Without a reload*, switching sessions in the sidebar keeps the mode but
-  resets the counter to 1, so a 3-turn Thought Record re-opens showing
-  **"Step 1 of 5"** over a transcript that is plainly past step 1. Execute did
-  not see this case; it follows from the same effect and is arguably the more
-  confusing of the two.
-
-The severe half is confirmed exactly as filed: the structured `ThoughtRecord`
-is written only when `thoughtRecordStep > 5` (`src/App.tsx:287-318`, guarded by
-`thoughtRecordSaved` and requiring ≥5 user messages), and the counter is
-ephemeral — so a user who reloads mid-exercise can never reach the save
-condition for that session. **This is silent data loss in the one mode that
-most looks like real therapy work**, which outranks every cosmetic item here.
-
-**Fix shape DECIDED — persist the mode, *derive* the step. Do not persist the
-counters.** `Session` (`src/types.ts:20-31`) gains one optional field,
-`mode?: JournalingMode`, written when the session is created and read on
-`loadExisting` (`src/App.tsx:716-723`); `undefined` means `"freewrite"`, so
-every existing session in IndexedDB stays valid with no migration. The step is
-**computed from the stored transcript** — the count of user messages in the
-session, `+1`, which is exactly what the current increments produce
-(`:323-325`, `:506-508` bump once per send). Rationale, and it is not a
-preference: a derived step **cannot drift from the transcript**, and it makes
-the save condition reachable again on a resumed session — a restored 5-message
-Thought Record satisfies `> 5` on load and persists the artifact that is
-currently lost. Persisting three counters would fix the display and leave the
-data loss in place for any session that was already interrupted.
-
-**R10 — CONFIRMED, and it is structural exactly as described.** Verified this
-run: `getSystemInstruction(mode, contextBlock?, personalityDirective?)`
-(`src/prompts/systemPrompts.ts:191`) takes **no step argument**, and a
-repo-wide grep for the four `*_SEQUENCE` constants
-(`src/data/journalPrompts.ts:349-385`) returns **only** the three display
-components (`ThoughtRecordGuide`, `GratitudeGuide`, `CheckInGuide`) plus a
-comment in `conversationScripts.ts`. Nothing carries the step to the model. The
-banner and the reply are two independent processes and the desync is the
-default behavior, not a fluke — the same holds for Gratitude and Check-in.
-
-**No fix is queued this run, and that is deliberate.** Every real fix feeds the
-step into the prompt or the context block, which is **gate-triggering in the
-expensive way** (fresh 3-seed generate read, ~2.75 h) under the README's replay
-rule. Spending that on a desync measured **once**, on the **pre-R7 engine**
-that no stranger will use, would be buying a fix for an unpriced defect.
-Execute's own instinct — "re-measure on MediaPipe before pricing any fix" — is
-adopted as the ruling and queued as **R10a** below. The UI-only variant (hiding
-the banner during a reply) is **REJECTED now rather than parked**: it makes the
-contradiction harder to see without making the guidance true, which is the
-wrong trade for an app whose whole pitch is honesty.
-
-**R11 — CONFIRMED, and cheaper than execute priced it.** The note at
-`src/App.tsx:768-773` renders inside the loading card unconditionally, with no
-cache-awareness. Execute was right that its own numbers only partly support the
-complaint (5.6–13.3 s warm, ~40–60 s cold-process, the last uninstrumented).
-**Ruling: that uncertainty is an argument for fixing the copy, not for
-measuring first.** A sentence that is true for a warm reload and false the next
-morning is wrong for the case a returning stranger actually lives in, and no
-instrumented number changes the word "instantly". **Cache-detection is
-REJECTED** — reading Cache Storage to branch the copy is real code and a real
-failure mode (R1e already documents origins that skip the cache) for one line
-of text. The fix is one string that is true in every case.
-
-**Copy DECIDED (execute: use verbatim; the `{size}` interpolation stays exactly
-as it is today — `MODEL_DOWNLOAD_SIZES[runtimeId]`):**
-> First time: downloads the AI model ({size}) once, then it's stored on this
-> device. After that it loads from your device — a few seconds, no download.
-
-"a few seconds" covers the 5.6–13.3 s readings honestly and does not promise
-instant; "no download" is the claim that actually matters to someone on
-cellular, and it is unconditionally true once the cache exists.
+1. **Derived beats persisted for anything the transcript already implies.** R9
+   fixed the lost Thought Record by deriving the guided step from the stored
+   user-message count rather than persisting three counters — a derived step
+   *cannot* drift from the transcript, and it made the save condition reachable
+   on a **resumed** session, which persisting counters would not have done.
+   `Session.mode` is the one thing persisted, optional, `undefined` =
+   `"freewrite"`, no migration. R13a below is the open question about what that
+   saved artifact actually contains.
+2. **R10 is structural and remains unfixed by design.** `getSystemInstruction`
+   takes no step argument and the four `*_SEQUENCE` constants are imported only
+   by the three display components — nothing carries the step to the model.
+   Both cheap fixes were REJECTED (hiding the banner during a reply conceals the
+   contradiction without making the guidance true; dropping the sequences would
+   re-open the data loss R9 closed). R12 is what shipped instead; the full
+   reasoning is in the R10 fix ruling below.
+3. **"An unmeasured word is worth one string, not one instrument."** R11 shipped
+   the copy fix without first instrumenting cold-process load time: no number
+   changes whether "instantly" is true the next morning. Cache-detection to
+   branch the copy was REJECTED as real code with a real failure mode for one
+   line of text. The shipped sentence — "a few seconds, no download" — is now
+   the standard tester-facing copy inherits (see human-feedback's 08-08 share
+   message correction).
 
 - [x] 2026-08-06 · **R9 — Make guided sessions resumable, and stop losing the
-  Thought Record** (DONE 2026-08-06, PR #127 — see Ledger). Implement the
-  decided shape above, nothing more.
-  1. `src/types.ts` — add `mode?: JournalingMode` to `Session` (optional;
-     absent = `"freewrite"`, no migration).
-  2. `src/App.tsx` — write `mode: journalingMode` when a session is created in
-     `newSession`; in `loadExisting` (`:716-723`) restore it with
-     `setJournalingMode(s.mode ?? "freewrite")`.
-  3. Replace the three `useState` counters (`:153-155`) and the reset effect
-     (`:277-283`) with a **derived** step: the number of user messages across
-     `current.threads`, `+1`. Delete the three `set*Step((s) => s + 1)` calls at
-     `:323-325` and `:506-508` — the count moves on its own when the message
-     lands. Keep the `thoughtRecordSaved` ref guard as-is so the artifact is
-     still written once per session.
-  → **Verify:** (a) unit tests — a session with 3 stored user messages derives
-  step 4; a session with no `mode` derives `"freewrite"`; a restored 5-message
-  thoughtrecord session reaches the `> 5` save condition (this is the
-  data-loss regression test, and it must fail against today's code — check
-  that it does before writing the fix). (b) `npm run build` + `npm run test`
-  green. (c) On `npx vite preview`: start a Thought Record, send 2 entries,
-  **reload**, re-open from the sidebar — the mode strip must still read Thought
-  Record and the banner "Step 3 of 5"; then switch to another session and back
-  without reloading and confirm the banner does not fall back to step 1.
-  Screenshots to `docs/screenshots/<date>/`.
-  **Gate: NOT gate-triggering, and here is the reasoning.** No file on the
-  README's list is touched: no `src/prompts/`, no safety util, no
-  `evalRunner.ts`, and `buildMessages` is not edited. It does change *which*
-  system instruction a **resumed** session gets (`journalingMode` feeds
-  `getSystemInstruction` at `:384`/`:589`) — but that is restoring the mode the
-  user chose, i.e. making the shipped behavior match the four modes the gate
-  already reads separately, not altering any prompt or how messages are built.
-  **Hard guard:** if the implementation turns out to need an edit inside the
-  send path's message construction, `buildMessages`, or context assembly,
-  **stop and re-queue** — that is a different item with a different gate answer.
+  Thought Record** (DONE 2026-08-06, PR #127 — item body pruned 2026-08-08, in
+  git history; the shipped shape and its evidence are the Ledger row, and the
+  durable rule is kept fact 1 above.)
 
 - [x] 2026-08-06 · **R10a — Does the guided desync happen on the default
   engine?** (DONE 2026-08-06, PR #129 — **result section below**. Answer: yes,
   and worse than R10 recorded — see the table.) (measurement only — **no
-  `src/` diff**, no eval run, no fix.)
-  R10's single observation was on WebLLM, which R7 retired as the default. Price
-  the defect on what a stranger now gets before anyone spends a 3-seed generate
-  read on it. Production build on `npx vite preview`, Chromium via Playwright,
-  MediaPipe / Gemma 4 E2B (the post-R7 default — confirm `quietnote-runtime` is
-  absent or `mediapipe` before starting).
-  1. For **each** of the three guided modes (Thought Record, Gratitude,
-     Check-in): one session, **three** turns, one session per page load, entries
-     verbatim and recorded in the write-up so the run is repeatable.
-  2. After each send, record **the banner text as rendered** (the `Step N of M`
-     line and its prompt) and **the reply's closing question**, verbatim. Score
-     each turn `aligned` / `desynced` / `ambiguous`, and state the rule you
-     scored by — "the banner asks for X and the reply asks for Y" is a desync;
-     a reply that asks nothing is `ambiguous`, not aligned.
-  3. Record separately whether any **closing question repeats** a previous
-     turn's (that is the M14/M15 metric, and R10's original sighting had one).
-  → **Verify:** an **R10a result** section here with a 9-row table (mode × turn),
-  the desync count per mode, and one screenshot per mode into
-  `docs/screenshots/<date>/`. **Then stop — rule nothing and fix nothing.** If
-  the rate is high the next planning run prices the prompt-side fix against the
-  gate; if MediaPipe happens to track the sequence on its own, R10 may be a
-  WebLLM-era defect that R7 already closed, and that is worth knowing before
-  paying 2.75 h to find out.
+  `src/` diff**, no eval run, no fix.) Item body pruned 2026-08-08 (git
+  history); its **scoring rule is restated inside the result section below**,
+  which is the part that has to survive for the measurement to be repeatable.
 
 ### R10a result (2026-08-06, execute) — the desync reproduces on the default engine
 
@@ -482,17 +399,9 @@ shipped default rather than a single WebLLM-era sighting. Screenshots:
 `powerPreference`, WGSL subgroups).
 
 - [x] 2026-08-06 · **R11 — Drop "instantly" from the first-time note**
-  (DONE 2026-08-06, PR #128 — see Ledger).
-  Copy-only. In `src/App.tsx:768-773`, replace the sentence with the decided
-  copy above, verbatim — keep the `MODEL_DOWNLOAD_SIZES[runtimeId]`
-  interpolation, the `Lock` icon, the classes and the placement untouched. Do
-  **not** add cache detection or a second variant of the line. Check whether
-  `DownloadSizeHonesty.test.ts` asserts on the old wording and update the
-  assertion if so (the *size* pins must stay).
-  → **Verify:** `npm run build` + `npm run test` green; a grep for "instantly"
-  across `src/` returns nothing; screenshot of the loading card on
-  `npx vite preview` showing the new line with the MediaPipe size. Not
-  gate-triggering (loading-card JSX only, as R2b established).
+  (DONE 2026-08-06, landed as PR #130 — see Ledger; item body pruned 2026-08-08.
+  The shipped sentence is quoted in kept fact 3 above and pinned by a tree-wide
+  test, so the copy of record is the test, not this doc.)
 
 **R6 moved out of the queue 2026-08-05 (planner).** It sat open for two runs
 because execute is right to refuse it: its task file's standing rule ("never
@@ -537,33 +446,15 @@ spliced card without flagging it. "No defects found" means "none noticed".
 - [x] 2026-08-04 · **R5 — Quote the entry on the continuity card instead of
   splicing it** (DONE 2026-08-04, PR #122 — see Ledger)
 
-**Audit walk (2026-07-29, execute — `npm run build` (green) +
-`npm run test` (1099 green, 68 files) + `npx vite preview` on `:4173`, WebLLM
-default, Chromium via Playwright):** at run start the only open queue item
-anywhere was F2 (gated on R4), so the queue-empty rule sent this run to an
-audit walk; the planner pushed M9/M10 to `main` mid-walk (commit 470d711),
-which the run then picked up and worked. The walk's finding stands either way.
-Walked load → writing surface → first exchange → second turn →
-reload persistence → session re-open. Working: model loaded from cache with no
-errors; the AI-limitations disclaimer + Crisis resources button render above
-the transcript; mode strip in the shipped order; all four footer links carry
-the correct hrefs; the new session persisted through a full reload (sidebar
-"Today felt heavy." / "Worked through sad feelings around relationships." +
-"Pick up where you left off" card + fully restored two-turn transcript on
-re-open, which also confirms the reply text is what is stored in IndexedDB).
-**0 console errors** (one benign Chromium `powerPreference`-ignored WebGPU
-warning, crbug.com/369219127).
-**One defect found — filed as model-quality M11 (proposed):** both assistant
-replies opened with a stray unmatched `"` (`"Feeling guilty about letting your
-friend down…`, `"Staying late at work and skipping dinner…`) — 2/2 turns, and
-persisted, so it is in the reply text, not a render artifact. Also observed
-(not a new item — existing echo/parroting evidence for M1/M4): turn 2 ignored
-the new disclosure ("scared of being seen as replaceable") and restated turn
-1's content. Same scope caveat as 07-21/07-22/07-26/07-27: the Playwright
-profile was persistent (prior sessions present), so this was a returning-user
-walk, not a true fresh-profile cold start — the fresh-profile matrix stays the
-2026-07-12 R2 read, to be re-run on the live URL at R4. Screenshots:
-`docs/screenshots/2026-07-29/`.
+**Audit walk 2026-07-29 (execute) — pruned 2026-08-08, full text in git
+history.** Same shape as the walks above (`vite preview`, WebLLM default,
+persistent profile → a returning-user walk, 0 console errors, disclaimer +
+Crisis button + footer hrefs + reload persistence all correct). **Its one
+defect is the reason it is kept at all:** both assistant replies opened with a
+stray unmatched `"`, 2 of 2 turns and *persisted*, so it was in the reply text
+rather than the renderer — filed as model-quality **M11**, since fixed, and the
+R7 and 08-03 walks have both since confirmed no quote artifact of any kind on
+the live path.
 
 **Superseded audit walks (2026-07-21 / 07-22 / 07-26 / 07-27, execute) — pruned
 2026-08-04 and 2026-08-05, full text in git history.** All four were queue-empty walks on
@@ -881,6 +772,66 @@ below measures it right after R12 lands, and the next planning run rules.
   the conversation-followed run mislabels, R12 has already done most of the work
   and the residue is a copy problem; if both misalign, the mapping itself is
   wrong and needs replacing with something that does not assume order.
+
+## R14 — the release shipped, and the front page still says it hasn't (planner, 2026-08-08)
+
+Found by doing step 3 of this run's job on R4 itself: verifying a *completed*
+increment's outcome against the outside world rather than trusting its own
+result table. R4's table records nine PASSes on the live app and none of them
+looked at what the repo says about the app.
+
+**`README.md:5` reads, today, on a public repo:**
+`**Live app:** ` + a *backticked* URL + ` *(activating at release)*`.
+
+Two defects in one line. The hedge is **false** — the app activated on 08-07 and
+returns 200. And the URL is in code backticks rather than a link, so the single
+most important click on the page **isn't a click at all**. R3a wrote the hedge
+deliberately (Ledger, 2026-07-10: "live-URL line marked 'activating at
+release'"), and it was correct for 28 days; R4's item even says "R4 unmarks the
+URL" (`human-feedback.md:52`). Nothing unmarked it, because R4 was executed
+interactively rather than as a queued item with a verification block — which is
+the process lesson worth keeping: **an interactively-fired increment skips the
+loop's own verification, so its doc consequences have to be swept afterwards.**
+
+**Copy DECIDED (execute: use verbatim, replacing line 5 entirely):**
+> **Live app:** [https://guzzler.github.io/QuietNote/](https://guzzler.github.io/QuietNote/) — runs in Chrome or Edge; the first visit downloads the model (~2.0 GB) once.
+
+The size and the browser requirement move up to the one line a stranger is most
+likely to act on, because that click starts a 2 GB download. Both facts are
+already in the README further down and in the app itself (R2b's card) — this is
+the same disclosure, before the click instead of after it. `~2.0 GB` is
+`MODEL_DOWNLOAD_SIZES.mediapipe` and must be re-read off
+`src/inference/types.ts` at write time, not copied from here.
+
+**Repo metadata DECIDED** (`gh repo edit`, not a file — see the scope note):
+- description: `A private AI journal that runs entirely in your browser. The model downloads to your device; nothing you write is ever sent to a server.`
+- homepage: `https://guzzler.github.io/QuietNote/`
+
+- [ ] 2026-08-08 · **R14 — Unmark the live URL, and give the public repo a
+  description.** Two parts, one PR plus one command.
+  1. `README.md:5` — replace the whole line with the decided copy above,
+     verbatim. Re-read the size off `src/inference/types.ts`
+     (`MODEL_DOWNLOAD_SIZES.mediapipe`) and use what is actually there; if it
+     no longer says `~2.0 GB`, use the real value and say so in the PR body.
+     Then grep `README.md` for any other "activating"/"at release"/"once the
+     repo is public" hedge and fix the same way — the release happened, the
+     whole document should read as though it did.
+  2. Repo metadata, **after** the README lands:
+     `gh repo edit Guzzler/QuietNote --description "…" --homepage "https://guzzler.github.io/QuietNote/"`
+     with the decided description verbatim.
+  **Scope guards.** Part 2 is a repo-settings write, so state the boundary
+  plainly: `--description` and `--homepage` **only**. Do **not** pass any other
+  flag, and specifically nothing touching visibility, features, merge settings,
+  or topics. Visibility is Sharang's in both directions and the loop never
+  touches it. If `gh repo edit` fails or asks for anything beyond these two
+  fields, **stop and report it** — leave it for Sharang rather than working
+  around it. No `src/` diff in this item at all.
+  → **Verify:** `README.md:5` renders as a real markdown link (check the
+  rendered file on github.com, not just the source) and the word "activating"
+  appears nowhere in `README.md`; `gh repo view Guzzler/QuietNote --json
+  description,homepageUrl` returns both non-empty and matching the decided
+  strings; `npm run build` + `npm run test` green. **Not gate-triggering** — no
+  `src/`, no prompts, no send path, no safety util, no `evalRunner.ts`.
 
 **What R12 does not claim.** It does not make the model follow the sequence, and
 it is not a substitute for that if the sequence is ever meant to be binding. It

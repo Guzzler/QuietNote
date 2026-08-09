@@ -9,11 +9,28 @@ prefilled or attached to anything. Rules of engagement:
 
 ## Grounding (verified 2026-07-10 — planner: re-verify before editing)
 
-- **Repo is PRIVATE until release day** (go-public deferred 2026-07-10;
-  Sharang's trigger — see public-release R4). Issue templates and the in-app
-  `issues/new` link are built now but stay **dormant for outsiders** until
-  the flip; the `mailto:` link works regardless. Owner email:
-  sharangpaiusa@gmail.com.
+- **~~Repo is PRIVATE until release day~~ — THE REPO IS PUBLIC AND THE APP IS
+  LIVE (R4 fired 2026-08-07; re-verified from outside 2026-08-08, planner).**
+  `gh repo view` returns `visibility: PUBLIC`, `licenseInfo: MIT`;
+  `gh api repos/Guzzler/QuietNote/pages` returns
+  `html_url: https://guzzler.github.io/QuietNote/`, `build_type: workflow`,
+  `https_enforced: true`; an anonymous `GET` of that URL returns **200** with
+  the correct `/QuietNote/` asset paths. **This initiative is no longer gated
+  on anything but Sharang's decision to send the message.** The issue templates
+  and the in-app `issues/new` link are live for outsiders; the `mailto:` link
+  works as it always did. Owner email: sharangpaiusa@gmail.com.
+- **The chooser check F1/F1a deferred to R4 is NOT machine-verifiable by the
+  loop, and that is now a finding rather than a pending step (2026-08-08).**
+  `https://github.com/Guzzler/QuietNote/issues/new/choose` returns **302 to the
+  login page** for an anonymous request, and a token in an `Authorization`
+  header does not authenticate GitHub's *web* UI either — it redirects the same
+  way. So "do both templates render in the chooser, and does GitHub accept the
+  `mailto:` contact link" can only be answered by a logged-in human. It is one
+  click for Sharang and is filed under **Blocked on Sharang** as a micro-check,
+  not queued. What the loop *can* assert is already asserted:
+  `FeedbackChannelGuards.test.ts` parses both templates as YAML and pins the
+  corrected F1a label, and `config.yml`'s contact link is a bare `mailto:` with
+  no query string.
 - The app footer already carries the single privacy indicator (lock + "stay
   on this device", Track A3); Settings has row-style entries (A3's
   "Privacy & your data" row is the pattern to copy for a feedback row).
@@ -65,7 +82,8 @@ it ships correct the moment R4 lands:
 |---|---|---|
 | F1 | Feedback channel: issue templates + in-app "Share feedback" link-out | DONE (PR #85) — one copy defect found 2026-07-23, filed as F1a |
 | F1a | Issue templates point testers at "Settings → engine"; the picker is in the Privacy dashboard | DONE (PR #109) |
-| F2 | Soft-launch kit: tester one-pager + share message for Sharang | gated on public-release R4 (needs the live URL; download sizes come from R1b) |
+| F2 | Soft-launch kit: tester one-pager + share message for Sharang | **UNGATED 2026-08-08** — R4 fired 08-07, the live URL exists and is verified 200. Queued below |
+| F1b | Re-check the shipped feedback path from the live origin (the half of F1's "re-check at R4" the loop can actually do) | queued 2026-08-08 |
 | F3 | Field-notes intake convention + weekly issue→field-note triage | after first feedback exists |
 | F4 | Feedback-driven iteration: human reports outrank queue items | activates with F3 |
 
@@ -81,11 +99,47 @@ it ships correct the moment R4 lands:
   templates** (DONE 2026-07-23, PR #109 — see Ledger. Chooser rendering
   stays unverifiable until the repo is public — re-check at R4 with the
   rest of F1.)
-- [ ] gated on public-release R4 · **F2 — Soft-launch kit**: write
-  `docs/beta/WELCOME.md` per the decided outline below, linked from README;
-  include a short copy-paste share message for Sharang in the PR body and
-  the ntfy notification ("ready to share"). Sharing with testers is
-  **Sharang's action, not the loop's**.
+- [ ] 2026-08-08 · **F2 — Soft-launch kit** (**ungated** — R4 fired 2026-08-07;
+  `docs/beta/` does not exist yet, verified this run). Write
+  `docs/beta/WELCOME.md` per the decided outline below — which is a spec, not a
+  draft: follow its six sections in order, in its stated tone, under ~80 lines,
+  no screenshots. Then link it from `README.md` in the "An honest note on what
+  this is" area as one plain line (`If you're one of the first testers, start
+  with [the welcome note](docs/beta/WELCOME.md).`). Put the decided share
+  message below **verbatim** in the PR body and a pointer to it in the ntfy
+  notification. **Sharing with testers is Sharang's action, never the loop's** —
+  do not open a discussion, post anywhere, or email anyone.
+  **Standing rule that has already bitten once:** re-read the three download
+  sizes off `src/inference/types.ts` (`MODEL_DOWNLOAD_SIZES`) and the mode
+  labels/order off `JournalingModeSelector.tsx` at write time rather than
+  copying them from the outline. (Planner re-checked both this run: sizes are
+  still `~1.5 GB` / `~3.2 GB` / `~2.0 GB` with **mediapipe the default**, so
+  §2's numbers are correct as written — check anyway, cheaply.)
+  → **Verify:** the file exists at `docs/beta/WELCOME.md` and covers all six
+  sections; the live URL in it is `https://guzzler.github.io/QuietNote/` with
+  **no "activating at release" hedge** (R14 removes the same hedge from the
+  README — if R14 has not landed, say so in the PR rather than editing line 5
+  twice); every number in it matches `src/inference/types.ts`; `npm run build`
+  and `npm run test` green (docs-only, but the README link must not break any
+  link test). **Not gate-triggering** — no `src/`, no prompts, no safety util.
+
+- [ ] 2026-08-08 · **F1b — Re-check the feedback path from the live origin.**
+  F1 and F1a both deferred a "re-check at R4" that has now half arrived: the
+  repo is public, so the in-app links resolve for a stranger for the first time.
+  Do the half the loop can do, on **https://guzzler.github.io/QuietNote/**
+  itself (not `vite preview` — the point is the deployed origin), Chromium via
+  Playwright: confirm the footer renders all four `·`-separated links, that
+  "Share feedback" href is `…/issues/new/choose` and "open source" is the repo
+  root, and that **both now return a real GitHub page rather than a 404** when
+  followed anonymously (the accepted dormancy R3b recorded has ended — check it
+  actually ended). Record the `mailto:` href verbatim without opening it.
+  → **Verify:** an **F1b result** note here with the four hrefs as read from the
+  live DOM, the HTTP status of the two GitHub links followed logged-out, and one
+  screenshot of the live footer into `docs/screenshots/<date>/`. **Measurement
+  only — no `src/` diff.** If a link 404s or the chooser errors, file it as a
+  proposed item; do not fix it in the same run. Note in the write-up that the
+  chooser's *rendering* stays unverifiable logged-out (302 to login) — that
+  piece is Sharang's one-click check, below.
 
 **Decided (2026-07-14) — F2 WELCOME.md outline (execute: follow this
 structure; sizes/requirements are the measured values, re-check against the
@@ -144,18 +198,45 @@ DM as-is, ~110 words, no links besides the two the tester needs:
 > https://guzzler.github.io/QuietNote/
 >
 > Two things to know before you open it: you'll need Chrome or Edge on a
-> laptop, and the first visit downloads about 2 GB (one time, then it's
-> instant) — so do it on Wi-Fi.
+> laptop, and the first visit downloads about 2 GB — one time, then it loads
+> from your device with no download — so do it on Wi-Fi.
 >
 > Write about something real if you can, and go a few messages back and
 > forth. Then tell me where it felt off. Rough edges are expected — that's
 > the point of asking you.
+
+**Copy correction 2026-08-08 (planner) — the share message promised the thing
+R11 removed from the app.** As decided on 2026-07-23 it read "one time, then
+it's instant". Three weeks later R11 (PR #130) ruled that exact word out of the
+product: a load that takes 5.6–13.3 s warm and ~40–60 s from a cold browser
+process is not instant, and the app's loading card now says "a few seconds, no
+download" — with a test that fails if the banned word reappears anywhere under
+`src/`. A tester-facing message that still promised instant would have been the
+one piece of shipped copy contradicting the guarantee, and it would have been
+the *first* thing every tester read. Rewritten above to make the claim that is
+actually true and actually matters on cellular — **no download** — without
+promising a speed. **This is the same standard R2a, R2b and R11 were held to,
+applied to copy the loop writes for a human to send.** Standing consequence:
+any future tester-facing copy inherits the `src/` honesty guards; the guards
+are the spec, not just a test.
 
 Notes for execute: the URL line stays exactly as-is (it's live by the time
 this is sent — R4 precedes F2); do **not** add a deadline, a feedback form
 link, or anything that reads like a survey invite — the in-app footer link
 and `WELCOME.md` §6 carry the reporting path. Do not name the model or the
 engine; testers don't need it, and §2 of WELCOME.md covers alternates.
+
+**Queue status (2026-08-08, planner): 2 open — F2 and F1b, and this initiative
+is now the pacing one.** R4 fired on 08-07, which removes the only gate F2 ever
+had. `public-release` has exactly one open item (R13a, measurement, blocks
+nobody), so the loop's centre of gravity moves here: the app is live and **zero
+humans have used it**, which is the condition PHASE.md set `RELEASE` to fix.
+**On the model-quality blocker, read precisely:** Sharang's 2026-07-12 ruling
+gates *the soft launch* — i.e. sending the message — on the 10-turn quality bar,
+and that bar is still unmet. It does not gate *preparing the kit*, and F2 has
+always ended at "hand it to Sharang". Writing `WELCOME.md` publishes nothing and
+shares nothing with nobody. What ships is a file in a repo that is already
+public. Sending stays his call, in **Blocked on Sharang**, exactly as before.
 
 **Queue status (2026-07-23, execute): F1a shipped (PR #109) — the queue is
 back to zero open non-gated items across all three initiatives; F2 remains
@@ -175,4 +256,18 @@ task (outline corrected, share message decided) the moment R4 lands.
 ## Blocked on Sharang
 
 - **Sharing the link with testers** (after F2 + the release gate pass) — the
-  loop prepares; Sharang sends.
+  loop prepares; Sharang sends. **Now the only thing standing between a live app
+  and its first human user.** The kit is being written this cycle (F2); the
+  message is decided and corrected, verbatim above. Two things to weigh when you
+  decide: your own 2026-07-12 ruling gates this on the 10-turn quality bar,
+  which is **still unmet**, and R10a measured the guided modes at **0 of 7**
+  turns aligned — Free Write is the surface that has been walked repeatedly and
+  is the one that holds up. Sending to 5–10 people who know it's rough is a
+  legitimate reading of that; so is waiting for M4. The loop won't decide it.
+- **One-click check only you can do: does the issue-template chooser render?**
+  Open https://github.com/Guzzler/QuietNote/issues/new/choose while logged in
+  and confirm you see the two forms plus the "Prefer email?" contact link. The
+  loop cannot see this page — logged-out it 302s to the login screen, and a
+  token doesn't authenticate GitHub's web UI (verified 2026-08-08). This is the
+  last unverified piece of F1/F1a. If a form is missing, GitHub rejected its
+  YAML and it becomes a queue item.

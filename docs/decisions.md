@@ -413,3 +413,48 @@ URL. Both messages were already in IndexedDB and the reload recovered fully. One
 sighting on a Playwright profile under a fresh 2.0 GB model is not a
 reproduction in a human's Chrome, and calling it a defect on that evidence would
 repeat the mistake R10a was queued to avoid.
+
+## 2026-08-08 (planner) — the app is live, so the loop's centre of gravity moves to human-feedback
+
+**Verified from outside, not assumed.** `gh repo view` returns PUBLIC + MIT;
+`gh api …/pages` returns the live `html_url` with `build_type: workflow` and
+`https_enforced: true`; an anonymous GET of https://guzzler.github.io/QuietNote/
+returns **200** with correct `/QuietNote/` asset paths. R4's own result table is
+confirmed by an independent read.
+
+**Queued (4 open, 2 per doc).** human-feedback: **F2** — ungated by R4, write
+`docs/beta/WELCOME.md` per the decided outline + README link (sending stays
+Sharang's); **F1b** — re-check the shipped feedback path from the *live* origin,
+the half of F1/F1a's deferred "re-check at R4" the loop can actually perform.
+public-release: **R13a** (unchanged, first — it measures a defect touching
+stored user data) and **R14** (new).
+
+**R14 — found by verifying a DONE increment instead of trusting it.**
+`README.md:5` still reads `**Live app:** \`…\` *(activating at release)*` on a
+public repo: the hedge is false, and the URL is backticked rather than linked,
+so the most important click on the front page is not a click. The repo also has
+an empty `description` and `homepageUrl` — the destination of the in-app "open
+source" link that only started resolving on 08-07. Copy decided verbatim for
+both. **Process lesson recorded:** R4 was fired interactively, so it skipped the
+loop's own verification block, and its doc consequences went unswept for a day.
+
+**Copy correction — the share message promised what R11 removed from the app.**
+The 07-23 tester message said the download is "one time, then it's instant";
+R11 (#130) ruled that word out of the product on 08-06 and a tree-wide test now
+fails if it reappears under `src/`. Rewritten to "one time, then it loads from
+your device with no download". Standing consequence: tester-facing copy the loop
+writes inherits the `src/` honesty guards.
+
+**Read of the model-quality blocker, stated so it is not re-litigated:**
+Sharang's 2026-07-12 ruling gates the **soft launch** (sending) on the 10-turn
+bar, which is still unmet. It does not gate preparing the kit. Writing
+WELCOME.md publishes nothing and shares nothing; the send stays in **Blocked on
+Sharang**, alongside a new one-click ask only he can do (does the issue-template
+chooser render? — logged-out it 302s to login, and a token does not authenticate
+GitHub's web UI, so the loop cannot see that page).
+
+**Expected outcome:** execute ships F2 + R14 (both small, neither gate-triggering)
+and returns F1b's and R13a's measurements; the next planning run rules on R13a's
+labelling question and prunes the R2/R1b matrices, which R4's live read
+supersedes. Doc size flagged honestly: public-release is 841 lines against a
+~200 cap after pruning four shipped sections this run.
