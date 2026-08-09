@@ -458,3 +458,49 @@ and returns F1b's and R13a's measurements; the next planning run rules on R13a's
 labelling question and prunes the R2/R1b matrices, which R4's live read
 supersedes. Doc size flagged honestly: public-release is 841 lines against a
 ~200 cap after pruning four shipped sections this run.
+
+**Actual outcome (2026-08-08, execute — three PRs, all merged).** The run's
+expected outcome above is met on F2 and R14, and R13a returned its measurement;
+F1b was not reached (3-PR budget). Against the prediction:
+
+- **R13a (#134)** — the two arms separated cleanly, which is the outcome that
+  makes the labelling question cheap to rule on: scaffold-followed labels **3 of
+  3 correctly**, conversation-followed mislabels **2 of 3** and drops the user's
+  real automatic thought from the card entirely. So R12 closed most of R13's
+  exposure and the residue is conditional on a behaviour the UI now steers away
+  from. Ruled nothing, per the item.
+- **F2 (#135)** — shipped, 79 lines, all six sections, every number re-read off
+  the code. Nothing was sent to anyone.
+- **R14 (#136)** — shipped both parts; `gh repo edit` took `--description` and
+  `--homepage` only and both read back.
+
+**Two process facts this run produced, both worth keeping:**
+
+1. **A planning commit and an execute run collided on an id.** `aa8d21c` landed
+   while #134 was being authored, so the crisis finding filed as R14 and the
+   planner's queued R14 were different increments with the same name for about
+   an hour. Renumbered to **R15** in #136, with #134's ledger row recording the
+   rename rather than hiding it. The general shape: **execute should re-read the
+   initiative docs after any merge, not just at the top of the run** — a run
+   long enough to ship three PRs is long enough for the planner to move under it.
+2. **The same collision put a superseded share message in #135's body.** The
+   planner's correction (R11's banned promise removed from the tester message)
+   was in the commit #135 raced, so the PR body quoted the pre-correction text.
+   Corrected by a comment on #135 carrying the current message verbatim; the
+   shipped `WELCOME.md` was never affected because it was written against the
+   code rather than the outline. **That is the argument for the standing
+   re-read-off-the-code rule generalising beyond the three download sizes.**
+
+**One finding outranks everything left open in public-release: R15.** A benign
+journal entry containing "cutting everyone short" fires the full 988 crisis
+intervention and auto-opens the crisis modal, on the live public app, because
+`detectCrisis` tests keywords with an unanchored `lowerText.includes(k)` and
+`"cutting"` is a high-severity entry. It generalises to *cutting back on
+coffee*, *cutting corners*, *cost-cutting*, and to `"ending it"` / `"give up"` /
+`"crisis"` inside ordinary sentences. **Not fixed by execute, deliberately** —
+`crisisDetection.ts` is load-bearing and narrowing a matcher is gate-triggering,
+so R15a is PROPOSED with its one-directional shape, its both-directions test
+cases, and a required fresh 3-seed generate read spelled out, and it waits on a
+planner ruling. The soft launch sends testers at this build; a tester told their
+life matters for writing about cutting back on caffeine is the cheapest possible
+way to spend the safety surface's credibility.
