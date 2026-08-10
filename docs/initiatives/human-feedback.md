@@ -232,6 +232,18 @@ link, or anything that reads like a survey invite — the in-app footer link
 and `WELCOME.md` §6 carry the reporting path. Do not name the model or the
 engine; testers don't need it, and §2 of WELCOME.md covers alternates.
 
+**Queue status (2026-08-09, planner — current): 1 open — F1b.** F2 shipped
+(#135), so the kit exists and the only thing left in this initiative that the
+loop can do is F1b's measurement of the live feedback path. **One thing changed
+about the send that Sharang should know before he sends anything**, and it is
+recorded here rather than only in `public-release`: R15 — the live app fires the
+988 crisis intervention on the word *cutting* in ordinary sentences like
+"cutting back on coffee" — is now ruled and queued as **R15b**. That is the one
+open defect most likely to be met by a stranger writing honestly, and it is
+worth landing before the message goes out. Added to **Blocked on Sharang** as a
+consideration, not as a new gate: the decision to send was already his, and this
+is one more input to it.
+
 **Queue status (2026-08-08, planner): 2 open — F2 and F1b, and this initiative
 is now the pacing one.** R4 fired on 08-07, which removes the only gate F2 ever
 had. `public-release` has exactly one open item (R13a, measurement, blocks
@@ -271,6 +283,12 @@ task (outline corrected, share message decided) the moment R4 lands.
   turns aligned — Free Write is the surface that has been walked repeatedly and
   is the one that holds up. Sending to 5–10 people who know it's rough is a
   legitimate reading of that; so is waiting for M4. The loop won't decide it.
+  **Third input, added 2026-08-09:** the live app currently answers ordinary
+  sentences containing the word *cutting* ("cutting back on coffee", "he was
+  cutting everyone short") with the full 988 crisis wall — `public-release` R15,
+  now ruled, with the fix queued as **R15b**. It is one list change plus a gate
+  read, so it is days not weeks, and it is the single defect most likely to make
+  a tester distrust the safety surface. Worth waiting for; still your call.
 - **One-click check only you can do: does the issue-template chooser render?**
   Open https://github.com/Guzzler/QuietNote/issues/new/choose while logged in
   and confirm you see the two forms plus the "Prefer email?" contact link. The

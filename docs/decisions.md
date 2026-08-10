@@ -504,3 +504,48 @@ cases, and a required fresh 3-seed generate read spelled out, and it waits on a
 planner ruling. The soft launch sends testers at this build; a tester told their
 life matters for writing about cutting back on caffeine is the cheapest possible
 way to spend the safety surface's credibility.
+
+## 2026-08-09 (planner) — R15a REJECTED as a non-fix; R15b is the fix; R13b rules the R13a residue
+
+**R15a REJECTED, and measured before ruling rather than argued.** The proposal
+was to word-boundary the single-word crisis keywords. It does not fix R15: the
+reproduction is "he was cutting everyone short", where `cutting` is a standalone
+word that `\bcutting\b` matches exactly as `includes` does. Running both matchers
+over the 13 single-word keywords in `crisisDetection.ts:17-62` against R15's
+reproduction plus every false positive it listed: **14 of 15 probes identical**.
+The one change is "my anxiousness is high" losing `anxious` — a low-severity,
+`show_resources` keyword that never suppresses a reply. R15a would have spent a
+~2.75 h 3-seed generate read to change one gentle false positive while leaving
+the 988 wall firing on every case it was filed for, and it would also have
+stopped matching the "cuttingmyself" compound the item itself worried about.
+
+**R15b queued as the fix.** The false positives share not a word shape but a
+direction: the cutting is not aimed at the writer. So it is a data change, not a
+matcher change — drop the bare `"cutting"` entry (the only HIGH/CRITICAL keyword
+that is also a common benign English verb) and add seven self-directed phrases
+that the existing `includes` already handles. Scoped to the `immediate_help`
+tier only; medium/low keep firing broadly on purpose, because a false positive
+there costs a gentle appended line and one at `immediate_help` throws the 988
+modal over the writing surface. Expected outcome: R15's verbatim sentence scores
+`none`, "I have been cutting again" still scores `high`, and the residue in both
+directions is written into the PR body rather than hidden.
+
+**Gate cost ruled with it.** `detectCrisis` is in the eval harness
+(`scripts/run-eval.ts:374` feeds it to the referral-reprompt trigger), so R15b is
+on the replay rule's must-generate list by default. But that rule's condition is
+checkable: if diffing old-list vs new-list `isCrisis` over every user turn in
+every eval case shows **zero** changes, the generator is provably unchanged and a
+`--rescore` satisfies the gate. Discharging the precondition with a measurement
+is not weakening the rule.
+
+**R13a residue RULED: a display problem, queued as R13b.** The positional map at
+`App.tsx:292-311` cannot be made semantic without inferring meaning from free
+text, which is not a thing to start doing to a stored clinical artifact — so not
+a mapping fix. The sharper finding this run is that `ThoughtRecordHistory.tsx`
+renders only **3 of the 5** captured entries, which is why arm 2's real automatic
+thought was invisible rather than merely mislabelled. R13b renders all five and
+re-heads them with the question each answer was written against — a claim the app
+can support — instead of clinical assertions about the content.
+
+Also corrected: the `*_SEQUENCE` line reference in the public-release grounding
+(`349-385` → `362-398`, re-read this run).

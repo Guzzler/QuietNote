@@ -51,6 +51,14 @@ otherwise done. `model-quality` remains the **pacing** initiative for *sending*
 the soft-launch message — Sharang's 2026-07-12 bar gates the send, not the
 preparation, and F2 has always ended at "hand it to Sharang".
 
+**Amended 2026-08-09 (planner): one `public-release` item jumps the whole
+order — R15b.** The safety-relevant rule below ("safety-relevant reports outrank
+everything") was written for *human* reports, but its reason applies identically
+to a defect the loop found on the live app: R15 fires the 988 crisis
+intervention on the word *cutting* in benign sentences, on a public build about
+to be handed to strangers. R15b is the ruled fix and is the top item anywhere in
+the initiatives. `human-feedback` remains the working initiative behind it.
+
 `model-quality` is now the pacing initiative for the soft launch;
 `public-release` items (R1e, R2) stay workable in parallel since the release
 machinery is needed either way; `human-feedback` unblocks as noted in that

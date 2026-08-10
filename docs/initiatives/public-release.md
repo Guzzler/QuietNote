@@ -49,7 +49,8 @@ decisions, release gate, queue format).
   so nothing survives a reload, and the effect at `:277-283` resets the three
   counters on every `currentId` change. `getSystemInstruction`
   (`src/prompts/systemPrompts.ts:191`) takes no step argument, and the four
-  `*_SEQUENCE` constants (`src/data/journalPrompts.ts:349-385`) are imported
+  `*_SEQUENCE` constants (`src/data/journalPrompts.ts:362-398` — line numbers
+  re-read 2026-08-09; the doc said `349-385`, which drifted) are imported
   **only** by the three guide display components. This is the shared root of
   R9 and R10.
 - 3 backends: WebLLM (Gemma 2 2B, WebGPU), Transformers.js v4 (Gemma 4 E2B
@@ -133,7 +134,10 @@ decisions, release gate, queue format).
 | R6 | MIT LICENSE | **DONE 2026-08-07 (PR #132)** — on Sharang's direct interactive go |
 | R13a | Does the saved Thought Record match its labels? (measurement) | queued 2026-08-07, unblocked by R12 — **still the only open measurement** |
 | R14 | The public front page still says the app isn't live yet, and the repo has no description | **DONE 2026-08-08 (PR #136)** — decided copy verbatim, "activating" gone from `README.md`, description + homepage set |
-| R15 | A benign entry containing "cutting" fires the full 988 crisis intervention (unanchored substring match) | FILED 2026-08-08 (execute, found on the R13a walk) — mechanism confirmed in code; fix is **R15a**, PROPOSED and gate-triggering, awaiting a planner ruling |
+| R15 | A benign entry containing "cutting" fires the full 988 crisis intervention (unanchored substring match) | FILED 2026-08-08 (execute, found on the R13a walk) — mechanism confirmed in code and **re-confirmed by the planner 2026-08-09**; defect is real and is the highest-severity open item on the live app |
+| R15a | Word-boundary the crisis keyword match | **REJECTED 2026-08-09 (planner)** — measured: it does not fix R15 or any false positive R15 listed. Every one of them uses the keyword as a whole word. See the ruling |
+| R15b | Retire the bare `"cutting"` keyword in favour of self-directed forms (the fix that actually fixes R15) | **queued 2026-08-09**, gate-triggering |
+| R13b | The Thought Record card silently drops two captured fields and asserts clinical labels the app cannot support | **queued 2026-08-09** — display-only, from the R13a arm-2 result |
 
 ## Task queue
 
@@ -200,7 +204,18 @@ smoke results**, both superseded by R4's live read, once R13a has closed. Not
 done this run because R13a is unanswered and the R2 matrix is what its result
 gets compared against.
 
-**Queue status (2026-08-08, execute — end of run): 1 open — R15a (PROPOSED,
+**Queue status (2026-08-09, planner — current): 2 open — R15b, then R13b.**
+R15a is REJECTED with the measurement behind it (see the ruling); R15b replaces
+it and is the only fix that touches R15's actual reproduction. **R15b first and
+it is not close:** it is the highest-severity defect on a live public app, it is
+the safety surface spending its own credibility, and the soft launch (F2, the
+kit is written) points strangers at this build. R13b rides behind it — display
+only, no gate, and it closes the R13a arm-2 residue. **This initiative is still
+not the pacing one** (`human-feedback` F1b is), but R15b outranks everything
+open anywhere in the initiatives on severity, which is the README's own rule.
+Everything else here is DONE.
+
+**Queue status (2026-08-08, execute — earlier run): 1 open — R15a (PROPOSED,
 needs a planner ruling; do not start it).** R13a shipped this run (#134) and its
 two-arm result is below: the scaffold-followed run labels 3/3 correctly, the
 conversation-followed run mislabels 2/3, so R12 closed most of R13's exposure and
@@ -946,6 +961,15 @@ every guided session. **Ruling nothing per the item's instruction**; the next
 planning run owns whether that residue is a copy problem, a mapping problem, or
 acceptable.
 
+**RULED 2026-08-09 (planner): a display problem — R13b.** Not a mapping problem:
+the positional map at `App.tsx:292-311` cannot be made semantic without the app
+inferring meaning from free text, which is not a thing to start doing to a stored
+clinical artifact. Not acceptable either, for the reason the observation below
+gives — and the sharper half of arm 2 is that the *card renders 3 of the 5
+captured entries*, so the dropped field wasn't merely mislabelled, it was
+invisible. Fixing the display fixes both halves at once, with no stored-shape
+change and no gate. Queued above.
+
 One observation for whoever prices it: the failure is quiet in the worst way —
 nothing on the card signals low confidence, so a mislabelled record reads
 exactly like a correct one.
@@ -995,19 +1019,128 @@ could in principle let a real signal through, so it needs a planner ruling and a
 gate read, not an execute-run patch. Filed with the mechanism and the
 reproduction so the ruling can be made on evidence.
 
-- [ ] 2026-08-08 · **R15a — Word-boundary the crisis keyword match** (PROPOSED —
-  needs a planner ruling before anyone starts; gate-triggering.) The shape that
-  is plausibly one-directional-safe: keep every list and every entry exactly
-  as-is, and change the **single-word** keyword tests from
-  `lowerText.includes(k)` to a word-boundary regex (`\b…\b`), leaving the
-  multi-word phrases on `includes` since they cannot false-positive the same
-  way. That strictly *shrinks* the matched set, which is why it needs a ruling
-  rather than a patch: it can also drop a real hit inside a compound
-  ("cuttingmyself"), so the ruling owes an explicit answer on
-  hyphen/punctuation handling and on whether any entry is intentionally a stem.
-  → **Verify:** every existing `crisisDetection` test still green with **no test
-  deleted or loosened**; new cases pinning both directions (*cutting everyone
-  short* → `none`; *I have been cutting again* → `high`); full 4-mode 3-seed gate
-  read at seeds 11/22/33 with `--referral-reprompt` ON, numbers vs the README
-  floors in the PR body. **A fresh generate read, not a `--rescore`** — the
-  crisis/referral trigger is on the replay rule's must-generate list.
+### R15a cold ruling (planner, 2026-08-09) — **REJECTED: it is a non-fix, and it was measured before ruling**
+
+R15a proposed word-boundarying the single-word keyword tests. **It does not fix
+R15.** The reproduction is *"he was cutting everyone short"*, where `cutting`
+is a standalone word — `\bcutting\b` matches it exactly as `includes` does.
+
+Measured, not reasoned: the 13 single-word keywords (`suicide`, `cutting`,
+`suicidal`, `overdose`, `hopeless`, `worthless`, `depressed`, `anxious`,
+`overwhelmed`, `struggling`, `crisis`, `emergency`, `desperate` — the entries in
+`crisisDetection.ts:17-62` with no space or hyphen) were run under both matchers
+over R15's own reproduction plus every false positive R15 enumerated. **14 of 15
+probes are byte-identical under the two matchers.** Unchanged: *cutting everyone
+short*, *cutting back on coffee*, *cost-cutting at work*, *cutting my hair*,
+*ending it on a good note*, *I won't give up on this*, *the housing crisis*,
+*the emergency exit*, *a desperate attempt*, *overwhelmed by the number of
+options*, *struggling with a crossword puzzle*. The **one** probe that changes is
+*"my anxiousness is high"* → `anxious` stops matching: a **low**-severity
+keyword, on the `show_resources` tier, which appends a gentle line and never
+suppresses a reply. R15a would spend a ~2.75 h 3-seed generate read to change
+one gentle false positive and leave the 988 wall firing on every case it was
+filed for.
+
+It is also not free in the other direction: `\bcutting\b` *stops* matching
+`"cuttingmyself"`, which is the compound the item itself worried about. So the
+proposal is strictly worse than doing nothing on the only axis it moves.
+
+**The two questions R15a asked the ruling to answer, answered so they are
+closed:** hyphen/punctuation handling is **moot** — the idea is dropped, and no
+matcher change ships. Is any entry intentionally a stem? **Yes, exactly one, and
+it is the whole defect:** `"cutting"` (`:31`) is the only HIGH/CRITICAL entry
+that is also a common benign English verb. `"suicide"`, `"suicidal"` and
+`"overdose"` are single words too, but their benign uses (*suicide prevention*,
+*career suicide*, *an overdose of meetings*) are rare in a journal entry and are
+accepted as the safe direction. `"cutting"` is not rare.
+
+**What the false positives actually have in common is not word shape — it is
+that the cutting is not directed at the writer.** That is the axis the fix has
+to move, and it is a data change, not a matcher change. R15b below.
+
+- [ ] 2026-08-09 · **R15b — Retire the bare `"cutting"` keyword in favour of
+  self-directed forms.** In `src/utils/crisisDetection.ts`, remove `"cutting"`
+  (line 31) from `HIGH_SEVERITY_KEYWORDS` and add these seven phrase entries in
+  its place, verbatim: `"cutting myself"`, `"cut myself"`, `"self-cutting"`,
+  `"been cutting"`, `"started cutting"`, `"cutting again"`, `"urge to cut"`.
+  **No matcher change** — every new entry is multi-word or hyphenated and works
+  under the existing `lowerText.includes()`, so the diff is one list. **Change
+  nothing else:** `CRITICAL_KEYWORDS`, `MEDIUM_SEVERITY_KEYWORDS`,
+  `LOW_SEVERITY_KEYWORDS`, all four indirect-phrase lists, the severity ranking
+  and every branch in `detectCrisis` stay byte-identical. Scope is deliberately
+  the `immediate_help` tier only: a false positive there suppresses the model
+  reply and throws the 988 modal over the writing surface
+  (`App.tsx:503-522`), while a false positive on the low tier appends a gentle
+  line — the tiers do not deserve the same caution and the medium/low lists keep
+  firing broadly on purpose.
+  **The one test row you must amend, and you are explicitly authorised to:**
+  `crisisDetection.test.ts:63` iterates `"cutting"` through the template
+  `I've been thinking about ${keyword}`. Replace that one string with
+  `"cutting myself"`. That is re-pointing the row at the entry that replaced it,
+  not loosening it — the row still asserts `high` + `immediate_help`. **No other
+  test may be deleted, skipped or weakened.**
+  Add both directions as new cases: R15's verbatim sentence (*"the standup was
+  running long and he was cutting everyone short"*) → `severity: "none"`,
+  `isCrisis: false`; plus *cutting back on coffee*, *cost-cutting at work*,
+  *cutting my hair tomorrow* → `none`; and *"I have been cutting again"*,
+  *"I cut myself last night"*, *"I get the urge to cut when it gets bad"* →
+  `high` + `immediate_help`.
+  **Record the residue in the PR body rather than hiding it** — this trade is the
+  point of the item, and the reviewer is Sharang: the disclosures that stop
+  matching are bare-noun forms with no self-reference (*"the cutting is getting
+  worse"*), and the new entries accept two benign phrases as the safe direction
+  (*"I cut myself shaving"*, *"cutting myself short"*). Both directions were
+  chosen knowingly; do not silently extend the list to chase either.
+  → **Verify:** `npm run build` and `npm run test` green with the full existing
+  `crisisDetection` suite passing and exactly one string amended as authorised
+  above. **Gate-triggering** — see the gate-cost note below for how to run it.
+
+**Gate cost for R15b, and the one legitimate way to reduce it (planner,
+2026-08-09).** `detectCrisis` is *in the eval harness*, not only in the app:
+`scripts/run-eval.ts:374` feeds `detectCrisis(userText).isCrisis` into
+`shouldAttemptReferralReprompt`, so a keyword-list change can in principle change
+whether a second generation fires on an eval turn — i.e. it can change what the
+model is asked. That puts it on the replay rule's **must-generate** list, and the
+default is a fresh 4-mode 3-seed read at seeds 11/22/33 with
+`--referral-reprompt` ON (~2.75 h), numbers vs the README floors in the PR body.
+**But the replay rule's condition is a fact, not an assumption, and here it can
+be *proven*:** before running anything, evaluate old-list and new-list
+`detectCrisis(...).isCrisis` over **every user turn in every eval case across all
+four modes** and diff them. If **zero** turns change their `isCrisis` value, the
+referral-reprompt trigger is provably identical on this corpus, the generator is
+unchanged by construction, and a `--rescore` of the preserved corpora satisfies
+the gate — paste the diff-check output (turn count checked, changes found: 0) in
+the PR body as the evidence. If **any** turn changes, run the full fresh 3-seed
+generate read. This does not weaken the rule; it discharges its own precondition
+with a measurement instead of a guess, which is the same standard R10a and R13a
+were held to.
+
+- [ ] 2026-08-09 · **R13b — Stop the Thought Record card dropping two fields and
+  asserting labels the app cannot support.** Grounded in code this run: the save
+  at `App.tsx:292-311` is a pure positional map of the first five user messages
+  (`situation`/`automaticThought`/`emotions`/`evidenceFor`/`alternativeThought`),
+  and `ThoughtRecordHistory.tsx:136-160` renders only **three** of them under
+  clinical headers. That combination is what made R13a arm 2 fail silently: the
+  user's real automatic thought was written, stored at position `[2]` as
+  `emotions`, and displayed **nowhere**. Ruling: this is a **display problem, not
+  a mapping problem** — the mapping is positional by construction and cannot be
+  made semantic without inferring meaning from free text, which is not something
+  this app should start doing for a stored clinical artifact. Fix the display:
+  in `ThoughtRecordHistory.tsx` only, (a) render the two missing entries —
+  `record.emotions` and `record.evidenceFor` — in their positional order so **no
+  captured entry is invisible**, and (b) change the five headers from clinical
+  assertions about the content to the question each answer was written against,
+  matching `THOUGHT_RECORD_SEQUENCE` in `src/data/journalPrompts.ts`: "What
+  happened" · "What went through your mind" · "How you felt" · "The evidence" ·
+  "A more balanced view". That is a claim the app can support — it is the prompt
+  the user was shown — where "Automatic thought" is a claim about the text that
+  R13a measured wrong 2 times in 3. Keep the existing calm styling, the
+  `line-clamp-2`, the date, the delta pill and the delete affordance untouched.
+  **Do not touch `App.tsx`, the save path, `types.ts`, or the stored shape** —
+  existing records must render unchanged under the new headers, with no
+  migration.
+  → **Verify:** `npm run build` and `npm run test` green; a screenshot of the
+  card into `docs/screenshots/<date>/` showing all five entries with the new
+  headers, taken on **https://guzzler.github.io/QuietNote/** if the deploy has
+  landed or `npx vite preview` otherwise. **Not gate-triggering** — no
+  `src/prompts/`, no send path, no safety util.
