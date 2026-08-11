@@ -129,7 +129,7 @@ it ships correct the moment R4 lands:
   and `npm run test` green (docs-only, but the README link must not break any
   link test). **Not gate-triggering** — no `src/`, no prompts, no safety util.
 
-- [ ] 2026-08-08 · **F1b — Re-check the feedback path from the live origin.**
+- [x] 2026-08-08 · **F1b — Re-check the feedback path from the live origin.**
   F1 and F1a both deferred a "re-check at R4" that has now half arrived: the
   repo is public, so the in-app links resolve for a stranger for the first time.
   Do the half the loop can do, on **https://guzzler.github.io/QuietNote/**
@@ -146,6 +146,60 @@ it ships correct the moment R4 lands:
   proposed item; do not fix it in the same run. Note in the write-up that the
   chooser's *rendering* stays unverifiable logged-out (302 to login) — that
   piece is Sharang's one-click check, below.
+
+### F1b result (execute, 2026-08-10) — **the dormancy has ended; one count in the item was wrong**
+
+Read from the live DOM at **https://guzzler.github.io/QuietNote/** (Chromium via
+Playwright, not `vite preview`), production build, 0 console errors (the same 2
+benign warnings as every prior walk: Chromium `powerPreference`, WGSL
+subgroups).
+
+**Footer, verbatim `innerText`:**
+
+```
+Quietnote — your journal entries stay on this device · Share feedback · email · open source
+```
+
+**Correction to the item's premise, small but worth being exact about:** the
+footer has **four `·`-separated segments, three of which are links** — the first
+segment is the plain "your journal entries stay on this device" text. There is
+no fourth link and there never was; R3b added the third. "All four
+`·`-separated links" was a miscount in the item, not a missing link on the page.
+
+**The three hrefs, as read from the live DOM:**
+
+| text | href | target / rel |
+|---|---|---|
+| Share feedback | `https://github.com/Guzzler/QuietNote/issues/new/choose` | `_blank` / `noopener noreferrer` |
+| email | `mailto:sharangpaiusa@gmail.com` | none / none |
+| open source | `https://github.com/Guzzler/QuietNote` | `_blank` / `noopener noreferrer` |
+
+The `mailto:` is recorded verbatim above and was **not opened**, as the item
+required.
+
+**HTTP status of the two GitHub links, followed logged-out** (anonymous `curl`,
+no credentials, browser UA):
+
+| link | no-follow | followed | result |
+|---|---|---|---|
+| `…/QuietNote` (open source) | **200** | 200, 0 redirects | Real repo page. `<title>` reads `GitHub - Guzzler/QuietNote: A private AI journal that runs entirely in your browser…` — i.e. R14's description is live and visible to a stranger. |
+| `…/issues/new/choose` (Share feedback) | **302** | 200 at `github.com/login?return_to=…/issues/new/choose` | Redirect to login, **not a 404** — GitHub requires an account to open an issue, and it round-trips the tester back to the chooser after sign-in. |
+
+**So the accepted dormancy R3b and F1 recorded has genuinely ended**: neither
+link 404s any more. Two supporting reads, taken because "not a 404" is a weak
+claim on its own — `…/QuietNote/issues` returns **200** logged-out (a stranger
+can read the issue list without an account) and
+`…/tree/main/.github/ISSUE_TEMPLATE` returns **200**, so F1/F1a's three template
+files are publicly present at the path the chooser reads.
+
+**Still unverifiable by the loop, as the item predicted:** the chooser's
+*rendering* — whether the two templates plus `config.yml` present correctly, and
+whether F1a's corrected engine-picker path reads right — is behind the 302. That
+is Sharang's one-click check while signed in; it is the only piece of F1/F1a
+left open.
+
+**Nothing was filed as a defect** — no link 404s, no error surfaced. **No `src/`
+diff.** Screenshot: `docs/screenshots/2026-08-10/f1b-live-footer.png`.
 
 **Decided (2026-07-14) — F2 WELCOME.md outline (execute: follow this
 structure; sizes/requirements are the measured values, re-check against the
@@ -268,6 +322,7 @@ task (outline corrected, share message decided) the moment R4 lands.
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-10 | F1b — Re-check the feedback path from the live origin | #139 | **Measurement only — no `src/` diff, nothing fixed, nothing filed as a defect.** Read on **https://guzzler.github.io/QuietNote/** itself (Chromium via Playwright, not `vite preview`), 0 console errors. **The dormancy R3b and F1 accepted has ended:** `open source` → `https://github.com/Guzzler/QuietNote` is **200** logged-out and its `<title>` carries R14's live description, and `Share feedback` → `…/issues/new/choose` is **302 → login → 200**, i.e. a sign-in redirect that round-trips back to the chooser, **not a 404**. Two supporting reads: `…/issues` is **200** anonymously and `…/tree/main/.github/ISSUE_TEMPLATE` is **200**, so F1/F1a's template files are publicly present at the path the chooser reads. `mailto:sharangpaiusa@gmail.com` recorded verbatim and **not opened**. **One correction to the item's own premise:** it asks to confirm "all four `·`-separated links" — the footer has **four `·`-separated segments, three of which are links**; the first is the plain "your journal entries stay on this device" text. Nothing is missing; the item miscounted. **Still open and still Sharang's:** the chooser's *rendering* sits behind the 302, so whether the two templates and `config.yml` present correctly (and whether F1a's corrected engine-picker path reads right) is a one-click check while signed in — the only piece of F1/F1a left. Full hrefs, statuses and the footer `innerText` are in the F1b result section above. Screenshot: `docs/screenshots/2026-08-10/f1b-live-footer.png`. **Not gate-triggering.** |
 | 2026-08-08 | F2 — Soft-launch kit | #135 | `docs/beta/WELCOME.md` written to the decided outline as a spec: all six sections in order (welcome / what you need / what to try / honest limits / your data / telling me what happened), **79 lines**, warm-and-plain tone, no screenshots, no deadline and no survey-flavoured language. **Every number re-read off the code at write time per the standing rule, not copied from the outline:** `MODEL_DOWNLOAD_SIZES` (`src/inference/types.ts:60-64`) is `~1.5 GB` / `~3.2 GB` / `~2.0 GB` and `createEngine`'s default parameter (`src/inference/index.ts:12`) is `"mediapipe"`, so the headline "about 2.0 GB" is right; the browser line ("Chrome or Edge 113+, Chrome for Android 121+, Firefox/Safari not yet") matches `WebGPUFallback.tsx:45-54` verbatim in substance; the four mode labels and their order match `JournalingModeSelector.tsx`. The live URL appears once, unhedged, as `https://guzzler.github.io/QuietNote/`. README linked with the decided line — `If you're one of the first testers, start with [the welcome note](docs/beta/WELCOME.md).` — placed in the "An honest note on what this is" section. **README line 5's "activating at release" hedge was deliberately left alone:** public-release R14 owns that line and had not landed when this was written, and the item says to say so rather than edit line 5 twice. One judgement call recorded: §4 "Honest limits" adds a sentence inviting testers to report *false* crisis triggers, because R14 (crisis false positive, this run's R13a walk) means a tester can meet one on ordinary text — it is honest about a known live defect, and it costs nothing if the defect is fixed. Build green, 1256 tests green. Docs-only, not gate-triggering. **Nothing was sent anywhere** — sharing is Sharang's action. **One error in this PR, corrected in a comment on it rather than silently:** the body quoted the **superseded** share message ("one time, then it's instant"), because #135 was authored against a `main` that predated the planner's commit `aa8d21c`, which had rewritten exactly that sentence out — it is the promise R11 (#130) banned from `src/`. `#135`'s comment carries the current decided message verbatim and says plainly not to send the one in the body. The shipped `WELCOME.md` was never affected: it was written against the code, and its §2 already reads "no download again, though a fresh browser session still takes a few seconds to load it". |
 | 2026-07-23 | F1a — Correct the engine-picker path in both issue templates | #109 | Both `backend` dropdown labels now read `Which AI engine were you using (Settings → Privacy & your data → Inference Engine)?` — the picker is the "Inference Engine" section in `PrivacyDashboard.tsx:320-341`, reached via Settings → "Privacy & your data"; `SettingsPanel.tsx` has no engine control at all. Templates only, no `src/` runtime change (not gate-triggering); every other field, the option list, and the don't-paste-your-journal guard untouched. `FeedbackChannelGuards.test.ts` gained a 4-test F1a block: both templates contain the corrected label and no longer contain `(Settings → engine)`, plus two UI-anchor assertions (PrivacyDashboard has "Inference Engine", SettingsPanel does not) so the copy can't drift from the UI again. Both files parse as YAML (`js-yaml`, `backend` label read back verbatim). Build green, 1057 tests green. Chooser rendering itself stays unverifiable while the repo is private — re-check at R4 with the rest of F1. |
 | 2026-07-12 | F1 — Feedback channel | #85 | Issue templates per the decided spec verbatim (`feedback.yml`, `bug.yml`, `config.yml` with mailto contact link) + calm footer affordance beside the privacy lock: "Share feedback" → `issues/new/choose` (new tab, noopener) · "email" → `mailto:`. Static links only, no query params, nothing prefilled — `FeedbackChannelGuards` (10 tests) pins hrefs, no-fetch, and the don't-paste-your-journal guard in both templates. Verified rendered footer + DOM hrefs on `vite preview` (screenshot). Template chooser rendering itself is only verifiable once the repo is public (F2/R4) — re-check then, incl. that GitHub accepts the `mailto:` contact link. 1336 tests green. |
