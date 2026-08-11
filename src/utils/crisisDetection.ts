@@ -28,7 +28,16 @@ const CRITICAL_KEYWORDS = [
 const HIGH_SEVERITY_KEYWORDS = [
   "self-harm",
   "hurt myself",
-  "cutting",
+  // "cutting" alone is a common benign verb (cutting back, cost-cutting,
+  // cutting corners) — only the self-directed forms belong on this tier,
+  // which suppresses the reply and shows the 988 modal.
+  "cutting myself",
+  "cut myself",
+  "self-cutting",
+  "been cutting",
+  "started cutting",
+  "cutting again",
+  "urge to cut",
   "self harm",
   "self injury",
   "suicidal",
