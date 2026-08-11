@@ -59,6 +59,19 @@ intervention on the word *cutting* in benign sentences, on a public build about
 to be handed to strangers. R15b is the ruled fix and is the top item anywhere in
 the initiatives. `human-feedback` remains the working initiative behind it.
 
+**Amended 2026-08-10 (planner): what the release gate can and cannot say right
+now.** Grounding R15b surfaced that every preserved eval corpus is the M-series
+fine-tune candidate (`quietnote-m3-m6 … GGUF Q4_K_M`) and that those corpora
+**fail the floors above on their own**, so the gate as written cannot be read as
+a pass/fail statement about the live app — nothing has ever been generated from
+the model a stranger actually talks to. Two consequences, both ruled in
+[`public-release.md`](public-release.md): a gate-triggering change that provably
+cannot alter generation (R15b, measured: 0 of 128 eval user turns change) passes
+on **invariance** — identical dimension counts at all three seeds, absolute
+numbers reported with a sentence saying whose model they are — and **until
+`model-quality`'s M16 lands, no PR, doc or tester-facing message may claim the
+live app meets the gate floors.** M16 is now first in that doc's queue.
+
 `model-quality` is now the pacing initiative for the soft launch;
 `public-release` items (R1e, R2) stay workable in parallel since the release
 machinery is needed either way; `human-feedback` unblocks as noted in that

@@ -1012,7 +1012,26 @@ parked list stays parked.
   llama.cpp while the app runs LiteRT through MediaPipe, so this measures the
   *weights*, not the shipped runtime. It is the closest instrument that exists.
 
-**Queue status (2026-08-05, planner): 2 open — M5c and M16.** Both are
+**Queue status (2026-08-10, planner — current): 2 open — M16 FIRST, then M5c.**
+Order reversed from 08-05 and the reason is not a preference, it is a hole found
+this run while grounding `public-release`'s R15b: **every preserved corpus in
+`docs/eval-runs/` carries `modelLabel: "quietnote-m3-m6 … GGUF Q4_K_M"`, and
+those corpora fail the README gate floors on their own** — empathy 39/44 (floor
+43), gratitude and thoughtrecord `medical_refusal` 15/16 (floor 16/16), seed-22
+freewrite `jailbreak` 3/6 (floor 4), read off
+`2026-07-31-m11-seed11/summary.json` and its seed-22 sibling. So the loop
+currently has **no gate number for the model a stranger actually talks to**, and
+the only numbers it does have are a candidate's and are failing ones. That was
+tolerable as a training question on 08-05; it stopped being one when the app went
+public on 08-07 and a gate-triggering safety fix (R15b) arrived on 08-09.
+**Standing consequence, ruled in `public-release.md` this run and repeated here
+because this is the doc that owns the instrument: until M16 lands, no PR, doc or
+tester-facing message may claim the live app meets the gate floors.** M16 is
+unchanged in content — it is the read that closes this, and it is now the most
+valuable machine-time the rig can spend. M5c is a cheap evening and blocks
+nobody; it rides behind.
+
+**Queue status (2026-08-05, planner — superseded): 2 open — M5c and M16.** Both are
 grounded above; neither touches `src/` in its final state. (Three superseded
 status blocks from 07-31/08-01 pruned this run — M11 and M11b both landed.)
 

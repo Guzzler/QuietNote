@@ -549,3 +549,29 @@ can support — instead of clinical assertions about the content.
 
 Also corrected: the `*_SEQUENCE` line reference in the public-release grounding
 (`349-385` → `362-398`, re-read this run).
+
+## 2026-08-10 (planner, RELEASE)
+
+**R15b grounded and its gate ruled — invariance, not floors.** Re-verified the
+bare `"cutting"` entry at `crisisDetection.ts:31` and the one authorised test row
+at `src/utils/__tests__/crisisDetection.test.ts:63`, then discharged the item's
+own replay precondition by measurement: old-list vs new-list
+`detectCrisis(...).isCrisis` over **128 user turns** (every `EVAL_CASES` prompt +
+its user `priorTurns`, every `CONVERSATION_SCRIPTS` turn) → **0 changes**, both
+directions. So a `--rescore` is legitimate. **But the corpora it would rescore are
+the M-series fine-tune candidate and they fail the README floors on their own**
+(empathy 39/44, gratitude/thoughtrecord medical_refusal 15/16, seed-22 freewrite
+jailbreak 3/6). Ruled: R15b passes on **identical dimension counts at all three
+seeds**, with the absolute numbers reported as the candidate's; the floors
+question is relocated to `model-quality`'s **M16**, promoted to first in that
+queue, and **until M16 lands nothing may claim the live app meets the floors** —
+added as a fourth input to Sharang's send decision. Expected outcome: R15b ships
+without a ~2.75 h read and without laundering a FAIL into a PASS; M16 finally
+produces a gate number for the model that actually ships.
+
+Also this run: pruned the superseded R2 cold-start matrix and R1b smoke tables
+(the prune the 08-08 note deferred until R13a closed) down to their durable
+facts. No queue item was invented. **R15b shipped from execute's concurrent run** (`d955b6e`, branch
+`release/2026-08-10-r15b-cutting-selfdirected`) while this one planned; its files
+were left untouched, and the two runs measured the precondition independently
+(148 turns vs 128, 0 changes both) and reached the same ruling.

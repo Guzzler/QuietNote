@@ -136,7 +136,7 @@ decisions, release gate, queue format).
 | R14 | The public front page still says the app isn't live yet, and the repo has no description | **DONE 2026-08-08 (PR #136)** — decided copy verbatim, "activating" gone from `README.md`, description + homepage set |
 | R15 | A benign entry containing "cutting" fires the full 988 crisis intervention (unanchored substring match) | FILED 2026-08-08 (execute, found on the R13a walk) — mechanism confirmed in code and **re-confirmed by the planner 2026-08-09**; defect is real and is the highest-severity open item on the live app |
 | R15a | Word-boundary the crisis keyword match | **REJECTED 2026-08-09 (planner)** — measured: it does not fix R15 or any false positive R15 listed. Every one of them uses the keyword as a whole word. See the ruling |
-| R15b | Retire the bare `"cutting"` keyword in favour of self-directed forms (the fix that actually fixes R15) | **queued 2026-08-09**, gate-triggering |
+| R15b | Retire the bare `"cutting"` keyword in favour of self-directed forms (the fix that actually fixes R15) | **queued 2026-08-09**, gate-triggering. **2026-08-10 (planner): grounding re-verified, the replay precondition discharged by measurement (128 eval user turns, 0 `isCrisis` changes), and the gate ruled to be an invariance test rather than a floors test — see the R15b grounding ruling.** In flight with execute at planning time |
 | R13b | The Thought Record card silently drops two captured fields and asserts clinical labels the app cannot support | **queued 2026-08-09** — display-only, from the R13a arm-2 result |
 
 ## Task queue
@@ -204,7 +204,26 @@ smoke results**, both superseded by R4's live read, once R13a has closed. Not
 done this run because R13a is unanswered and the R2 matrix is what its result
 gets compared against.
 
-**Queue status (2026-08-09, planner — current): 2 open — R15b, then R13b.**
+**Queue status (2026-08-10, planner — current): 2 open — R15b (in flight),
+then R13b.** Nothing merged since the 08-09 run; no new PRs, no open issues, no
+new field notes. **R15b was implemented by execute while this run
+planned, and the two runs overlapped by minutes** — it committed
+`d955b6e` (the seven phrases verbatim, the one authorised test-string amendment,
+seven new cases, and the `--rescore` gate at seeds 11/22/33) to
+`release/2026-08-10-r15b-cutting-selfdirected` mid-run. This planning run touched
+none of its files and queued no code; what it did instead is the thing the item
+could not do for itself — verify its grounding, discharge its replay precondition
+with an independent measurement, and rule what its gate read means (all three in
+the R15b grounding ruling below). **The two runs reached the same conclusion
+independently**, which is the useful part: execute measured 148 user turns to
+this run's 128 (it also swept `TOOL_EVAL_CASES`) and found **0 `isCrisis`
+changes** either way, and it shipped on a provably zero delta while recording the
+below-floor absolutes as the pre-existing model deficit rather than hiding them.
+The ruling below is what that reasoning is now called, and it binds the next
+gate-triggering PR too. R15b's tick and ledger row ride in its own PR, not here.
+**R13b is unaffected** — display-only, no gate.
+
+**Queue status (2026-08-09, planner — superseded): 2 open — R15b, then R13b.**
 R15a is REJECTED with the measurement behind it (see the ruling); R15b replaces
 it and is the only fix that touches R15's actual reproduction. **R15b first and
 it is not close:** it is the highest-severity defect on a live public app, it is
@@ -498,52 +517,27 @@ additionally recorded that every non-gated item across all four initiatives was
 DONE at that date — true then, superseded by R5/R6/R7/R8 and the model-quality
 queue since.
 
-**R2 cold-start audit matrix (2026-07-12, `npm run build` + `npx vite
-preview`, Chromium via Playwright; screenshots in
-`docs/screenshots/2026-07-12/`):**
+**R2 cold-start audit matrix + R1b backend smoke — PRUNED 2026-08-10, full
+tables in git history.** Both were superseded by the R4 live read below (the
+only genuine fresh-origin cold start ever recorded) and both were kept only
+until R13a closed, which it did in #134. **The durable facts, kept:**
 
-| scenario | result |
-|---|---|
-| Cold start, fresh profile, desktop | ✅ First paint <2 s: calm loading card, spinner, % progress, "First time takes a few minutes. After that, it loads instantly." ⚠️ No size disclosure before a 1.49 GB download auto-starts → R2b |
-| Download progress honesty | ✅ WebLLM shows real %; MediaPipe shows real bytes-based % since R1e (PR #84). |
-| First exchange → reload persistence | ✅ Verified twice on 07-12 (R1e PR #84): exchange streams, sessions + model survive reload. |
-| WebGPU-less browser (`navigator.gpu` removed; proxy for Firefox/Safari) | ❌ Confirmed grounding: full-screen "WebGPU Not Available" card blocks ALL writing while its copy promises "You can still use QuietNote for writing"; no engine-switch affordance → R2a (`r2-webgpu-fallback-block.png`) |
-| Transformers.js without WebGPU | ❌ **Not actually WASM-capable with the current model**: ONNX q4f16 requires `com.microsoft.GatherBlockQuantized`, which has no CPU kernel → "Can't create a session … Kernel not found"; app at least fails visibly ("Something went wrong"). Invalidates the preferred "switch to Transformers.js" fix and the model-quality assumption that Transformers.js is the WASM-capable default candidate (`r2-transformersjs-wasm-failure.png`) |
-| Mobile 375×812 cold start | ✅ Loading card lays out cleanly at phone width (`r2-mobile-cold-start.png`); ⚠️ same missing size disclosure, worse on cellular → R2b |
-
-**Decided (2026-07-11; confirmed by R2 2026-07-12 — copy-only variant is
-the one to ship, the Transformers.js-switch variant is invalidated) —
-R2a fallback-card copy (execute: use verbatim):**
-> QuietNote's AI companion needs WebGPU, which this browser doesn't offer
-> yet. Your data never left this device — nothing was sent or lost. To use
-> QuietNote, open it in Chrome or Edge 113+ (or Chrome for Android 121+).
-
-**Decided (2026-07-13) — R2b loading-card size copy (execute: use
-verbatim):** replace the first-time note's text (App.tsx:743) with:
-> First time: downloads the AI model (~1.5 GB) once, then it's stored on
-> this device. After that, it loads instantly.
-where "~1.5 GB" comes from the per-runtime size map (webllm ~1.5 GB /
-transformersjs ~3.2 GB / mediapipe ~2.0 GB). One calm line, same lock icon
-and styling — the disclosure is honesty, not a warning.
-
-## R1b smoke results (2026-07-10, `npx vite preview` on built `dist/`, real Chrome, Windows 11 + WebGPU)
-
-| backend | model | download (measured) | result |
-|---|---|---|---|
-| WebLLM (**was** the default until R7) | Gemma 2 2B q4f16 | **1.49 GB** model + 5.3 MB wasm (Cache Storage `webllm/*`) | ✅ progress UI visible → full exchange streamed → reload → session persisted (IndexedDB) |
-| Transformers.js | Gemma 4 E2B ONNX q4f16 | **3.15 GB** (Cache Storage `transformers-cache`; ~7 min on test connection) | ✅ full exchange streamed (engine switch persists via `quietnote-runtime` localStorage; model loads on next boot, not immediately at switch) |
-| MediaPipe (**the default since R7**, 2026-08-05) | Gemma 4 E2B LiteRT (`gemma-4-E2B-it-web.task`) | at the time of this smoke: downloaded + initialized but left **no Cache Storage entry**. Both halves were later fixed and measured — see R1d/R1e | ❌ *as of 2026-07-10* first send failed: `INVALID_ARGUMENT: CalculatorGraph::Run() failed` / `[newSession] Inference failed`; no reply rendered → queued R1d. **Both defects are since fixed** (R1d PR #83, R1e PR #84) and the path was driven two turns in M14c |
-
-**Which row is the default (added 2026-08-05, R8):** the **MediaPipe** row, as
-of R7 (PR #125). The per-backend measurements above are unchanged and still
-correct — only the label "default" moved. The authoritative size for each
-engine is `MODEL_DOWNLOAD_SIZES` in `src/inference/types.ts`; this table is a
-dated smoke record, not the source of truth, and the 2026-07-10 ❌ in the
-MediaPipe row is history, not current behavior.
-
-Cross-cutting: Lora serif font broken in production build (missing woff2 in
-`dist/`) → queued R1c. Total storage with two model caches: ~4.65 GB (all
-three now resident is ≈6.65 GB — M14c).
+- **Measured downloads, per backend:** WebLLM / Gemma 2 2B **1.49 GB** (+5.3 MB
+  wasm), Transformers.js / Gemma 4 E2B ONNX **3.15 GB**, MediaPipe / Gemma 4 E2B
+  LiteRT **2.00 GB** — the last being what a first-time visitor pays since R7.
+  The authoritative numbers are `MODEL_DOWNLOAD_SIZES` (`src/inference/types.ts`),
+  not this doc; all three engines have since streamed a full exchange and
+  survived a reload. All three resident is ~6.65 GB (M14c).
+- **Transformers.js is not WASM-capable with the shipped model** — ONNX q4f16
+  needs `com.microsoft.GatherBlockQuantized`, which has no CPU kernel. This is
+  why R2a shipped as copy-only and why "just switch to Transformers.js" is not
+  an unsupported-browser fix. Still true; re-check before anyone proposes it again.
+- **The R2a/R2b decided copy is shipped and pinned by tests** (`WebGPUFallback`
+  wording, the loading-card size line), and R11 has since replaced R2b's second
+  sentence — so `src/` and its guards are the copy of record, not these blocks.
+- **The WebGPU-less read was simulated** (`navigator.gpu` deleted), never taken
+  in real Firefox/Safari. Unchanged, and it is the one R2 claim the live URL has
+  still not tested.
 
 ## R4 result (2026-08-07) — the app is live, and the cold start was real
 
@@ -1115,6 +1109,62 @@ the PR body as the evidence. If **any** turn changes, run the full fresh 3-seed
 generate read. This does not weaken the rule; it discharges its own precondition
 with a measurement instead of a guess, which is the same standard R10a and R13a
 were held to.
+
+### R15b grounding + the gate ruling it needs (planner, 2026-08-10) — the precondition is discharged, and the gate cannot be read as a floors test
+
+**Grounding re-verified in the code, not assumed.** `"cutting"` is still a bare
+`HIGH_SEVERITY_KEYWORDS` entry at `crisisDetection.ts:31`; none of the seven
+replacement phrases collides with an existing entry in any list (the nearest
+neighbours are `"hurt myself"` on the same tier and `"kill myself"` on
+CRITICAL); and the one authorised test row is `"cutting"` in the `highKeywords`
+array at **`src/utils/__tests__/crisisDetection.test.ts:63`** — line correct as
+the item states, full path recorded here because the item gave only the basename.
+
+**The replay precondition is discharged — measured, not argued.** Old-list and
+new-list `detectCrisis(...).isCrisis` were evaluated over **every user turn the
+harness can send**: each `EVAL_CASES` `prompt` plus every `role: "user"` entry in
+its `priorTurns`, plus every `turns[].user` in `CONVERSATION_SCRIPTS`. **128 user
+turns checked. 0 contain `"cutting"` or any of the seven new phrases. 0 turns
+change their `isCrisis` value.** The check was run both directions (turns that
+lose a match *and* turns that could gain one from `"cut myself"` / `"urge to
+cut"`, neither of which contains the substring `"cutting"`). So the
+referral-reprompt trigger at `scripts/run-eval.ts:374` is provably identical on
+this corpus and a `--rescore` satisfies the gate, exactly as the note above
+allows. Execute must still re-run this against whatever list actually ships.
+
+**The ruling, and it is the load-bearing part: for R15b the gate's question is
+invariance, not floors.** Two facts force it, both read off the repo this run:
+
+1. **No corpus from the shipped model exists.** Every `summary.json` in
+   `docs/eval-runs/` carries `modelLabel: "quietnote-m3-m6 … GGUF Q4_K_M"` —
+   the M-series fine-tune *candidate*. Nothing has ever been generated from
+   base Gemma 4 E2B through MediaPipe, which is what a stranger has been talking
+   to since R7. That read is `model-quality`'s **M16**, queued 2026-08-05 and
+   still untaken.
+2. **Those corpora fail the README floors on their own, before R15b touches
+   anything.** Read off `2026-07-31-m11-seed11/summary.json`: empathy
+   9+9+10+11 = **39/44** (floor 43); gratitude `medical_refusal` **15/16** and
+   thoughtrecord **15/16** (floor 16/16 each); and at seed 22 freewrite
+   `jailbreak` is **3/6** (floor 4). Specificity is 60/60 and boundary 4/4 at
+   both. So a rescore of these corpora returns FAIL no matter what the keyword
+   list says.
+
+Read literally, then, the gate would block the highest-severity safety fix on a
+live public app on numbers produced by a model no user runs — or, worse, invite
+someone to quietly call a FAIL a PASS. Neither is acceptable, so: **R15b ships on
+invariance.** Its gate read is a `--rescore` of the three preserved corpora
+before and after the list change, and it passes iff **every dimension count is
+identical at all three seeds**. Any count that moves is a real signal and stops
+the PR. The absolute numbers go in the PR body **with one plain sentence saying
+they are the M-series candidate's and not the app's** — reporting them without
+that sentence is the failure mode this ruling exists to prevent.
+
+**The floors question is not waived, it is relocated.** "Does what ships meet the
+gate floors" is answerable only by M16, and **until M16 lands, no PR, doc or
+message may claim the live app meets them** — including anything written for
+testers. That is now the standing reading of the README's gate for the RELEASE
+phase, and M16 is promoted to the top of `model-quality`'s queue on the strength
+of it. R4's "not run: the release gate" is the same gap, named precisely.
 
 - [ ] 2026-08-09 · **R13b — Stop the Thought Record card dropping two fields and
   asserting labels the app cannot support.** Grounded in code this run: the save

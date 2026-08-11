@@ -289,6 +289,19 @@ task (outline corrected, share message decided) the moment R4 lands.
   now ruled, with the fix queued as **R15b**. It is one list change plus a gate
   read, so it is days not weeks, and it is the single defect most likely to make
   a tester distrust the safety surface. Worth waiting for; still your call.
+- **Fourth input, added 2026-08-10 — read this one before the other three.** The
+  "release gate pass" that the kit and this initiative have been assuming as a
+  precondition **does not exist and cannot currently be obtained**: every
+  preserved eval corpus is the M-series fine-tune candidate, not the model the
+  live app runs, and those corpora fail the floors on their own (details and the
+  ruling in [`public-release.md`](public-release.md)). So the honest statement
+  about the live build is *"it has been walked end-to-end by hand on the live URL
+  and it works; it has never been scored"* — not *"it passed the gate"*. Nothing
+  the loop has written to testers claims otherwise (checked this run:
+  `docs/beta/WELCOME.md` and the decided share message make no gate or quality
+  claim), and nothing may. `model-quality`'s **M16** is the read that would close
+  it and is now first in that queue. This does not change whose decision the send
+  is — it changes what you would be saying if you made it.
 - **One-click check only you can do: does the issue-template chooser render?**
   Open https://github.com/Guzzler/QuietNote/issues/new/choose while logged in
   and confirm you see the two forms plus the "Prefer email?" contact link. The
