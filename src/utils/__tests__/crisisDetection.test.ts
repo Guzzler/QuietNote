@@ -60,7 +60,7 @@ describe("detectCrisis — explicit keyword detection", () => {
     const highKeywords = [
       "self-harm",
       "hurt myself",
-      "cutting",
+      "cutting myself",
       "self harm",
       "suicidal",
       "ending it",
@@ -317,6 +317,41 @@ describe("detectCrisis — false positive resilience", () => {
     const result = detectCrisis("I could sleep for hours");
     expect(result.isCrisis).toBe(false);
   });
+});
+
+// R15b — "cutting" as a benign everyday verb must not throw the 988 wall over
+// the writing surface, while the self-directed forms still must.
+describe("detectCrisis — benign 'cutting' (R15b)", () => {
+  const benign = [
+    "the standup was running long and he was cutting everyone short",
+    "I'm cutting back on coffee",
+    "there's a lot of cost-cutting at work right now",
+    "I'm cutting my hair tomorrow",
+  ];
+
+  for (const text of benign) {
+    it(`does not treat "${text}" as a crisis`, () => {
+      const result = detectCrisis(text);
+      expect(result.isCrisis).toBe(false);
+      expect(result.severity).toBe("none");
+      expect(result.recommendedAction).toBe("continue");
+    });
+  }
+
+  const selfDirected = [
+    "I have been cutting again",
+    "I cut myself last night",
+    "I get the urge to cut when it gets bad",
+  ];
+
+  for (const text of selfDirected) {
+    it(`still treats "${text}" as high severity`, () => {
+      const result = detectCrisis(text);
+      expect(result.isCrisis).toBe(true);
+      expect(result.severity).toBe("high");
+      expect(result.recommendedAction).toBe("immediate_help");
+    });
+  }
 });
 
 // ─── getCrisisResources ───
