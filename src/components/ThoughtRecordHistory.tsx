@@ -24,6 +24,50 @@ function avgIntensity(emotions: { emotion: string; intensity: number }[]): numbe
   return Math.round(emotions.reduce((s, e) => s + e.intensity, 0) / emotions.length * 10) / 10;
 }
 
+// R13b — the card's headers are the question each answer was written against
+// (THOUGHT_RECORD_SEQUENCE in src/data/journalPrompts.ts), not a clinical claim
+// about what the text contains. The save at App.tsx is a positional map of the
+// first five user messages, so a clinical header was asserting a meaning the
+// app cannot support; the prompt the user was shown, it can.
+const THOUGHT_RECORD_CARD_LABELS = {
+  situation: "What happened",
+  automaticThought: "What went through your mind",
+  emotions: "How you felt",
+  evidenceFor: "The evidence",
+  alternativeThought: "A more balanced view",
+} as const;
+
+function formatEmotions(emotions: { emotion: string; intensity: number }[]): string {
+  return emotions.map((e) => `${e.emotion} (${e.intensity}/10)`).join(", ");
+}
+
+/**
+ * The five positional entries in the order they were written, so nothing the
+ * user captured is invisible on the card. Empty entries are skipped rather
+ * than rendered as a bare header.
+ */
+function entriesForRecord(record: ThoughtRecord): { label: string; value: string }[] {
+  return [
+    { label: THOUGHT_RECORD_CARD_LABELS.situation, value: record.situation },
+    {
+      label: THOUGHT_RECORD_CARD_LABELS.automaticThought,
+      value: record.automaticThought,
+    },
+    {
+      label: THOUGHT_RECORD_CARD_LABELS.emotions,
+      value: formatEmotions(record.emotions),
+    },
+    {
+      label: THOUGHT_RECORD_CARD_LABELS.evidenceFor,
+      value: record.evidenceFor.join(" "),
+    },
+    {
+      label: THOUGHT_RECORD_CARD_LABELS.alternativeThought,
+      value: record.alternativeThought,
+    },
+  ].filter((entry) => entry.value.trim().length > 0);
+}
+
 export default function ThoughtRecordHistory({ isOpen, onClose }: Props) {
   const [records, setRecords] = useState<ThoughtRecord[]>([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -134,30 +178,16 @@ export default function ThoughtRecordHistory({ isOpen, onClose }: Props) {
                       </div>
 
                       <div className="space-y-1.5">
-                        <div>
-                          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-                            Situation
-                          </span>
-                          <p className="text-sm text-slate-700 line-clamp-2">
-                            {record.situation}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-                            Automatic thought
-                          </span>
-                          <p className="text-sm text-slate-700 line-clamp-2">
-                            {record.automaticThought}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-                            Alternative thought
-                          </span>
-                          <p className="text-sm text-slate-700 line-clamp-2">
-                            {record.alternativeThought}
-                          </p>
-                        </div>
+                        {entriesForRecord(record).map((entry) => (
+                          <div key={entry.label}>
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                              {entry.label}
+                            </span>
+                            <p className="text-sm text-slate-700 line-clamp-2">
+                              {entry.value}
+                            </p>
+                          </div>
+                        ))}
                       </div>
 
                       <div className="mt-3 flex items-center justify-end">
