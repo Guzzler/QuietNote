@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { analyzeMoodTrend, findTopEmotions } from "../../utils/moodPatterns";
+import { buildGreeting, buildWelcomeSuggestion } from "../../utils/welcomeSuggestion";
 import type { MoodEntry, MoodEmotion } from "../../types";
 
 function makeMood(
@@ -16,22 +17,15 @@ function makeMood(
   };
 }
 
-// Replicates the personalized welcome logic from ChatPanel
+// F6 (2026-08-11) — this used to be a hand-copied replica of ChatPanel's
+// `useMemo`. A replica cannot catch a change to the real thing, and it did
+// not: the suggestion logic it duplicated was the reason the first tester
+// never saw Thought Record. The greeting and suggestion now come from the
+// same module ChatPanel calls; only the mood-trend plumbing (which stays in
+// the component) is still assembled here.
 function computePersonalizedWelcome(moods: MoodEntry[], hour: number) {
-  let greeting: string;
-  let suggestion: { text: string; mode: string } | null = null;
-
-  if (hour >= 5 && hour < 12) {
-    greeting = "Good morning";
-    suggestion = { text: "Start with a morning check-in?", mode: "checkin" };
-  } else if (hour >= 12 && hour < 17) {
-    greeting = "Good afternoon";
-  } else if (hour >= 17 && hour < 21) {
-    greeting = "Good evening";
-    suggestion = { text: "Wind down with an evening reflection?", mode: "checkin" };
-  } else {
-    greeting = "Hello";
-  }
+  const greeting = buildGreeting(hour);
+  const suggestion = buildWelcomeSuggestion(hour, moods);
 
   let moodTrend: "improving" | "stable" | "declining" | null = null;
   let topEmotion: string | null = null;
@@ -40,14 +34,6 @@ function computePersonalizedWelcome(moods: MoodEntry[], hour: number) {
     moodTrend = analyzeMoodTrend(moods);
     const top = findTopEmotions(moods, 1);
     if (top.length > 0) topEmotion = top[0].emotion;
-
-    const recentMoods = moods.slice(0, 5);
-    const anxiousOrStressed = recentMoods.filter(
-      (m) => m.emotion === "anxious" || m.emotion === "frustrated" || m.emotion === "angry"
-    );
-    if (anxiousOrStressed.length >= 2) {
-      suggestion = { text: "Feeling overwhelmed? Try a thought record.", mode: "thoughtrecord" };
-    }
   }
 
   return { greeting, suggestion, moodTrend, topEmotion, hasMoodData: moods.length > 0 };
@@ -92,9 +78,14 @@ describe("Personalized Welcome logic", () => {
     expect(result.suggestion!.text).toContain("Wind down");
   });
 
-  it("has no suggestion in the afternoon by default", () => {
+  // F6 — this test used to assert `suggestion === null` in the afternoon.
+  // The empty slot is the defect: those were the two bands that offered a
+  // first-time user nothing at all, and 00:35 (the hour T1 wrote at) is one
+  // of them. Field note §B1.
+  it("offers the thought record in the afternoon, where nothing was offered before", () => {
     const result = computePersonalizedWelcome([], 14);
-    expect(result.suggestion).toBeNull();
+    expect(result.suggestion).not.toBeNull();
+    expect(result.suggestion!.mode).toBe("thoughtrecord");
   });
 
   it("shows mood trend when 5+ moods exist", () => {

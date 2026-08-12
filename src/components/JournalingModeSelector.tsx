@@ -26,7 +26,11 @@ export default function JournalingModeSelector({ mode, onChange }: Props) {
   ];
 
   return (
-    <div className="inline-flex gap-0.5 overflow-x-auto max-w-full" role="radiogroup" aria-label="Journaling mode">
+    // F6 — this row used to be an inline-flex strip that scrolled sideways,
+    // which at phone widths pushed "Thought Record" (the widest label, last
+    // of four) off the edge behind a scrollbar the first tester never used.
+    // It wraps now, so every mode is always visible.
+    <div className="flex flex-wrap gap-0.5 max-w-full" role="radiogroup" aria-label="Journaling mode">
       {modes.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
