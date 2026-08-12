@@ -6,6 +6,7 @@ import MoodSuggestionCard from "./MoodSuggestionCard";
 import PromptSuggestionCard from "./PromptSuggestionCard";
 import JournalingModeSelector from "./JournalingModeSelector";
 import { MODE_LABELS } from "../utils/modeLabels";
+import { buildGreeting, buildWelcomeSuggestion } from "../utils/welcomeSuggestion";
 import GratitudeGuide from "./GratitudeGuide";
 import CheckInGuide from "./CheckInGuide";
 import ThoughtRecordGuide from "./ThoughtRecordGuide";
@@ -151,21 +152,11 @@ export default function ChatPanel({
 
   // Personalized welcome: compute greeting and suggestions from mood data
   const personalizedWelcome = useMemo(() => {
+    // F6 — greeting and suggestion now come from utils/welcomeSuggestion.ts so
+    // they can be tested at real hours with real mood arrays.
     const hour = new Date().getHours();
-    let greeting: string;
-    let suggestion: { text: string; mode: JournalingMode } | null = null;
-
-    if (hour >= 5 && hour < 12) {
-      greeting = "Good morning";
-      suggestion = { text: "Start with a morning check-in?", mode: "checkin" };
-    } else if (hour >= 12 && hour < 17) {
-      greeting = "Good afternoon";
-    } else if (hour >= 17 && hour < 21) {
-      greeting = "Good evening";
-      suggestion = { text: "Wind down with an evening reflection?", mode: "checkin" };
-    } else {
-      greeting = "Hello";
-    }
+    const greeting = buildGreeting(hour);
+    const suggestion = buildWelcomeSuggestion(hour, moods);
 
     let moodTrend: "improving" | "stable" | "declining" | null = null;
     let topEmotion: string | null = null;
@@ -174,15 +165,6 @@ export default function ChatPanel({
       moodTrend = analyzeMoodTrend(moods);
       const top = findTopEmotions(moods, 1);
       if (top.length > 0) topEmotion = top[0].emotion;
-
-      // Override suggestion based on recent mood patterns
-      const recentMoods = moods.slice(0, 5);
-      const anxiousOrStressed = recentMoods.filter(
-        (m) => m.emotion === "anxious" || m.emotion === "frustrated" || m.emotion === "angry"
-      );
-      if (anxiousOrStressed.length >= 2) {
-        suggestion = { text: "Feeling overwhelmed? Try a thought record.", mode: "thoughtrecord" };
-      }
     }
 
     return { greeting, suggestion, moodTrend, topEmotion, hasMoodData: moods.length > 0 };
@@ -575,11 +557,16 @@ export default function ChatPanel({
           </p>
         )}
         {/* Mode selector + Prompt Selector */}
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
+        {/* F6 — on a phone the mode strip takes the full row and the prompt
+            button drops below it. Sharing one row left the strip ~200px wide,
+            which wrapped four modes onto three lines. */}
+        <div className="mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+          <div className="min-w-0 sm:flex-1">
             <JournalingModeSelector mode={journalingMode} onChange={onJournalingModeChange} />
           </div>
-          <PromptSelector onSelectPrompt={(prompt: string) => setUserInput(prompt)} externalOpen={promptSelectorOpen} onExternalOpenHandled={() => setPromptSelectorOpen(false)} />
+          <div className="flex justify-end">
+            <PromptSelector onSelectPrompt={(prompt: string) => setUserInput(prompt)} externalOpen={promptSelectorOpen} onExternalOpenHandled={() => setPromptSelectorOpen(false)} />
+          </div>
         </div>
 
         <div className="flex gap-2 items-end">
