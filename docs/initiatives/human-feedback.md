@@ -9,6 +9,28 @@ prefilled or attached to anything. Rules of engagement:
 
 ## Grounding (verified 2026-07-10 — planner: re-verify before editing)
 
+- **A REAL HUMAN HAS USED QUIETNOTE (2026-08-11) — this initiative's mission
+  statement is now partly satisfied and its blocking assumption is dead.**
+  Sharang shared the app; the first tester (T1) used it on a phone at ~00:35 and
+  sent back six items. **The whole of `Blocked on Sharang`'s "the only thing
+  standing between a live app and its first human user" is therefore
+  historical — the send happened.** The feedback is triaged, code-verified and
+  de-identified in
+  [`docs/field-notes/2026-08-11-first-tester.md`](../field-notes/2026-08-11-first-tester.md),
+  which is the spec of record for F5–F8 below. **It did not arrive as a GitHub
+  issue** — it came over a private message, which is the intake shape F3 has to
+  actually support (see F3). Two structural findings from it, both load-bearing
+  for the whole project:
+  - The tester's main quality complaint ("it sounds like…") is a **shipped-model
+    finding, not a copy finding** — the app runs stock Gemma, never the QLoRA
+    (field note §C1). This corroborates `README.md:62-73` from the outside.
+  - The tester's stated primary use case is CBT distortion work, and **they never
+    found Thought Record** (field note §B1). Discoverability, not quality.
+- **De-identification is a hard rule for this initiative now the repo is
+  public.** Tester names and verbatim personal disclosures must never enter a
+  tracked file, a PR body, or an ntfy body — paraphrase, per the convention
+  `docs/field-notes/2026-06-09-real-user-data-plan.md:4` set for the old-app
+  corpus. Refer to testers as T1, T2, …
 - **~~Repo is PRIVATE until release day~~ — THE REPO IS PUBLIC AND THE APP IS
   LIVE (R4 fired 2026-08-07; re-verified from outside 2026-08-08, planner).**
   `gh repo view` returns `visibility: PUBLIC`, `licenseInfo: MIT`;
@@ -83,11 +105,116 @@ it ships correct the moment R4 lands:
 | F1 | Feedback channel: issue templates + in-app "Share feedback" link-out | DONE (PR #85) — one copy defect found 2026-07-23, filed as F1a |
 | F1a | Issue templates point testers at "Settings → engine"; the picker is in the Privacy dashboard | DONE (PR #109) |
 | F2 | Soft-launch kit: tester one-pager + share message for Sharang | **DONE 2026-08-08 (PR #135)** — `docs/beta/WELCOME.md`, 79 lines, all six sections; README linked. Sharing remains Sharang's |
-| F1b | Re-check the shipped feedback path from the live origin (the half of F1's "re-check at R4" the loop can actually do) | queued 2026-08-08 |
-| F3 | Field-notes intake convention + weekly issue→field-note triage | after first feedback exists |
-| F4 | Feedback-driven iteration: human reports outrank queue items | activates with F3 |
+| F1b | Re-check the shipped feedback path from the live origin (the half of F1's "re-check at R4" the loop can actually do) | DONE (PR #139) |
+| F3 | Field-notes intake convention + weekly issue→field-note triage | **ACTIVE 2026-08-11** — first feedback exists. Convention set by `2026-08-11-first-tester.md`: de-identified, code-triaged, sequencing at the end. Note the intake shape: feedback arrived by **private message**, not as an issue, so relaying it into `docs/field-notes/` is a Sharang-and-planner step, not an automated one |
+| F4 | Feedback-driven iteration: human reports outrank queue items | **ACTIVE 2026-08-11** — F5–F8 below are the first exercise of it |
+| F5 | Mobile session control: "New" is invisible on a phone **and** switching modes silently corrupts the session (3 coupled bugs) | queued 2026-08-11 (field note §A1+§A2) |
+| F6 | Surface Thought Record at phone widths — highest-intent tester never saw the most differentiated mode | queued 2026-08-11 (field note §B1) |
+| F7 | Time-of-day correctness: a 00:35 check-in asks how "today" went about a day that already ended | queued 2026-08-11 (field note §A3) — gate-triggering |
+| F8 | Gratitude tone + CBT distortion-naming, batched into ONE gated PR | **BLOCKED** on the QLoRA-to-browser question (field note §C, Blocked on Sharang) — do not queue |
 
 ## Task queue
+
+**Queue rebuilt 2026-08-11 (planner, interactive with Sharang) from the first
+real tester's report.** Spec of record:
+[`docs/field-notes/2026-08-11-first-tester.md`](../field-notes/2026-08-11-first-tester.md).
+F4 is now live, so these three outrank every remaining queued item anywhere in
+the initiatives except a safety-relevant report. **F8 is deliberately absent** —
+it is blocked on the QLoRA-to-browser question and lives under *Blocked on
+Sharang*; do not promote it into this queue without his answer.
+
+- [ ] 2026-08-11 · **F5 — Mode switching must start a new session (fixes 3
+  coupled bugs + makes "New" discoverable).** Field note §A1+§A2. In
+  `src/App.tsx`, change `onJournalingModeChange` (`:928`, currently just
+  `setJournalingMode(mode)`) to start a fresh session when the current one
+  already has content: `if (current) handleNewSession();` **before**
+  `setJournalingMode(mode)`. `handleNewSession` (`:189`) already clears
+  `current`/`currentId`/`selectedThread`/input/trim state, and the outgoing
+  session is already persisted by the `useEffect` at `:267-269`, so nothing is
+  lost — it stays in the Sessions list.
+  **Decided design (planner, this run — do not re-litigate):** one rule, no
+  modal. A mode is a distinct exercise, so switching always begins a new entry.
+  This resolves all three defects at once: the new mode's prompt can no longer
+  land on the old mode's transcript (`:581`), the persisted `mode` (`:356`) can
+  no longer disagree with the active mode on reload (`:715`), and
+  `deriveGuidedStep` can no longer inherit the old mode's user-message count and
+  render the new guide as already "Complete" (`CheckInGuide.tsx:63`). Add one
+  quiet inline confirmation in the calm register (e.g. *"Started a new
+  Check-in — your previous entry is saved in Sessions."*), styled like existing
+  `text-xs text-slate-400/500` notices, **not** a dialog and not a toast that
+  moves the writing surface.
+  Also make "New" visible on a phone: `App.tsx:862`'s label is
+  `hidden sm:inline`, so at ≤640px the header is four unlabelled icons. Keep the
+  icon-only treatment if the row cannot fit four labels, but the New control must
+  be distinguishable from the other three (it is the only indigo one today —
+  verify that reads as a control, or give it an accessible visible affordance).
+  **Do not** break `ChatPanel.tsx:409` (`onSuggestMode={onJournalingModeChange}`)
+  — the empty-state mode suggestion routes through this same handler, and there
+  `current` is null so behaviour must be unchanged.
+  → **Verify:** `npm run build` + `npm run test` green; new tests that bite
+  pre-change for all three defects (prompt/transcript pairing, reload-restored
+  mode, guided step reset). Drive the real app at **375px** via Playwright on
+  `npx vite preview`: send one gratitude turn → switch to Check-in → confirm a
+  fresh session, that the Check-in guide reads **step 1 of 3** and not
+  "Complete", and that the old entry is in Sessions; reload and confirm the mode
+  does not revert. Screenshots to `docs/screenshots/2026-08-11/` (mobile header
+  + post-switch state). **Not gate-triggering** — no `src/prompts/`, no send-path
+  message construction, no safety util.
+
+- [ ] 2026-08-11 · **F6 — Make Thought Record reachable on a phone.** Field note
+  §B1: the tester whose stated primary use case is CBT distortion work never saw
+  the mode. Two independent causes, both verified this run — fix both.
+  (a) `JournalingModeSelector.tsx` renders `inline-flex gap-0.5 overflow-x-auto
+  max-w-full` with every button `whitespace-nowrap flex-shrink-0`, and "Thought
+  Record" is the widest label **last of four**, inside `ChatPanel.tsx:565-569`'s
+  `min-w-0 flex-1` beside `PromptSelector`. At ~375px the row overflows with no
+  visible scroll affordance. Change the container to wrap (`flex-wrap`, keeping
+  `gap-0.5` and the `role="radiogroup"`) so all four modes are always visible;
+  if two rows look wrong in the calm register, an explicit scroll affordance is
+  the fallback — but four-visible is the goal.
+  (b) **The only in-app surface that ever names Thought Record is unreachable to
+  a new user.** `ChatPanel.tsx:180` suggests it, but that line sits behind
+  `moods.length >= 5` **and** ≥2 of the last 5 moods being
+  anxious/frustrated/angry (`:169-181`), so a first-time user with no mood
+  history can never see it. Additionally at T1's hour the `else` branch (`:162`)
+  leaves `suggestion` **null**, so the empty state offered no mode at all. Widen
+  discovery for the zero-data case — but **respect
+  `WelcomeEmptyState.tsx:25-26`'s deliberate "at most one auxiliary element"
+  rule and `pickAuxiliaryElement`**: route any new hint through the existing
+  suggestion slot rather than adding a second element, or `VisualCalmGuards` /
+  `WelcomeEmptyState` / `PersonalizedWelcome` tests will (correctly) fight it.
+  → **Verify:** `npm run build` + `npm run test` green; a test that all four mode
+  labels are reachable without horizontal scroll at 375px, and one that the
+  zero-mood empty state can surface Thought Record. Playwright on
+  `npx vite preview` at **375px and 390px**, fresh profile with **no mood data**:
+  screenshot showing all four modes visible, and complete one Thought Record
+  step-1 exchange entered from that surface. Screenshots to
+  `docs/screenshots/2026-08-11/`. **Not gate-triggering** — UI only, no prompt
+  text, no safety util.
+
+- [ ] 2026-08-11 · **F7 — A 00:35 check-in must not ask how "today" went.**
+  Field note §A3. `isMorning()` (`src/prompts/systemPrompts.ts:186`) is
+  `hour >= 5 && hour < 12`, so every hour from 12:00 to 04:59 selects
+  `CHECKIN_EVENING_INSTRUCTION`, whose step 1 is "How their day was overall" —
+  which at 00:35 asks about a day that ended 35 minutes ago. **Second, separate
+  defect found this run: the app carries two disagreeing clocks.**
+  `ChatPanel.tsx:150-164` uses four bands (morning 5–12, afternoon 12–17,
+  evening 17–21, else "Hello") while `isMorning()` uses two, so after midnight
+  the greeting is correctly neutral while the system prompt is confidently
+  "Evening". Unify on one time model — a single shared helper both call — and
+  give the small-hours band wording that does not assert which day it is.
+  Decide the late-night copy in the doc before coding it; keep the existing
+  3-step shape and every safety carveout **verbatim**.
+  → **Verify:** `npm run build` + `npm run test` green, with tests pinning the
+  band boundaries (04:59 / 05:00 / 11:59 / 12:00 / 21:00 / 00:35) against
+  injected clocks, plus a test that the two call sites agree at every hour.
+  **GATE-TRIGGERING — `src/prompts/` is touched.** Per `README.md`'s replay rule
+  this changes what the model is asked, so it needs a **fresh 3-seed generate
+  read** at 11/22/33, not a `--rescore`; put the numbers vs the floors in the PR
+  body. Pin the check-in variant explicitly via `getBaseSystemInstruction`'s
+  `opts.morning` so the eval stays reproducible regardless of wall-clock time.
+  **Sequencing note:** this is the *only* gated item of the three — if gate time
+  is short in a run, ship F5 and F6 first; they are independent of it.
 
 - [x] 2026-07-10 · **F1 — Feedback channel** (DONE 2026-07-12, PR #85 — see
   Ledger. The decided 2026-07-12 issue-template spec is pruned here on
@@ -329,9 +456,36 @@ task (outline corrected, share message decided) the moment R4 lands.
 
 ## Blocked on Sharang
 
-- **Sharing the link with testers** (after F2 + the release gate pass) — the
-  loop prepares; Sharang sends. **Now the only thing standing between a live app
-  and its first human user.** The kit is being written this cycle (F2); the
+- **Can the QLoRA actually reach the browser? (asked 2026-08-11 — now the single
+  highest-value unknown in the project.)** Sharang has referred to "weird
+  limitations" around converting the fine-tune to a LiteRT-web `.task`. The app
+  ships stock Gemma on all three engines (`src/inference/index.ts:33/39/45`) and
+  the first tester's main quality complaint is exactly the thing the QLoRA was
+  trained to fix (field note §C1). This one fact sets the order of all gated
+  work:
+  - **If reachable:** F8 (gratitude tone + CBT distortion-naming) waits for the
+    tuned model and tone becomes a *training* target, not a prompt target. M16
+    stays first in `model-quality`.
+  - **If structurally blocked:** prompt-only is the permanent shipped ceiling and
+    **F8 is promoted to the top of this queue** — because then no amount of
+    waiting fixes the banned opener, and the prompt is the only lever left.
+
+  The loop must not guess this, and must not queue F8 either way until answered.
+  Everything else in the queue (F5, F6, F7) is workable now and independent of it.
+
+- **The one-click chooser check** — see the grounding note above; still one
+  signed-in click, still not machine-verifiable by the loop.
+
+- ~~**Sharing the link with testers**~~ — **DONE 2026-08-11. Sharang sent it and
+  the first tester reported back**; the resulting queue is F5–F8 above. Kept for
+  the record because the reasoning below shows what the decision cost and what it
+  bought: it was sent with the 10-turn bar still unmet, and the tester's report
+  vindicates that call — the six items are worth more than the wait would have
+  been, and none of them is a safety incident. Historical text follows.
+
+- *(historical)* **Sharing the link with testers** (after F2 + the release gate
+  pass) — the loop prepares; Sharang sends. **~~Now the only thing standing
+  between a live app and its first human user.~~** The kit is being written this cycle (F2); the
   message is decided and corrected, verbatim above. Two things to weigh when you
   decide: your own 2026-07-12 ruling gates this on the 10-turn quality bar,
   which is **still unmet**, and R10a measured the guided modes at **0 of 7**

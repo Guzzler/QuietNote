@@ -78,6 +78,33 @@ machinery is needed either way; `human-feedback` unblocks as noted in that
 doc. Human-reported issues (GitHub issues / `docs/field-notes/`) outrank
 queued items once they exist; safety-relevant reports outrank everything.
 
+**Amended 2026-08-11 (interactive with Sharang): the "once they exist" clause
+above has fired. A real human used QuietNote.** The first tester's report is
+triaged, code-verified and de-identified in
+[`docs/field-notes/2026-08-11-first-tester.md`](../field-notes/2026-08-11-first-tester.md),
+and `human-feedback` F3/F4 are now ACTIVE with **F5, F6, F7** queued. Three
+consequences:
+
+1. **`human-feedback` F5–F7 is the working queue, top-down, ahead of everything
+   except a safety-relevant report.** `public-release` has **zero** open items
+   (all 16 done) so its historical "public-release first" ordering is now dead
+   weight; `model-quality` keeps M16 and M5c. Execute should stop reading the
+   order as "public-release, then human-feedback".
+2. **The shipped app has never run the fine-tune, and the first tester's main
+   quality complaint is precisely what the fine-tune was for.**
+   `src/inference/index.ts:33/39/45` are all stock (Gemma 2 2B MLC / ONNX E2B /
+   litert `.task`), and `systemPrompts.ts:18` bans the exact opener the tester
+   was served as its *"strictest rule, never break"*. This is the outside
+   confirmation of lines 62-73 above. **Whether the QLoRA can reach the browser
+   at all is now the project's highest-value unknown** and is Sharang's to answer
+   — it is filed under `human-feedback`'s *Blocked on Sharang*, and it decides
+   whether tone work is a training target or the only remaining lever.
+3. **Do not spend gate reads one prompt-fix at a time.** A 3-seed generate read
+   costs ~2.75h measured. Every prompt-touching item this note generates (F7, and
+   F8's tone + distortion-naming) must be **batched into as few gated PRs as
+   possible** — F7 alone now, F8's two halves together later. Three separate
+   reads for three prompt edits is a planning error.
+
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
 
 1. **Hosting:** GitHub Pages via Actions. **The repo stays PRIVATE until
@@ -161,6 +188,40 @@ R4 — verified against the current scripts, not assumed.
   dose-echo WATCH) — gate-triggered only.
 - New features/modes, new eval dimensions or cases, B3 prompt-library seeding.
 - Everything `docs/ROADMAP.md` lists as REJECTED (still rejected).
+
+### The field-note carve-out (added 2026-08-11, interactive with Sharang)
+
+**Work traceable to a named field note from a real tester is not "new features"
+and is not "eval micro-tuning". It is the point of the RELEASE phase, and it
+outranks this parked list.**
+
+Why this clause exists: read literally, the two bullets above forbid most of what
+the first tester's report asks for — a time-of-day fix touches `src/prompts/`, a
+CBT distortion-naming step looks like a new feature, and a tone change looks like
+prompt micro-tuning. The loop would have read the first real human feedback the
+project has ever received and correctly filed nearly all of it as parked. The
+parked list was written to stop the loop **inventing** work during RELEASE; it was
+never meant to stop it **responding** to a human.
+
+The carve-out is deliberately narrow. To qualify, an item must:
+
+1. **Trace to a specific field note or GitHub issue** from a real user, cited by
+   filename/issue number in the queue item itself. No "while we're in here".
+2. **Stay inside the reported problem.** Fixing what the tester hit is in scope;
+   the adjacent redesign it suggests to you is not.
+3. **Obey the release gate unchanged** — the carve-out lifts the *parked* status,
+   never the gate. Anything touching `src/prompts/`, the send path, or a safety
+   util still takes its full read, and gate failure still outranks it.
+4. **Never weaken** guardrails, crisis detection, the disclaimer, the referral
+   guard, or the local-only rule. A tester asking for something that breaks those
+   gets a documented decline in the field note, not an implementation — see
+   §D1 of the 2026-08-11 note, where a tester's own reasoning was the argument
+   against their own suggestion.
+5. **Never be invented on the loop's behalf.** No field note, no carve-out. The
+   audit-pass rule (queue empty → file findings, don't invent work) is unchanged.
+
+Everything still parked stays parked: eval dimensions/cases, ROADMAP-rejected
+items, telemetry in any form, and any feature no human has asked for.
 
 ## Queue-item format
 
