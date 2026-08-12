@@ -5,6 +5,7 @@ import PromptSelector from "./PromptSelector";
 import MoodSuggestionCard from "./MoodSuggestionCard";
 import PromptSuggestionCard from "./PromptSuggestionCard";
 import JournalingModeSelector from "./JournalingModeSelector";
+import { MODE_LABELS } from "../utils/modeLabels";
 import GratitudeGuide from "./GratitudeGuide";
 import CheckInGuide from "./CheckInGuide";
 import ThoughtRecordGuide from "./ThoughtRecordGuide";
@@ -74,6 +75,8 @@ interface ChatPanelProps {
   onRetryLoad?: () => void;
   journalingMode?: JournalingMode;
   onJournalingModeChange: (mode: JournalingMode) => void;
+  /** F5 — set when a mode switch started a fresh entry; cleared on the next new session. */
+  modeSwitchNotice?: JournalingMode | null;
   gratitudeStep?: number;
   checkinStep?: number;
   thoughtRecordStep?: number;
@@ -102,6 +105,7 @@ export default function ChatPanel({
   onRetryLoad,
   journalingMode = "freewrite",
   onJournalingModeChange,
+  modeSwitchNotice = null,
   gratitudeStep = 1,
   checkinStep = 1,
   thoughtRecordStep = 1,
@@ -561,6 +565,15 @@ export default function ChatPanel({
 
       {/* Input Row */}
       <div className="border-t border-slate-200 mt-2 pt-2">
+        {/* F5 — quiet confirmation that switching modes started a fresh entry.
+            Inline text in the existing notice register, not a dialog or a
+            toast: it must not move the writing surface. */}
+        {modeSwitchNotice && !current && (
+          <p className="mb-2 ml-1 text-xs text-slate-400">
+            Started a new {MODE_LABELS[modeSwitchNotice]} — your previous entry is
+            saved in Sessions.
+          </p>
+        )}
         {/* Mode selector + Prompt Selector */}
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">

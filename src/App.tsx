@@ -18,6 +18,10 @@ import { isBareDeflection, withDeflectionReprompt } from "./utils/responseShapin
 import { shouldAttemptReferralReprompt, withReferralReprompt } from "./utils/referralReprompt";
 import { buildSessionContext, formatContextForPrompt } from "./utils/sessionContext";
 import { deriveGuidedStep, resolveSessionMode } from "./utils/guidedSession";
+import {
+  shouldStartNewSessionOnModeChange,
+  shouldPersistThoughtRecord,
+} from "./utils/modeSwitch";
 import { generateReflection, shouldRegenerate } from "./utils/sessionReflection";
 import { buildPersonalityDirective, DEFAULT_PERSONALITY } from "./utils/personalityPrompt";
 import {
@@ -178,6 +182,9 @@ export default function App() {
   // Track A6 — distraction-free focus mode (Esc toggles; chrome recedes)
   const [focusMode, setFocusMode] = useState(false);
 
+  // F5 — quiet confirmation after a mode switch started a new entry
+  const [modeSwitchNotice, setModeSwitchNotice] = useState<JournalingMode | null>(null);
+
   // Listen for crisis resources open event from ChatPanel disclaimer link
   useEffect(() => {
     const handleOpenCrisis = () => setShowCrisisResources(true);
@@ -192,7 +199,23 @@ export default function App() {
     setSelectedThread(null);
     setUserInput("");
     setContextTrimmed(false);
+    setModeSwitchNotice(null);
   }, []);
+
+  // F5 — a mode is a distinct exercise, so switching modes on a session that
+  // already has content starts a new entry (see utils/modeSwitch.ts for the
+  // four bugs this closes). The outgoing session is already persisted by the
+  // `current` effect below, so it stays in the Sessions list.
+  const handleJournalingModeChange = useCallback(
+    (mode: JournalingMode) => {
+      if (shouldStartNewSessionOnModeChange(current, journalingMode, mode)) {
+        handleNewSession();
+        setModeSwitchNotice(mode);
+      }
+      setJournalingMode(mode);
+    },
+    [current, journalingMode, handleNewSession]
+  );
 
   // Keep a fresh modal-open snapshot for the global key handler without
   // re-binding the listener on every modal toggle (ref, not dep).
@@ -283,10 +306,12 @@ export default function App() {
   const thoughtRecordSaved = useRef<string | null>(null);
   useEffect(() => {
     if (
-      journalingMode !== "thoughtrecord" ||
-      guidedStep <= 5 ||
-      !current ||
-      thoughtRecordSaved.current === current.id
+      !shouldPersistThoughtRecord({
+        mode: journalingMode,
+        session: current,
+        savedSessionId: thoughtRecordSaved.current,
+      }) ||
+      !current
     ) return;
 
     const userMessages = current.threads
@@ -312,7 +337,7 @@ export default function App() {
 
     thoughtRecordSaved.current = current.id;
     saveThoughtRecord(record).catch(console.error);
-  }, [guidedStep, journalingMode, current]);
+  }, [journalingMode, current]);
 
   // Start a new session with the first user entry
   const newSession = async (firstMessage: string) => {
@@ -839,33 +864,41 @@ export default function App() {
           focusMode ? "opacity-0 pointer-events-none -translate-y-2 h-0 overflow-hidden" : "opacity-100"
         }`}
       >
-        <div className="w-full px-6 py-3 flex items-center gap-3">
+        <div className="w-full px-4 sm:px-6 py-3 flex items-center gap-3">
           <div className="p-2 rounded-xl bg-indigo-50">
             <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Quietnote logo" className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold">Quietnote</h1>
-            <p className="text-xs text-slate-500">
+            <h1 className="text-xl font-semibold whitespace-nowrap">Quietnote</h1>
+            {/* F5 — at 375px the tagline wrapped to three lines once the New
+                control carried its label. It is decoration; the controls are
+                not. Hidden below the sm breakpoint. */}
+            <p className="hidden sm:block text-xs text-slate-500">
               Private journaling companion
             </p>
           </div>
-          <div className="ml-auto flex items-center gap-4">
-            {/* New Session Button — only visible when in a conversation */}
+          <div className="ml-auto flex items-center gap-1 sm:gap-4">
+            {/* New Session Button — only visible when in a conversation.
+                F5: the label used to be `hidden sm:inline`, which left a phone
+                header of four unlabelled icons and no way to tell which one
+                started a new entry (field note §A1). It now reads "New" at
+                every width, in a tinted pill so it is distinguishable from the
+                three quiet icon buttons beside it. */}
             {current && (
               <button
                 onClick={handleNewSession}
-                className="flex items-center gap-2 px-3 py-2.5 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/70 rounded-lg transition-colors min-h-[44px]"
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2.5 text-sm text-indigo-600 bg-indigo-50/70 sm:bg-transparent hover:text-indigo-700 hover:bg-indigo-50/70 rounded-lg transition-colors min-h-[44px]"
                 title="New session"
                 aria-label="Start new session"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">New</span>
+                <span>New</span>
               </button>
             )}
             {/* Sessions Button — mobile only */}
             <button
               onClick={() => setShowMobileSessions((v) => !v)}
-              className="flex lg:hidden items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
+              className="flex lg:hidden items-center gap-2 px-2.5 sm:px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
               title="Sessions"
               aria-label="Toggle sessions panel"
             >
@@ -875,7 +908,7 @@ export default function App() {
             {/* Mood Tracker Button */}
             <button
               onClick={() => setShowMoodTracker(true)}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
+              className="flex items-center gap-2 px-2.5 sm:px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
               title="Mood history & details"
               aria-label="Mood history & details"
             >
@@ -885,7 +918,7 @@ export default function App() {
             {/* Settings Button */}
             <button
               onClick={() => setShowSettings(true)}
-              className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
+              className="flex items-center gap-2 px-2.5 sm:px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100/70 rounded-lg transition-colors min-h-[44px]"
               title="AI personality settings"
               aria-label="AI personality settings"
             >
@@ -925,7 +958,8 @@ export default function App() {
             sessions={sessions}
             moods={allMoods}
             journalingMode={journalingMode}
-            onJournalingModeChange={(mode: JournalingMode) => setJournalingMode(mode)}
+            onJournalingModeChange={handleJournalingModeChange}
+            modeSwitchNotice={modeSwitchNotice}
             gratitudeStep={guidedStep}
             checkinStep={guidedStep}
             thoughtRecordStep={guidedStep}
