@@ -132,6 +132,12 @@ describe("App wiring (R9)", () => {
 
   it("the ThoughtRecord save condition reads the derived step", () => {
     expect(source).toContain("deriveGuidedStep(current)");
-    expect(source).toContain("guidedStep <= 5");
+    // F5 (2026-08-11) moved the save condition itself into
+    // utils/modeSwitch.ts so it could be tested directly — including the
+    // "> 5" threshold this line used to pin here. R9's requirement is
+    // unchanged: the threshold is read from the derived step, never from a
+    // separate counter.
+    expect(read("../modeSwitch.ts")).toContain("deriveGuidedStep(session) > 5");
+    expect(source).toContain("shouldPersistThoughtRecord({");
   });
 });
