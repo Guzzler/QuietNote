@@ -229,3 +229,55 @@ items, telemetry in any form, and any feature no human has asked for.
 <verification: command/URL/screenshot>` — concrete enough that execute never
 has to re-derive intent. Blocked-on-Sharang items live in each doc's
 **Blocked on Sharang** section, never in the queue.
+
+## Doc size, and the archive (rule revised 2026-08-11)
+
+**The old rule was "keep each initiative doc under ~200 lines — prune superseded
+content into its ledger". It is replaced, because it was dead text.** On
+2026-08-11 the four docs stood at 4,546 lines: `model-quality` 2,488,
+`public-release` 1,222, `human-feedback` 520, `personalization` 85 — 12× and 6×
+the cap on the two that mattered. Both scheduled tasks read every doc **in full,
+every run**, so that was a real recurring cost, not a tidiness complaint.
+
+It failed for three reasons worth recording, since they shape the replacement:
+
+1. **It was never here.** The rule lived only in the planner's task file, while
+   these docs cited it as a README rule (`public-release.md` said "The README
+   caps initiative docs at ~200 lines"). A constraint nobody could find in the
+   place it was attributed to is a constraint nobody enforces.
+2. **"Into its ledger" points the wrong way.** Pruning *into* the same file
+   cannot shrink it — and chasing the cap that way is exactly what turned ledger
+   rows into paragraph-length essays. Superseded material has to leave the file.
+3. **~200 is achievable for a finished initiative and impossible for a live
+   one.** A doc carrying an open queue, a measurement protocol and its evidence
+   is not padding at 400 lines. The loop had already worked this out and said so
+   in writing (2026-08-08: pruned ~110 lines, landed at 841, "still 4× the cap…
+   the remaining bulk is real evidence that is still load-bearing") — and then
+   kept violating a number it had itself judged wrong.
+
+**The rule now:**
+
+- **Cap the working core, not the file: ~250 lines of material a run actually
+  needs** — mission, grounding, the increments index, the open queue, live
+  defects, the compact ledger, Blocked on Sharang.
+- **A doc over ~400 lines total is a trigger, not a violation.** The next
+  planning run either archives down to the working core or writes one line in
+  the doc saying why the excess is still load-bearing. Silently exceeding it is
+  the only failure mode.
+- **Superseded content moves to [`archive/`](archive/), never into the ledger.**
+  Take a dated verbatim snapshot, then reduce the live doc — see
+  [`archive/README.md`](archive/README.md). Ledger rows in the live doc are one
+  scannable line; the full outcome text lives in the snapshot.
+- **When an initiative reaches zero open items, archive it whole** and leave the
+  index, the still-live defects, and the ledger. `public-release.md` is the
+  worked example.
+- **Five things are never pruned, at any size:** an open queue item; a **Blocked
+  on Sharang** entry; the release gate, multi-seed rule and replay rule above;
+  `model-quality.md`'s variance protocol (the multi-seed rule points at it); and
+  a defect that is still live on the shipped app, even when its fix is not
+  queued. When in doubt, keep it and archive something else.
+
+**Where this leaves the docs (2026-08-11): 1,431 live lines, down from 4,546.**
+`human-feedback.md` is deliberately left at 520 — it holds the only active queue
+(F5–F7) and its bulk is the field-note grounding those items depend on. It is
+over the trigger, and this sentence is the required reason.
