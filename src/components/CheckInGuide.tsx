@@ -1,6 +1,7 @@
 import { Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
-import { MORNING_CHECKIN_SEQUENCE, EVENING_CHECKIN_SEQUENCE, GUIDE_SCAFFOLD_NOTE } from "../data/journalPrompts";
+import { checkinGuideForBand, GUIDE_SCAFFOLD_NOTE } from "../data/journalPrompts";
+import { getTimeBand } from "../utils/timeOfDay";
 
 interface Props {
   currentStep: number; // 1-based (1, 2, or 3)
@@ -9,21 +10,17 @@ interface Props {
   onUsePrompt?: (prompt: string) => void;
 }
 
-function isMorning(): boolean {
-  const hour = new Date().getHours();
-  return hour >= 5 && hour < 12;
-}
-
 export default function CheckInGuide({ currentStep, compact, onUsePrompt }: Props) {
-  const morning = isMorning();
-  const sequence = morning ? MORNING_CHECKIN_SEQUENCE : EVENING_CHECKIN_SEQUENCE;
+  // F7 — the guide reads the same clock as the system prompt, so the step
+  // shown on screen cannot ask about "your day" while the model is running
+  // the late-night variant.
+  const { sequence, title, morning } = checkinGuideForBand(getTimeBand());
   const step = sequence[Math.min(currentStep - 1, sequence.length - 1)];
   const total = sequence.length;
   const displayStep = Math.min(currentStep, total);
   const isComplete = currentStep > total;
 
   const Icon = morning ? Sun : Moon;
-  const title = morning ? "Morning Check-in" : "Evening Check-in";
   const accentBg = morning ? "bg-amber-100" : "bg-indigo-100";
   const accentText = morning ? "text-amber-600" : "text-indigo-600";
   const barActive = morning ? "bg-amber-400" : "bg-indigo-400";
