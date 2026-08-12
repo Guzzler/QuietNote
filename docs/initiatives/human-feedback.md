@@ -110,7 +110,7 @@ it ships correct the moment R4 lands:
 | F4 | Feedback-driven iteration: human reports outrank queue items | **ACTIVE 2026-08-11** — F5–F8 below are the first exercise of it |
 | F5 | Mobile session control: "New" is invisible on a phone **and** switching modes silently corrupts the session (**4** coupled bugs — a 4th found 2026-08-11 pm, and it writes fabricated data to IndexedDB) | **DONE 2026-08-11 (PR #140)** |
 | F6 | Surface Thought Record at phone widths — highest-intent tester never saw the most differentiated mode | **DONE 2026-08-11 (PR #141)** |
-| F7 | Time-of-day correctness: a 00:35 check-in asks how "today" went about a day that already ended | queued 2026-08-11 (field note §A3) — gate-triggering |
+| F7 | Time-of-day correctness: a 00:35 check-in asks how "today" went about a day that already ended | **DONE 2026-08-11 (PR #142)** — gate taken on invariance |
 | F8 | Gratitude tone + CBT distortion-naming, batched into ONE gated PR | **BLOCKED** on the QLoRA-to-browser question (field note §C, Blocked on Sharang) — do not queue |
 
 ## Task queue
@@ -218,7 +218,8 @@ Sharang*; do not promote it into this queue without his answer.
   `docs/screenshots/2026-08-11/`. **Not gate-triggering** — UI only, no prompt
   text, no safety util.
 
-- [ ] 2026-08-11 · **F7 — A 00:35 check-in must not ask how "today" went.**
+- [x] 2026-08-11 · **F7 — A 00:35 check-in must not ask how "today" went.** DONE
+  2026-08-11 (PR #142 — see Ledger).
   Field note §A3. `isMorning()` (`src/prompts/systemPrompts.ts:186`) is
   `hour >= 5 && hour < 12`, so every hour from 12:00 to 04:59 selects
   `CHECKIN_EVENING_INSTRUCTION`, whose step 1 is "How their day was overall" —
@@ -411,15 +412,19 @@ link, or anything that reads like a survey invite — the in-app footer link
 and `WELCOME.md` §6 carry the reporting path. Do not name the model or the
 engine; testers don't need it, and §2 of WELCOME.md covers alternates.
 
-**Queue status (2026-08-11 pm, planner — current): 3 open — F5, F6, F7.**
-Unchanged in count since this morning: no execute run has happened since the
-queue was rebuilt, so nothing has been checked off and no PR is open. What moved
-this run is grounding, not the queue — **F5 grew a fourth coupled defect** (the
-only one of the four that writes fabricated data to IndexedDB) and **F7's
-deferred copy question is now answered in the item**, so all three are pure
-implementation tasks with no open design question between them. Ordering stands:
-F5 → F6 → F7, and F7 is the only gated one. F8 stays out of the queue pending the
-QLoRA-to-browser answer.
+**Queue status (2026-08-11, after the execute run): 0 open.** F5 (#140), F6
+(#141) and F7 (#142) all shipped this run, in that order, each as its own PR
+with build and tests green. F7's gate was taken on **invariance** exactly as the
+item ruled — byte-identity held, so a `--rescore` at seeds 11/22/33 replaced a
+~2.75 h generate read, and it reproduced the R15b baseline in every dimension at
+all three seeds. **No pass is claimed against the floors**; that is still M16's
+to answer. F8 stays out of the queue pending the QLoRA-to-browser answer, so this
+initiative has no workable open item until Sharang answers it or a new field note
+arrives. Three item premises turned out incomplete and were built honestly
+smaller/wider rather than glossed — the END-OF-RESPONSE RULE differing between
+MORNING and EVENING, the third clock (`currentTimeBucket`, left alone), and the
+check-in *guide* needing to move with the prompt. All three are in the ledger
+rows and in `docs/decisions.md`.
 
 The three superseded queue-status blocks (2026-08-09, 2026-08-08, 2026-07-23)
 are verbatim in
@@ -432,6 +437,7 @@ kit is not sending it" reading of the model-quality blocker is in the same place
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-11 | F7 — time-of-day correctness (gate-triggering, taken on invariance) | #142 | `utils/timeOfDay.ts` gains `getTimeBand`/`bandForHour` (4 bands, night 21:00–04:59); the greeting and the check-in system prompt now read that one helper, and `CHECKIN_NIGHT_INSTRUCTION` ships with the decided copy verbatim. The three variants are **composed from one shared body** — and the item's premise was one block short: MORNING and EVENING also differ in their **END-OF-RESPONSE RULE** (evening carries the longer "strictest format rule" version). Recorded, not smoothed: night takes evening's. **Byte-identity holds** — MORNING and EVENING equal a frozen pre-refactor snapshot (`src/prompts/__tests__/checkinSnapshots.ts`), and `morning: false` still resolves to EVENING at every hour, both pinned by tests. Two things beyond the item, both inside the reported defect: the **guide** now reads the same clock (a night guide showing "How was your day?" beside the night prompt would have reproduced the defect on the more visible surface), and a **third clock was found and deliberately left alone** — `currentTimeBucket` runs evening to 22:00 and selects journal prompts, a different question; noted in the file. 25 new tests, build green, **2592** tests green. **GATE (invariance, per README:62-73 + the item's ruling):** `--rescore` of the preserved M11 corpora at seeds 11/22/33 with `--referral-reprompt`, per-mode summaries **identical in every dimension to the R15b baseline at all three seeds** (`docs/eval-runs/2026-08-11-f7-rescore-seed{11,22,33}`). Those absolute numbers are the M-series fine-tune candidate, not the shipped model, and they miss floors on their own — **no pass is claimed**, only invariance. Verified in the app at a pinned 00:xx clock: "Late-night Check-in · Step 1 of 3 · How are you feeling right now?", coherent reply, and 19:00 still gets "Evening Check-in · How was your day?". 0 console errors. |
 | 2026-08-11 | F6 — Thought Record reachable on a phone | #141 | Both causes fixed. (a) The mode strip wraps instead of scrolling sideways, and on phones it takes the full row with the Prompt button below it — sharing one row left the strip ~200px, which wrapped four modes onto **three** lines; measured at 375px and 390px, all four labels on screen in two rows, `document.scrollWidth == innerWidth`. (b) `ChatPanel`'s inline welcome `useMemo` moved to `utils/welcomeSuggestion.ts`, and the two bands that returned **null for everyone** (afternoon, and 21:00–04:59 — T1's hour) now offer "Something on your mind? Try a thought record." Morning/evening check-in nudges and the mood override are unchanged, pinned by tests. It routes through the **existing** suggestion slot, so `pickAuxiliaryElement`'s one-auxiliary-element rule holds and continuity still wins. `PersonalizedWelcome.test.ts` had hand-copied the logic it was meant to guard — it now imports the real functions; a replica could not have caught this. 11 new tests, build green, **2567** tests green (+9 net). Playwright at 375/390px on `npx vite preview`, IndexedDB cleared to a true first-visit state and the clock pinned to 00:xx: suggestion → Thought Record **step 1 of 5** → one exchange → step 2. IndexedDB restored afterwards. 0 console errors. Not gate-triggering. |
 | 2026-08-11 | F5 — Mode switching starts a new session (4 coupled bugs + "New" on a phone) | #140 | New `utils/modeSwitch.ts` holds both predicates; `App.tsx`'s `onJournalingModeChange` calls `handleNewSession()` before `setJournalingMode` when the current session has content, and the ThoughtRecord save effect now runs through `shouldPersistThoughtRecord` — which adds a second line of defence (a session explicitly written in another mode is never filed as a record; pre-R9 sessions with no `mode` keep their old behaviour). Quiet inline notice above the mode strip, no dialog, no toast. Header: `New` is labelled at every width in a mobile-only indigo pill, mobile padding tightened, and the "Private journaling companion" tagline hides below `sm` — it wrapped to three lines at 375px once New carried its label. `ChatPanel.tsx:onSuggestMode` unchanged (empty state, `current` null). 18 new tests, each of the four defects modelled against the pre-F5 handler so the bite is explicit; one R9 source guard re-pointed at `modeSwitch.ts` rather than deleted. Build green, **2558 tests** green (+18). Playwright at 375px on `npx vite preview`: gratitude turn → switch to Check-in → fresh session, **"Evening Check-in · Step 1 of 3"** not "Complete", notice shown, old entry in Sessions; wrote a Check-in turn, reloaded, reopened it — mode restored as **Check-in**. 0 console errors. Not gate-triggering. |
 | 2026-08-10 | F1b — Re-check the feedback path from the live origin | #139 | **Measurement only, no `src/` diff.** The dormancy R3b/F1 accepted **has ended**: open-source link **200** logged-out (R14's description live in the `<title>`), Share feedback **302 → login → 200** (not a 404), `…/issues` and `…/tree/main/.github/ISSUE_TEMPLATE` both **200** anonymously. `mailto:` recorded verbatim, not opened. One correction: the footer has four `·`-separated *segments*, three of which are links — the item miscounted, nothing missing. Chooser *rendering* stays behind the 302 = Sharang's one click. Screenshot `docs/screenshots/2026-08-10/f1b-live-footer.png`. Full hrefs/status tables: [archive](archive/human-feedback-2026-08-11.md). |

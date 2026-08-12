@@ -1,5 +1,5 @@
 import type { PromptCategory } from "../types";
-import { currentTimeBucket } from "../utils/timeOfDay";
+import { currentTimeBucket, type TimeBand } from "../utils/timeOfDay";
 
 export interface PromptData {
   id: string;
@@ -384,6 +384,37 @@ export const EVENING_CHECKIN_SEQUENCE = [
   { step: 2, prompt: "What went well today?" },
   { step: 3, prompt: "What would you do differently?" },
 ] as const;
+
+/**
+ * Structured 3-step late-night check-in sequence (F7, 2026-08-11).
+ *
+ * The on-screen guide has to agree with what the model was told. From 21:00
+ * to 04:59 the system prompt now runs the late-night variant, whose steps
+ * never assert which day it is; showing "How was your day?" beside it would
+ * reproduce the exact defect the first tester reported, on the more visible
+ * of the two surfaces. Wording tracks CHECKIN_NIGHT_INSTRUCTION's steps.
+ */
+export const NIGHT_CHECKIN_SEQUENCE = [
+  { step: 1, prompt: "How are you feeling right now?" },
+  { step: 2, prompt: "What's still on your mind at this hour?" },
+  { step: 3, prompt: "What would help you set it down for tonight?" },
+] as const;
+
+/** The check-in sequence and title for a time band — one selector, so the
+ *  guide cannot drift from the system prompt. */
+export function checkinGuideForBand(band: TimeBand): {
+  sequence: readonly { step: number; prompt: string }[];
+  title: string;
+  morning: boolean;
+} {
+  if (band === "morning") {
+    return { sequence: MORNING_CHECKIN_SEQUENCE, title: "Morning Check-in", morning: true };
+  }
+  if (band === "night") {
+    return { sequence: NIGHT_CHECKIN_SEQUENCE, title: "Late-night Check-in", morning: false };
+  }
+  return { sequence: EVENING_CHECKIN_SEQUENCE, title: "Evening Check-in", morning: false };
+}
 
 /**
  * Structured 5-step CBT thought record sequence.

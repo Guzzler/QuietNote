@@ -11,6 +11,7 @@
 // left empty anyway.
 import type { MoodEntry } from "../types";
 import type { WelcomeSuggestion } from "./welcomeEmptyState";
+import { bandForHour, type TimeBand } from "./timeOfDay";
 
 /** The zero-data suggestion for the hours that used to offer nothing at all. */
 export const THOUGHT_RECORD_SUGGESTION: WelcomeSuggestion = {
@@ -18,11 +19,18 @@ export const THOUGHT_RECORD_SUGGESTION: WelcomeSuggestion = {
   mode: "thoughtrecord",
 };
 
+// F7 — the greeting's four bands are now the shared `getTimeBand` bands.
+// They were already these exact boundaries, so no hour changes its greeting;
+// what changes is that the system prompt reads the same clock.
+const GREETINGS: Record<TimeBand, string> = {
+  morning: "Good morning",
+  afternoon: "Good afternoon",
+  evening: "Good evening",
+  night: "Hello",
+};
+
 export function buildGreeting(hour: number): string {
-  if (hour >= 5 && hour < 12) return "Good morning";
-  if (hour >= 12 && hour < 17) return "Good afternoon";
-  if (hour >= 17 && hour < 21) return "Good evening";
-  return "Hello";
+  return GREETINGS[bandForHour(hour)];
 }
 
 /**
@@ -37,15 +45,13 @@ export function buildWelcomeSuggestion(
   hour: number,
   moods: MoodEntry[]
 ): WelcomeSuggestion | null {
-  let suggestion: WelcomeSuggestion | null = null;
-
-  if (hour >= 5 && hour < 12) {
-    suggestion = { text: "Start with a morning check-in?", mode: "checkin" };
-  } else if (hour >= 17 && hour < 21) {
-    suggestion = { text: "Wind down with an evening reflection?", mode: "checkin" };
-  } else {
-    suggestion = THOUGHT_RECORD_SUGGESTION;
-  }
+  const band = bandForHour(hour);
+  let suggestion: WelcomeSuggestion =
+    band === "morning"
+      ? { text: "Start with a morning check-in?", mode: "checkin" }
+      : band === "evening"
+        ? { text: "Wind down with an evening reflection?", mode: "checkin" }
+        : THOUGHT_RECORD_SUGGESTION;
 
   if (moods.length >= 5) {
     const recent = moods.slice(0, 5);
