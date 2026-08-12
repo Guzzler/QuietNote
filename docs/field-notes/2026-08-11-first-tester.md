@@ -65,6 +65,23 @@ when `{current && …}`, and its label is `hidden sm:inline` (Tailwind `sm` =
   step 4 of a 3-step flow and `CheckInGuide.tsx:63` immediately renders
   **"Complete"**. T1 would have been handed a check-in that was already over.
 
+**A2 addendum (planner, 2026-08-11 pm) — it is four coupled bugs, and the fourth
+writes fabricated data to the user's storage.** `App.tsx:283-315` saves a
+structured `ThoughtRecord` whenever `journalingMode === "thoughtrecord" &&
+guidedStep > 5 && current`. It never checks which mode the messages were *written*
+in, and `guidedStep` counts user messages session-wide — so switching to Thought
+Record after 5+ turns of Free Write or Gratitude persists a fabricated record to
+IndexedDB **immediately, before the user types anything**, filing their gratitude
+answers as `situation` / `automaticThought` / `evidenceFor` /
+`alternativeThought`, and it then shows up in `ThoughtRecordHistory` as real. T1
+switched modes after 3 turns so they did not cross the threshold, but the path
+they took is the path that reaches it. The other three defects end with the
+session; this one leaves permanent junk in the user's own data on an app whose
+entire positioning is that the data is theirs. It strengthens the F5 ruling
+(switching modes starts a new session) rather than changing it: `guidedStep` is a
+`useMemo` over `current` (`App.tsx:280`), so clearing `current` disarms this
+effect for free.
+
 **A3 — the midnight check-in asks the wrong question.** `isMorning()`
 (`systemPrompts.ts:186`) is `hour >= 5 && hour < 12`, so at 00:35 T1 got
 `CHECKIN_EVENING_INSTRUCTION`, whose step 1 is "How their day was overall" —

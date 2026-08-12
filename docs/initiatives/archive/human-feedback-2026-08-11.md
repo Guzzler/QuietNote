@@ -108,7 +108,7 @@ it ships correct the moment R4 lands:
 | F1b | Re-check the shipped feedback path from the live origin (the half of F1's "re-check at R4" the loop can actually do) | DONE (PR #139) |
 | F3 | Field-notes intake convention + weekly issue→field-note triage | **ACTIVE 2026-08-11** — first feedback exists. Convention set by `2026-08-11-first-tester.md`: de-identified, code-triaged, sequencing at the end. Note the intake shape: feedback arrived by **private message**, not as an issue, so relaying it into `docs/field-notes/` is a Sharang-and-planner step, not an automated one |
 | F4 | Feedback-driven iteration: human reports outrank queue items | **ACTIVE 2026-08-11** — F5–F8 below are the first exercise of it |
-| F5 | Mobile session control: "New" is invisible on a phone **and** switching modes silently corrupts the session (**4** coupled bugs — a 4th found 2026-08-11 pm, and it writes fabricated data to IndexedDB) | queued 2026-08-11 (field note §A1+§A2) |
+| F5 | Mobile session control: "New" is invisible on a phone **and** switching modes silently corrupts the session (3 coupled bugs) | queued 2026-08-11 (field note §A1+§A2) |
 | F6 | Surface Thought Record at phone widths — highest-intent tester never saw the most differentiated mode | queued 2026-08-11 (field note §B1) |
 | F7 | Time-of-day correctness: a 00:35 check-in asks how "today" went about a day that already ended | queued 2026-08-11 (field note §A3) — gate-triggering |
 | F8 | Gratitude tone + CBT distortion-naming, batched into ONE gated PR | **BLOCKED** on the QLoRA-to-browser question (field note §C, Blocked on Sharang) — do not queue |
@@ -138,28 +138,7 @@ Sharang*; do not promote it into this queue without his answer.
   land on the old mode's transcript (`:581`), the persisted `mode` (`:356`) can
   no longer disagree with the active mode on reload (`:715`), and
   `deriveGuidedStep` can no longer inherit the old mode's user-message count and
-  render the new guide as already "Complete" (`CheckInGuide.tsx:63`).
-  **A FOURTH coupled defect, found by this run's grounding pass and worse than
-  the other three — it writes fabricated data to storage.** `App.tsx:283-315`
-  persists a structured `ThoughtRecord` whenever `journalingMode ===
-  "thoughtrecord" && guidedStep > 5 && current`. Nothing in that effect checks
-  which mode the messages were *written* in, and `guidedStep` counts user
-  messages session-wide. So a user who writes 5+ turns in Free Write or Gratitude
-  and then switches to Thought Record has a **fabricated thought record saved to
-  IndexedDB immediately, before they type anything** — their gratitude answers
-  filed as `situation`, `automaticThought`, `evidenceFor` and
-  `alternativeThought`, with `parseEmotions` (`App.tsx:57`) reducing turn 3 to a
-  keyword. It then appears in `ThoughtRecordHistory` as a real record. The other
-  three defects are display/prompt-level and end when the session does; this one
-  leaves permanent junk in the user's own data on a privacy-positioning app, and
-  it is the strongest argument for the decided design below.
-  **Grounding note for execute — no extra reset code is needed.** `guidedStep` is
-  a `useMemo` over `current` (`App.tsx:280`), so `handleNewSession()` setting
-  `current = null` drops it to 1 automatically and the save effect's `!current`
-  guard short-circuits. Do not add a separate step-counter reset; there is no
-  such state to reset (R9 removed it deliberately — see `guidedSession.ts`'s
-  header comment).
-  Add one
+  render the new guide as already "Complete" (`CheckInGuide.tsx:63`). Add one
   quiet inline confirmation in the calm register (e.g. *"Started a new
   Check-in — your previous entry is saved in Sessions."*), styled like existing
   `text-xs text-slate-400/500` notices, **not** a dialog and not a toast that
@@ -173,11 +152,8 @@ Sharang*; do not promote it into this queue without his answer.
   — the empty-state mode suggestion routes through this same handler, and there
   `current` is null so behaviour must be unchanged.
   → **Verify:** `npm run build` + `npm run test` green; new tests that bite
-  pre-change for all **four** defects (prompt/transcript pairing, reload-restored
-  mode, guided step reset, **and no `saveThoughtRecord` call when the mode is
-  switched to `thoughtrecord` on a session with ≥5 user messages written in
-  another mode** — assert on the persistence call, not on the rendered guide).
-  Drive the real app at **375px** via Playwright on
+  pre-change for all three defects (prompt/transcript pairing, reload-restored
+  mode, guided step reset). Drive the real app at **375px** via Playwright on
   `npx vite preview`: send one gratitude turn → switch to Check-in → confirm a
   fresh session, that the Check-in guide reads **step 1 of 3** and not
   "Complete", and that the old entry is in Sessions; reload and confirm the mode
@@ -225,78 +201,18 @@ Sharang*; do not promote it into this queue without his answer.
   `ChatPanel.tsx:150-164` uses four bands (morning 5–12, afternoon 12–17,
   evening 17–21, else "Hello") while `isMorning()` uses two, so after midnight
   the greeting is correctly neutral while the system prompt is confidently
-  "Evening". Unify on one time model — a single shared helper both call — per the
-  **decided design below**, which this run wrote so F7 is a pure implementation
-  task. Keep the existing 3-step shape and every safety carveout **verbatim**.
-
-  **Decided (planner, 2026-08-11 pm — do not re-litigate):**
-  1. **One shared helper, four bands.** New `src/utils/timeOfDay.ts` exporting
-     `getTimeBand(now: Date = new Date()): "morning" | "afternoon" | "evening" |
-     "night"` — morning 05:00–11:59, afternoon 12:00–16:59, evening 17:00–20:59,
-     **night 21:00–04:59**. These are `ChatPanel.tsx:150-164`'s existing four
-     bands, unchanged, so the greeting's behaviour is **byte-identical at every
-     hour** after the refactor (verified this run: its `else` branch is exactly
-     21:00–04:59 → "Hello"). The greeting keeps its current strings; only the
-     source of the band moves.
-  2. **A third check-in variant, `CHECKIN_NIGHT_INSTRUCTION`**, selected for the
-     `night` band; `morning` → MORNING, `afternoon` **and** `evening` → EVENING
-     (unchanged from today for those hours).
-  3. **Build all three by composition, not by copy-paste.** The three constants
-     differ only in the header line, the 3-step block and the closing pair;
-     everything else — the medical rule, FIRST LINE RULE, UNINTELLIGIBLE INPUT
-     RULE, END-OF-RESPONSE RULE, SAFETY CARVEOUT, Empathy/Continuity/Format — is
-     duplicated verbatim today. Extract that shared body once and assemble the
-     three variants from it. A third hand-copied ~2000-token block is the failure
-     mode this avoids: it would be the fourth place a safety carveout has to be
-     edited in lockstep. **Constraint:** MORNING and EVENING must come out
-     **byte-identical to today's constants** — assert it with an equality test
-     against a frozen snapshot, not by eye.
-  4. **The night copy (decided text — the only new prose).** Header: `You are
-     Quietnote in Late-night Check-in mode.` Steps:
-     > Guide the user through a 3-step late-night reflection:
-     > 1. How they're feeling right now
-     > 2. What is still on their mind at this hour
-     > 3. What would help them set it down for tonight
-
-     Closing pair, replacing evening's "encourage self-compassion" / "Help them
-     close their day with peace": *After each response, gently acknowledge what
-     they shared and encourage self-compassion.* / *Be warm, brief (2-3
-     sentences), and unhurried. Help them put the day down — but always end with
-     a question.*
-     **Why this wording:** it never asserts *which* day it is, which is the whole
-     defect — "right now", "at this hour", "tonight" are all true at 00:35 and at
-     23:00. It keeps evening's self-compassion beat (the small hours are not the
-     moment to switch to morning's intention-setting), and it does not
-     editorialise about being awake late — T1's "odd state" observation is a
-     reason to avoid asserting a false frame, not a licence to comment on the
-     user's sleep.
+  "Evening". Unify on one time model — a single shared helper both call — and
+  give the small-hours band wording that does not assert which day it is.
+  Decide the late-night copy in the doc before coding it; keep the existing
+  3-step shape and every safety carveout **verbatim**.
   → **Verify:** `npm run build` + `npm run test` green, with tests pinning the
-  band boundaries (04:59 / 05:00 / 11:59 / 12:00 / 16:59 / 17:00 / 20:59 /
-  21:00 / 00:35) against **injected** clocks, a test that the greeting and the
-  system-prompt selection agree at all 24 hours, and the byte-identity assertion
-  from (3).
-  **GATE-TRIGGERING — `src/prompts/` is touched**, and that status does not
-  change. **How the read may be taken, ruled this run:** the eval already pins
-  `morning: false` at every generate site (`scripts/run-eval.ts:261, 395, 462,
-  496`), so it always assembles CHECKIN_EVENING_INSTRUCTION and **never reaches
-  the night variant**. If (3)'s byte-identity assertion holds, this PR provably
-  cannot alter what the model is asked in the eval — which is exactly the
-  **invariance** shape R15b established (`README.md:62-73`). So: land the
-  byte-identity test first, then take the gate as a `--rescore` of the preserved
-  3-seed corpora and show identical per-mode summaries at 11/22/33, saying in the
-  PR body that invariance is what is being claimed. **If that assertion cannot be
-  made to hold — if MORNING or EVENING moves by a single byte — the composition
-  refactor has failed its own precondition and the item reverts to a fresh 3-seed
-  generate read** (~2.75h). Conservative in the safe direction, per the replay
-  rule: when in doubt, generate.
-  **Correction to this item as first written (2026-08-11 am):** it said to "pin
-  the check-in variant explicitly via `opts.morning` so the eval stays
-  reproducible" — that is **already done** at all four sites, so there is nothing
-  to add. The real risk runs the other way: a refactor that changes what
-  `morning: false` *resolves to* (e.g. routing it through the new band enum and
-  landing on `night`) would silently change what the gate measures on every
-  future read. `morning: false` must keep meaning EVENING exactly; pin that with
-  a test.
+  band boundaries (04:59 / 05:00 / 11:59 / 12:00 / 21:00 / 00:35) against
+  injected clocks, plus a test that the two call sites agree at every hour.
+  **GATE-TRIGGERING — `src/prompts/` is touched.** Per `README.md`'s replay rule
+  this changes what the model is asked, so it needs a **fresh 3-seed generate
+  read** at 11/22/33, not a `--rescore`; put the numbers vs the floors in the PR
+  body. Pin the check-in variant explicitly via `getBaseSystemInstruction`'s
+  `opts.morning` so the eval stays reproducible regardless of wall-clock time.
   **Sequencing note:** this is the *only* gated item of the three — if gate time
   is short in a run, ship F5 and F6 first; they are independent of it.
 
@@ -358,14 +274,102 @@ Sharang*; do not promote it into this queue without his answer.
   chooser's *rendering* stays unverifiable logged-out (302 to login) — that
   piece is Sharang's one-click check, below.
 
-**F1b's full result section and the F2 WELCOME.md outline are archived** (2026-08-11 pm)
-— both describe finished work whose spec of record is now the shipped artifact, not this doc:
-the outline is superseded by `docs/beta/WELCOME.md` itself, and F1b's four-href /
-HTTP-status tables are reproduced in full in the snapshot. Verbatim in
-[`archive/human-feedback-2026-08-11.md`](archive/human-feedback-2026-08-11.md)
-(`grep -n "F1b result"`).
-Two things were kept live out of that material because they still bind: the share message below
-(unsent to testers 2-10) and its 2026-08-08 honesty correction.
+### F1b result (execute, 2026-08-10) — **the dormancy has ended; one count in the item was wrong**
+
+Read from the live DOM at **https://guzzler.github.io/QuietNote/** (Chromium via
+Playwright, not `vite preview`), production build, 0 console errors (the same 2
+benign warnings as every prior walk: Chromium `powerPreference`, WGSL
+subgroups).
+
+**Footer, verbatim `innerText`:**
+
+```
+Quietnote — your journal entries stay on this device · Share feedback · email · open source
+```
+
+**Correction to the item's premise, small but worth being exact about:** the
+footer has **four `·`-separated segments, three of which are links** — the first
+segment is the plain "your journal entries stay on this device" text. There is
+no fourth link and there never was; R3b added the third. "All four
+`·`-separated links" was a miscount in the item, not a missing link on the page.
+
+**The three hrefs, as read from the live DOM:**
+
+| text | href | target / rel |
+|---|---|---|
+| Share feedback | `https://github.com/Guzzler/QuietNote/issues/new/choose` | `_blank` / `noopener noreferrer` |
+| email | `mailto:sharangpaiusa@gmail.com` | none / none |
+| open source | `https://github.com/Guzzler/QuietNote` | `_blank` / `noopener noreferrer` |
+
+The `mailto:` is recorded verbatim above and was **not opened**, as the item
+required.
+
+**HTTP status of the two GitHub links, followed logged-out** (anonymous `curl`,
+no credentials, browser UA):
+
+| link | no-follow | followed | result |
+|---|---|---|---|
+| `…/QuietNote` (open source) | **200** | 200, 0 redirects | Real repo page. `<title>` reads `GitHub - Guzzler/QuietNote: A private AI journal that runs entirely in your browser…` — i.e. R14's description is live and visible to a stranger. |
+| `…/issues/new/choose` (Share feedback) | **302** | 200 at `github.com/login?return_to=…/issues/new/choose` | Redirect to login, **not a 404** — GitHub requires an account to open an issue, and it round-trips the tester back to the chooser after sign-in. |
+
+**So the accepted dormancy R3b and F1 recorded has genuinely ended**: neither
+link 404s any more. Two supporting reads, taken because "not a 404" is a weak
+claim on its own — `…/QuietNote/issues` returns **200** logged-out (a stranger
+can read the issue list without an account) and
+`…/tree/main/.github/ISSUE_TEMPLATE` returns **200**, so F1/F1a's three template
+files are publicly present at the path the chooser reads.
+
+**Still unverifiable by the loop, as the item predicted:** the chooser's
+*rendering* — whether the two templates plus `config.yml` present correctly, and
+whether F1a's corrected engine-picker path reads right — is behind the 302. That
+is Sharang's one-click check while signed in; it is the only piece of F1/F1a
+left open.
+
+**Nothing was filed as a defect** — no link 404s, no error surfaced. **No `src/`
+diff.** Screenshot: `docs/screenshots/2026-08-10/f1b-live-footer.png`.
+
+**Decided (2026-07-14) — F2 WELCOME.md outline (execute: follow this
+structure; sizes/requirements are the measured values, re-check against the
+live URL at R4):**
+
+1. **Hi — thanks for trying QuietNote** (2–3 sentences): a private AI
+   journaling companion that runs entirely in your browser — the AI model
+   downloads to your device and your writing never leaves it. You're one of
+   the first ~10 people to use it; rough edges expected.
+2. **What you need** (numbers refreshed 2026-08-05 by public-release R8, after
+   the default engine flipped to MediaPipe / Gemma 4 E2B in R7):
+   Chrome or Edge 113+ (or Chrome for Android 121+) with
+   WebGPU; **~2.0 GB** one-time model download on first visit (Wi-Fi
+   recommended; the two alternate engines under **Settings → Privacy & your
+   data → Inference Engine** are **~1.5 GB** (WebLLM / Gemma 2 2B) and
+   **~3.2 GB** (Transformers.js / Gemma 4 E2B) — path corrected 2026-07-23);
+   a few GB free disk.
+   Live URL: https://guzzler.github.io/QuietNote/ (insert at R4).
+   **Standing rule for whoever writes `WELCOME.md`:** re-read these three
+   numbers off `src/inference/types.ts` (`MODEL_DOWNLOAD_SIZES`) at the time
+   F2 is written rather than copying them from here — this outline has now
+   gone stale once, when the default moved underneath it.
+3. **What to try** — one bullet per mode, **in the app's own order and with
+   its own labels** (corrected 2026-07-23 against
+   `JournalingModeSelector.tsx`): **Free Write** (just write what's on your
+   mind and reply to what comes back), **Gratitude**, **Check-in** (a guided
+   mood check), **Thought Record** (work through one stressful thought,
+   CBT-style). Phrase each as an invitation. Suggested: have at least one
+   conversation that goes 5+ turns.
+4. **Honest limits**: the AI is a small on-device model — it can be clumsy,
+   repeat your words back, or miss nuance; it is not a therapist and will
+   point you to real help if you write about being in crisis; Firefox/Safari
+   aren't supported yet.
+5. **Your data**: everything (entries, moods, the model) lives in this
+   browser's storage — clearing site data deletes it; there's no account and
+   no sync; the Privacy dashboard in Settings shows exactly what's stored.
+6. **Telling us what happened** (the part we actually need): the in-app
+   "Share feedback" footer link → GitHub form (please don't paste journal
+   entries — it's public), or email sharangpaiusa@gmail.com. What helps most:
+   what you were doing, what you expected, what happened instead.
+
+Tone: warm, plain, no marketing voice; under ~80 lines; no screenshots
+needed (README has them).
 
 **Decided (2026-07-23) — F2 share message (execute: put this in the PR body
 and the ntfy notification verbatim; Sharang sends it, the loop never does).**
@@ -409,29 +413,44 @@ link, or anything that reads like a survey invite — the in-app footer link
 and `WELCOME.md` §6 carry the reporting path. Do not name the model or the
 engine; testers don't need it, and §2 of WELCOME.md covers alternates.
 
-**Queue status (2026-08-11 pm, planner — current): 3 open — F5, F6, F7.**
-Unchanged in count since this morning: no execute run has happened since the
-queue was rebuilt, so nothing has been checked off and no PR is open. What moved
-this run is grounding, not the queue — **F5 grew a fourth coupled defect** (the
-only one of the four that writes fabricated data to IndexedDB) and **F7's
-deferred copy question is now answered in the item**, so all three are pure
-implementation tasks with no open design question between them. Ordering stands:
-F5 → F6 → F7, and F7 is the only gated one. F8 stays out of the queue pending the
-QLoRA-to-browser answer.
+**Queue status (2026-08-09, planner — current): 1 open — F1b.** F2 shipped
+(#135), so the kit exists and the only thing left in this initiative that the
+loop can do is F1b's measurement of the live feedback path. **One thing changed
+about the send that Sharang should know before he sends anything**, and it is
+recorded here rather than only in `public-release`: R15 — the live app fires the
+988 crisis intervention on the word *cutting* in ordinary sentences like
+"cutting back on coffee" — is now ruled and queued as **R15b**. That is the one
+open defect most likely to be met by a stranger writing honestly, and it is
+worth landing before the message goes out. Added to **Blocked on Sharang** as a
+consideration, not as a new gate: the decision to send was already his, and this
+is one more input to it.
 
-The three superseded queue-status blocks (2026-08-09, 2026-08-08, 2026-07-23)
-are verbatim in
-[`archive/human-feedback-2026-08-11.md`](archive/human-feedback-2026-08-11.md);
-the two standing points they carried are already live elsewhere in this doc —
-R15b's relevance to the send is in *Blocked on Sharang*, and the "preparing the
-kit is not sending it" reading of the model-quality blocker is in the same place.
+**Queue status (2026-08-08, planner): 2 open — F2 and F1b, and this initiative
+is now the pacing one.** R4 fired on 08-07, which removes the only gate F2 ever
+had. `public-release` has exactly one open item (R13a, measurement, blocks
+nobody), so the loop's centre of gravity moves here: the app is live and **zero
+humans have used it**, which is the condition PHASE.md set `RELEASE` to fix.
+**On the model-quality blocker, read precisely:** Sharang's 2026-07-12 ruling
+gates *the soft launch* — i.e. sending the message — on the 10-turn quality bar,
+and that bar is still unmet. It does not gate *preparing the kit*, and F2 has
+always ended at "hand it to Sharang". Writing `WELCOME.md` publishes nothing and
+shares nothing with nobody. What ships is a file in a repo that is already
+public. Sending stays his call, in **Blocked on Sharang**, exactly as before.
+
+**Queue status (2026-07-23, execute): F1a shipped (PR #109) — the queue is
+back to zero open non-gated items across all three initiatives; F2 remains
+gated on R4.** F1a was the first non-gated work anywhere in the initiatives
+since 2026-07-19 — it came from a grounding pass, not from inventing work:
+the F2 outline had never been checked against the code, and checking it
+surfaced a shipped-copy defect in F1. F2 itself is now a pure write-it-out
+task (outline corrected, share message decided) the moment R4 lands.
 
 ## Ledger
 
 | date | item | PR | outcome |
 |---|---|---|---|
-| 2026-08-10 | F1b — Re-check the feedback path from the live origin | #139 | **Measurement only, no `src/` diff.** The dormancy R3b/F1 accepted **has ended**: open-source link **200** logged-out (R14's description live in the `<title>`), Share feedback **302 → login → 200** (not a 404), `…/issues` and `…/tree/main/.github/ISSUE_TEMPLATE` both **200** anonymously. `mailto:` recorded verbatim, not opened. One correction: the footer has four `·`-separated *segments*, three of which are links — the item miscounted, nothing missing. Chooser *rendering* stays behind the 302 = Sharang's one click. Screenshot `docs/screenshots/2026-08-10/f1b-live-footer.png`. Full hrefs/status tables: [archive](archive/human-feedback-2026-08-11.md). |
-| 2026-08-08 | F2 — Soft-launch kit | #135 | `docs/beta/WELCOME.md`, **79 lines**, all six sections in order; every number re-read off the code at write time (sizes `~1.5`/`~3.2`/`~2.0 GB`, default `mediapipe`, browser line matching `WebGPUFallback.tsx`, mode order matching `JournalingModeSelector.tsx`); live URL once, unhedged; README linked with the decided line. README line 5's hedge deliberately left to R14. Judgement call: §4 invites testers to report *false* crisis triggers (R15 was live). Build + 1256 tests green, docs-only. **Nothing sent anywhere.** One error corrected in a PR comment rather than silently: the body quoted the **superseded** share message ("one time, then it's instant", banned from `src/` by R11 #130) — the shipped file was never affected. Full text: [archive](archive/human-feedback-2026-08-11.md). |
+| 2026-08-10 | F1b — Re-check the feedback path from the live origin | #139 | **Measurement only — no `src/` diff, nothing fixed, nothing filed as a defect.** Read on **https://guzzler.github.io/QuietNote/** itself (Chromium via Playwright, not `vite preview`), 0 console errors. **The dormancy R3b and F1 accepted has ended:** `open source` → `https://github.com/Guzzler/QuietNote` is **200** logged-out and its `<title>` carries R14's live description, and `Share feedback` → `…/issues/new/choose` is **302 → login → 200**, i.e. a sign-in redirect that round-trips back to the chooser, **not a 404**. Two supporting reads: `…/issues` is **200** anonymously and `…/tree/main/.github/ISSUE_TEMPLATE` is **200**, so F1/F1a's template files are publicly present at the path the chooser reads. `mailto:sharangpaiusa@gmail.com` recorded verbatim and **not opened**. **One correction to the item's own premise:** it asks to confirm "all four `·`-separated links" — the footer has **four `·`-separated segments, three of which are links**; the first is the plain "your journal entries stay on this device" text. Nothing is missing; the item miscounted. **Still open and still Sharang's:** the chooser's *rendering* sits behind the 302, so whether the two templates and `config.yml` present correctly (and whether F1a's corrected engine-picker path reads right) is a one-click check while signed in — the only piece of F1/F1a left. Full hrefs, statuses and the footer `innerText` are in the F1b result section above. Screenshot: `docs/screenshots/2026-08-10/f1b-live-footer.png`. **Not gate-triggering.** |
+| 2026-08-08 | F2 — Soft-launch kit | #135 | `docs/beta/WELCOME.md` written to the decided outline as a spec: all six sections in order (welcome / what you need / what to try / honest limits / your data / telling me what happened), **79 lines**, warm-and-plain tone, no screenshots, no deadline and no survey-flavoured language. **Every number re-read off the code at write time per the standing rule, not copied from the outline:** `MODEL_DOWNLOAD_SIZES` (`src/inference/types.ts:60-64`) is `~1.5 GB` / `~3.2 GB` / `~2.0 GB` and `createEngine`'s default parameter (`src/inference/index.ts:12`) is `"mediapipe"`, so the headline "about 2.0 GB" is right; the browser line ("Chrome or Edge 113+, Chrome for Android 121+, Firefox/Safari not yet") matches `WebGPUFallback.tsx:45-54` verbatim in substance; the four mode labels and their order match `JournalingModeSelector.tsx`. The live URL appears once, unhedged, as `https://guzzler.github.io/QuietNote/`. README linked with the decided line — `If you're one of the first testers, start with [the welcome note](docs/beta/WELCOME.md).` — placed in the "An honest note on what this is" section. **README line 5's "activating at release" hedge was deliberately left alone:** public-release R14 owns that line and had not landed when this was written, and the item says to say so rather than edit line 5 twice. One judgement call recorded: §4 "Honest limits" adds a sentence inviting testers to report *false* crisis triggers, because R14 (crisis false positive, this run's R13a walk) means a tester can meet one on ordinary text — it is honest about a known live defect, and it costs nothing if the defect is fixed. Build green, 1256 tests green. Docs-only, not gate-triggering. **Nothing was sent anywhere** — sharing is Sharang's action. **One error in this PR, corrected in a comment on it rather than silently:** the body quoted the **superseded** share message ("one time, then it's instant"), because #135 was authored against a `main` that predated the planner's commit `aa8d21c`, which had rewritten exactly that sentence out — it is the promise R11 (#130) banned from `src/`. `#135`'s comment carries the current decided message verbatim and says plainly not to send the one in the body. The shipped `WELCOME.md` was never affected: it was written against the code, and its §2 already reads "no download again, though a fresh browser session still takes a few seconds to load it". |
 | 2026-07-23 | F1a — Correct the engine-picker path in both issue templates | #109 | Both `backend` dropdown labels now read `Which AI engine were you using (Settings → Privacy & your data → Inference Engine)?` — the picker is the "Inference Engine" section in `PrivacyDashboard.tsx:320-341`, reached via Settings → "Privacy & your data"; `SettingsPanel.tsx` has no engine control at all. Templates only, no `src/` runtime change (not gate-triggering); every other field, the option list, and the don't-paste-your-journal guard untouched. `FeedbackChannelGuards.test.ts` gained a 4-test F1a block: both templates contain the corrected label and no longer contain `(Settings → engine)`, plus two UI-anchor assertions (PrivacyDashboard has "Inference Engine", SettingsPanel does not) so the copy can't drift from the UI again. Both files parse as YAML (`js-yaml`, `backend` label read back verbatim). Build green, 1057 tests green. Chooser rendering itself stays unverifiable while the repo is private — re-check at R4 with the rest of F1. |
 | 2026-07-12 | F1 — Feedback channel | #85 | Issue templates per the decided spec verbatim (`feedback.yml`, `bug.yml`, `config.yml` with mailto contact link) + calm footer affordance beside the privacy lock: "Share feedback" → `issues/new/choose` (new tab, noopener) · "email" → `mailto:`. Static links only, no query params, nothing prefilled — `FeedbackChannelGuards` (10 tests) pins hrefs, no-fetch, and the don't-paste-your-journal guard in both templates. Verified rendered footer + DOM hrefs on `vite preview` (screenshot). Template chooser rendering itself is only verifiable once the repo is public (F2/R4) — re-check then, incl. that GitHub accepts the `mailto:` contact link. 1336 tests green. |
 

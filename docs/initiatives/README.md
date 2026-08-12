@@ -277,7 +277,12 @@ It failed for three reasons worth recording, since they shape the replacement:
   a defect that is still live on the shipped app, even when its fix is not
   queued. When in doubt, keep it and archive something else.
 
-**Where this leaves the docs (2026-08-11): 1,431 live lines, down from 4,546.**
-`human-feedback.md` is deliberately left at 520 — it holds the only active queue
-(F5–F7) and its bulk is the field-note grounding those items depend on. It is
-over the trigger, and this sentence is the required reason.
+**Where this leaves the docs (2026-08-11 pm): 1,464 live lines, down from 4,546.**
+`human-feedback.md` sits at **501** — it holds the only active queue (F5–F7) and
+its bulk is the field-note grounding and decided designs those items depend on.
+It is over the trigger, and this sentence is the required reason. It was pruned
+this run rather than allowed to grow: F1b's result tables, the F2 WELCOME.md
+outline (superseded by the shipped file) and three stale queue-status blocks went
+to [`archive/human-feedback-2026-08-11.md`](archive/human-feedback-2026-08-11.md)
+and two essay-length ledger rows became one line each, which paid for ~120 lines
+of new F5/F7 grounding at a net −19.
