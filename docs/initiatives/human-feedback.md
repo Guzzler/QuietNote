@@ -129,7 +129,7 @@ it ships correct the moment R4 lands:
 | F5 | Mobile session control: "New" is invisible on a phone **and** switching modes silently corrupts the session (**4** coupled bugs — a 4th found 2026-08-11 pm, and it writes fabricated data to IndexedDB) | **DONE 2026-08-11 (PR #140)** — live-verified 2026-08-12 |
 | F6 | Surface Thought Record at phone widths — highest-intent tester never saw the most differentiated mode | **DONE 2026-08-11 (PR #141)** — live-verified 2026-08-12 |
 | F7 | Time-of-day correctness: a 00:35 check-in asks how "today" went about a day that already ended | **DONE 2026-08-11 (PR #142)** — gate taken on invariance; live-verified 2026-08-12 |
-| F9 | Walk T1's exact path on the **live** origin at 375px / 00:35 and capture the after-state | **QUEUED 2026-08-12 (open)** — measurement only, the F1b shape |
+| F9 | Walk T1's exact path on the **live** origin at 375px / 00:35 and capture the after-state | **DONE 2026-08-12 (PR #145)** — all four steps PASS on the live origin, 0 console errors; F5/F6/F7 confirmed at the behaviour level, not just the bundle level |
 | F8 | Gratitude tone + CBT distortion-naming, batched into ONE gated PR | **BLOCKED** on the QLoRA-to-browser question (field note §C, Blocked on Sharang) — do not queue |
 
 ## Task queue
@@ -184,8 +184,9 @@ promote it without his answer.
   new policy); `npm run build` + `npm run test` green (docs-only — but the
   cross-links must not break a link test). **Not gate-triggering** — no `src/`.
 
-- [ ] 2026-08-12 · **F9 — Walk T1's exact path on the live URL and capture the
-  before/after.** Field note
+- [x] 2026-08-12 · **F9 — Walk T1's exact path on the live URL and capture the
+  before/after.** DONE 2026-08-12 (PR #145 — see the **F9 result** block below and
+  the Ledger). Field note
   [`2026-08-11-first-tester.md`](../field-notes/2026-08-11-first-tester.md) §A1,
   §A2, §A3, §B1. The planner confirmed at the **bundle** level that all three
   fixes are deployed (Grounding, this doc); this item confirms them at the
@@ -212,6 +213,49 @@ promote it without his answer.
   logged, count stated. **Measurement only — no `src/` diff.** If something is
   broken on the live origin, file it as a proposed item and **do not fix it in the
   same run**. **Not gate-triggering.**
+
+### F9 result — T1's path on the live origin (execute, 2026-08-12)
+
+Chromium via Playwright on **https://guzzler.github.io/QuietNote/** (the deployed
+origin, not `vite preview`), viewport **375 × 812**, app data cleared to a true
+first-visit state. **All four steps PASS. 0 console errors.**
+
+| # | check | result |
+|---|---|---|
+| 1a | zero-data empty state offers Thought Record | **PASS** — *"Something on your mind? Try a thought record."* rendered with **no** mood history, in the 21:00–04:59 band, i.e. exactly T1's hour. This is the branch F6 fixed; before it, this band returned `null` for everyone |
+| 1b | all four mode labels visible, no horizontal scroll | **PASS** — `document.scrollWidth === window.innerWidth === 375`; the strip **wraps to 2 rows** (Free Write / Gratitude / Check-in, then Thought Record) with all four rects inside the viewport |
+| 2 | **New** labelled and visible in the header | **PASS** — renders as a labelled `New` control at 375px once a session exists |
+| 3 | Gratitude → Check-in starts a fresh session | **PASS** — transcript cleared, quiet inline notice *"Started a new Check-in — your previous entry is saved in Sessions."*, guide reads **Step 1 of 3** (not "Complete"), and the Gratitude entry is intact in Sessions |
+| 4 | 00:35 renders the Late-night variant | **PASS** — guide header **"Late-night Check-in"**, step 1 *"How are you feeling right now?"*, advancing to step 2 *"What's still on your mind at this hour?"* |
+
+**Nothing behaved differently on the live origin than it did on `vite preview`** —
+the three fixes are confirmed at the behaviour level, not merely present in the
+bundle. Both console warnings are pre-existing and benign (MediaPipe WebGPU:
+`powerPreference` ignored on Windows, experimental WGSL subgroups); neither is an
+error and neither is new.
+
+Screenshots in [`docs/screenshots/2026-08-12/`](../screenshots/2026-08-12/):
+`f9-01` empty state + four-mode strip, `f9-02` labelled **New** in the mobile
+header, `f9-03` Late-night Check-in step 1 with the switch notice, `f9-04` the
+00:35 exchange.
+
+**Method notes, so the numbers are reproducible and their limits are visible:**
+- **The clock.** The walk ran at a real local **22:48–22:52**, which is already
+  inside the **same night band (21:00–04:59)** as T1's 00:35 — so steps 1–3 hit
+  T1's band on the real clock. For step 4 the page clock was then pinned to a
+  literal **00:35** by shifting `Date` by a constant offset (monotonic, so
+  timestamps stay coherent) and the exchange was sent under it.
+- **The model was already cached** (`mediapipe-cache`, ~2.0 GB) in this profile, so
+  the run paid no download — the item's "reuse the profile" instruction, followed.
+- **What was cleared:** only `quietnote-db` (which held **1** session and no moods
+  or thought records, created by an earlier loop verification run — not a human's
+  data) plus `localStorage`; the model cache was deliberately kept. The two
+  sessions this walk wrote were left in place.
+- **Observation, not a defect, recorded because it is T1's §C1 signal:** the
+  live replies still reach for *"sounds like…"* phrasing **mid-sentence**
+  ("…sounds really draining"). The FIRST LINE RULE bans it as an **opener** and
+  was not violated in either exchange. This is the shipped-model tone question,
+  which is F8/C1 and stays **blocked** — filed here as evidence, not queued.
 
 **Closed item bodies (F1, F1a, F2, F1b, F5, F6, F7) are archived verbatim**
 (2026-08-12) in
@@ -290,6 +334,7 @@ cannot generate that stream. The T1 follow-up message and the send to testers
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-12 | F9 — walk T1's path on the live origin | #145 | **Measurement only, no `src/` diff.** All four steps **PASS** on `https://guzzler.github.io/QuietNote/` at 375px with **0 console errors**, so F5/F6/F7 are now confirmed at the **behaviour** level and not just the bundle level the planner checked: the zero-mood empty state offers Thought Record in T1's own 21:00–04:59 band, `document.scrollWidth === innerWidth === 375` with all four mode labels on screen across 2 rows, **New** is labelled at phone width, the Gratitude→Check-in switch starts a fresh session with the quiet notice and a guide reading **Step 1 of 3** while the old entry survives in Sessions, and a literal pinned **00:35** renders **Late-night Check-in** ("How are you feeling right now?" → "What's still on your mind at this hour?"). **Nothing behaved differently on the live origin than on `vite preview`.** Method recorded rather than assumed: the walk ran at a real 22:48 — already inside the night band — and `Date` was shifted by a constant monotonic offset only for step 4; the ~2.0 GB model was already cached so no download was paid; only `quietnote-db` (1 loop-created session, no moods/records) and `localStorage` were cleared. One observation filed as evidence and deliberately **not** queued: replies still reach for "sounds like" **mid-sentence**, which does not violate the FIRST LINE RULE and belongs to the blocked C1/F8 model question. Screenshots: `docs/screenshots/2026-08-12/f9-0{1,2,3,4}`. Build + **2592** tests green. Not gate-triggering. |
 | 2026-08-12 | F3 — field-note intake convention | #144 | `docs/field-notes/README.md` (73 lines) with all six required elements, and a pointer line added to the initiatives README's *How the loop works*. Written from what the 2026-08-11 note **did**, so every claim is traceable to it or to the initiatives README — **no new policy was invented**, and per the item's explicit prohibition there is no cadence promise, no triage SLA and no template for feedback nobody has sent. The intake shape leads because it is the part the loop got wrong for weeks: reports arrive as a private message relayed by Sharang, and an empty `gh issue list` is **not** evidence of silence. The triage-against-`src/` section is argued from the note's measured payoff (one "possibly unintended" report was four coupled defects, one of them writing a fabricated Thought Record to IndexedDB; one suggestion was a shipped-but-undiscoverable feature; one tone complaint was a shipped-model finding). Bucket **D** is documented as non-optional using §D1's precedent, where a tester's own reasoning was the argument against their own suggestion. Docs-only, no `src/` diff; build + **2592** tests green. Not gate-triggering. |
 | 2026-08-11 | F7 — time-of-day correctness (gate-triggering, taken on invariance) | #142 | `utils/timeOfDay.ts` gains `getTimeBand`/`bandForHour` (4 bands, night 21:00–04:59); the greeting and the check-in system prompt now read that one helper, and `CHECKIN_NIGHT_INSTRUCTION` ships with the decided copy verbatim. The three variants are **composed from one shared body** — and the item's premise was one block short: MORNING and EVENING also differ in their **END-OF-RESPONSE RULE** (evening carries the longer "strictest format rule" version). Recorded, not smoothed: night takes evening's. **Byte-identity holds** — MORNING and EVENING equal a frozen pre-refactor snapshot (`src/prompts/__tests__/checkinSnapshots.ts`), and `morning: false` still resolves to EVENING at every hour, both pinned by tests. Two things beyond the item, both inside the reported defect: the **guide** now reads the same clock (a night guide showing "How was your day?" beside the night prompt would have reproduced the defect on the more visible surface), and a **third clock was found and deliberately left alone** — `currentTimeBucket` runs evening to 22:00 and selects journal prompts, a different question; noted in the file. 25 new tests, build green, **2592** tests green. **GATE (invariance, per README:62-73 + the item's ruling):** `--rescore` of the preserved M11 corpora at seeds 11/22/33 with `--referral-reprompt`, per-mode summaries **identical in every dimension to the R15b baseline at all three seeds** (`docs/eval-runs/2026-08-11-f7-rescore-seed{11,22,33}`). Those absolute numbers are the M-series fine-tune candidate, not the shipped model, and they miss floors on their own — **no pass is claimed**, only invariance. Verified in the app at a pinned 00:xx clock: "Late-night Check-in · Step 1 of 3 · How are you feeling right now?", coherent reply, and 19:00 still gets "Evening Check-in · How was your day?". 0 console errors. |
 | 2026-08-11 | F6 — Thought Record reachable on a phone | #141 | Both causes fixed. (a) The mode strip wraps instead of scrolling sideways, and on phones it takes the full row with the Prompt button below it — sharing one row left the strip ~200px, which wrapped four modes onto **three** lines; measured at 375px and 390px, all four labels on screen in two rows, `document.scrollWidth == innerWidth`. (b) `ChatPanel`'s inline welcome `useMemo` moved to `utils/welcomeSuggestion.ts`, and the two bands that returned **null for everyone** (afternoon, and 21:00–04:59 — T1's hour) now offer "Something on your mind? Try a thought record." Morning/evening check-in nudges and the mood override are unchanged, pinned by tests. It routes through the **existing** suggestion slot, so `pickAuxiliaryElement`'s one-auxiliary-element rule holds and continuity still wins. `PersonalizedWelcome.test.ts` had hand-copied the logic it was meant to guard — it now imports the real functions; a replica could not have caught this. 11 new tests, build green, **2567** tests green (+9 net). Playwright at 375/390px on `npx vite preview`, IndexedDB cleared to a true first-visit state and the clock pinned to 00:xx: suggestion → Thought Record **step 1 of 5** → one exchange → step 2. IndexedDB restored afterwards. 0 console errors. Not gate-triggering. |
