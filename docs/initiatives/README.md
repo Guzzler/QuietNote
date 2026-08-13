@@ -17,6 +17,11 @@ the planner no longer writes daily plan files).
   items off and adds a ledger row (with PR #) **in the same PR** as the code.
 - Queue empty → execute runs an audit pass on the live app and files
   findings as proposed queue items instead of inventing work.
+- Real users' reports enter through [`docs/field-notes/`](../field-notes/), whose
+  [`README.md`](../field-notes/README.md) holds the intake convention: feedback
+  arrives as a private message relayed by Sharang (an empty `gh issue list` is
+  **not** evidence of silence), testers are de-identified, and every claim is
+  triaged against `src/` before it becomes a queue item.
 
 ## Active initiatives (priority order)
 
