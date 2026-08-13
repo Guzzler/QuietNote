@@ -105,6 +105,21 @@ consequences:
    possible** — F7 alone now, F8's two halves together later. Three separate
    reads for three prompt edits is a planning error.
 
+**Amended 2026-08-12 (planner): the first tester's fixes are LIVE, and the order
+below is unchanged.** F5/F6/F7 shipped on 08-11 and were confirmed **deployed**
+this run, not merely merged — Pages run `31556317142` succeeded and the live
+bundle carries all three fixes' fingerprint strings (details in
+`human-feedback.md`'s Grounding). `human-feedback` stays the working initiative
+with a deliberately small queue — **F3** (write down the intake convention that
+has so far existed only as one worked example) and **F9** (walk T1's exact path on
+the live origin, the F1b shape) — and `model-quality` keeps **M16** then **M5c**.
+Two things this run refused to do, both recorded so the next run does not redo the
+reasoning: it did **not** invent replacement work for the empty
+`human-feedback` queue (what this initiative needs is a second human, which is
+Sharang's send), and it did **not** promote **F8** — the QLoRA-to-browser question
+is still unanswered and still decides whether tone is a training target or the
+only remaining lever.
+
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
 
 1. **Hosting:** GitHub Pages via Actions. **The repo stays PRIVATE until
@@ -277,12 +292,14 @@ It failed for three reasons worth recording, since they shape the replacement:
   a defect that is still live on the shipped app, even when its fix is not
   queued. When in doubt, keep it and archive something else.
 
-**Where this leaves the docs (2026-08-11 pm): 1,464 live lines, down from 4,546.**
-`human-feedback.md` sits at **501** — it holds the only active queue (F5–F7) and
-its bulk is the field-note grounding and decided designs those items depend on.
-It is over the trigger, and this sentence is the required reason. It was pruned
-this run rather than allowed to grow: F1b's result tables, the F2 WELCOME.md
-outline (superseded by the shipped file) and three stale queue-status blocks went
-to [`archive/human-feedback-2026-08-11.md`](archive/human-feedback-2026-08-11.md)
-and two essay-length ledger rows became one line each, which paid for ~120 lines
-of new F5/F7 grounding at a net −19.
+**Where this leaves the docs (2026-08-12): 1,386 live lines, down from 4,546.**
+`human-feedback.md` is **386 — under the ~400 trigger for the first time**, so no
+load-bearing-excess sentence is owed for it this run. It got there the way the
+rule intends: F5/F6/F7's shipped specs (~180 lines) and the closed F1/F1a/F2/F1b
+bodies moved verbatim to
+[`archive/human-feedback-2026-08-12.md`](archive/human-feedback-2026-08-12.md),
+along with two resolved *Blocked on Sharang* entries whose one still-binding
+sentence ("walked by hand, never scored") was kept in the live doc. No open item,
+no unresolved blocker, and no still-live defect was pruned. `model-quality.md`
+rose 375 → 394 (M16's step-1 preconditions, grounded this run) and remains the
+one doc worth watching against the trigger.

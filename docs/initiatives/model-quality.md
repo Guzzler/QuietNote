@@ -158,6 +158,25 @@ oversample multiplier past 6×).
      (`m4a-work/llama.cpp`), or pull an existing community Q4_K_M quant. **Record which artifact
      was used and its sha256** — a gate number is meaningless without knowing which weights
      produced it.
+     **Step-1 preconditions re-grounded 2026-08-12 (planner) — all four hold, so this step is
+     executable tonight and is not blocked on Sharang:**
+     - **The base repo is ungated.** `GET /api/models/google/gemma-4-E2B-it` returns
+       `gated: false, private: false`, and an anonymous `resolve/main/config.json` returns **200**.
+       This mattered: there is **no HF token on the rig** (`~/.cache/huggingface/token` does not
+       exist), and Gemma repos are commonly license-gated — had it been gated, step 1 would have
+       needed Sharang's HF account and belonged in *Blocked on Sharang* instead of this queue.
+       Re-check the 200 before starting rather than trusting this line; gating can be turned on.
+     - **Download size: one `model.safetensors` at 10.25 GB** (+ ~30 MB tokenizer/config). Same
+       shape as the merged repo M4a pulled, so `convert_hf_to_gguf.py` needs no new handling.
+     - **The toolchain is in place and the recipe is on disk.** `m4-convert.log` records the exact
+       three steps M4a ran — download `Sharangp/quietnote-m3-gemma4-e2b-merged` → `[2/3]
+       convert_hf_to_gguf -> f16` → `[3/3] llama_quantize … as Q4_K_M` — with `m4a-work/venv`,
+       `m4a-work/llama.cpp` and the built `m4a-work/bin/` all still present. Follow it; do not
+       re-derive it.
+     - **Disk: 79 GB free on C: (96 % used).** Peak need is ~24 GB (10.25 download + ~10 f16 +
+       3.4 Q4_K_M), so it fits — but **delete the f16 intermediate after quantizing**, which is
+       what M4a did (no `*-f16.gguf` survives on the rig, only the four Q4_K_M files). Do not
+       leave a second 10 GB artifact behind on a disk this full.
   2. Serve it through the M4a llama-server bridge with the M12 settings that make a read
      replayable: `--jinja --chat-template-kwargs '{"enable_thinking": false}'`, and
      `cache_prompt: false` (set automatically whenever `--seed=` is passed).

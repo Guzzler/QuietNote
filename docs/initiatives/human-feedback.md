@@ -9,6 +9,24 @@ prefilled or attached to anything. Rules of engagement:
 
 ## Grounding (verified 2026-07-10 — planner: re-verify before editing)
 
+- **T1's four fixable defects are fixed AND LIVE (verified 2026-08-12, planner —
+  this is the grounding pass for this run).** Shipping to `main` is not shipping
+  to the tester, so the deploy was checked end-to-end rather than assumed:
+  `gh run list` shows the Pages deploy for PR #142 (`31556317142`) **completed
+  success** at 02:15 UTC, and the live bundle served from
+  `https://guzzler.github.io/QuietNote/assets/index-D1RerXfO.js` (500,199 bytes,
+  fetched anonymously) contains all three fixes' fingerprint strings —
+  `Late-night Check-in` ×2 and `still on your mind at this hour` (F7),
+  `your previous entry is saved in Sessions` (F5), `Try a thought record` and
+  `flex-wrap` (F6). **So a tester who opens the same link today gets the fixed
+  app.** Two consequences: the follow-up message to T1 in *Blocked on Sharang* is
+  factually safe to send, and **F9** exists to confirm this at the behaviour
+  level rather than the bundle level.
+- **The model is still cached in T1's browser.** `src/inference/index.ts` and
+  `mediapipe-engine.ts` have not changed since R7 (PR #125), which predates T1's
+  2026-08-11 visit, so the model URL a returning visitor resolves is the same one
+  they already paid ~2 GB for. This is the one claim in the follow-up message that
+  would be expensive to get wrong, so it was checked in git rather than assumed.
 - **A REAL HUMAN HAS USED QUIETNOTE (2026-08-11) — this initiative's mission
   statement is now partly satisfied and its blocking assumption is dead.**
   Sharang shared the app; the first tester (T1) used it on a phone at ~00:35 and
@@ -106,269 +124,108 @@ it ships correct the moment R4 lands:
 | F1a | Issue templates point testers at "Settings → engine"; the picker is in the Privacy dashboard | DONE (PR #109) |
 | F2 | Soft-launch kit: tester one-pager + share message for Sharang | **DONE 2026-08-08 (PR #135)** — `docs/beta/WELCOME.md`, 79 lines, all six sections; README linked. Sharing remains Sharang's |
 | F1b | Re-check the shipped feedback path from the live origin (the half of F1's "re-check at R4" the loop can actually do) | DONE (PR #139) |
-| F3 | Field-notes intake convention + weekly issue→field-note triage | **ACTIVE 2026-08-11** — first feedback exists. Convention set by `2026-08-11-first-tester.md`: de-identified, code-triaged, sequencing at the end. Note the intake shape: feedback arrived by **private message**, not as an issue, so relaying it into `docs/field-notes/` is a Sharang-and-planner step, not an automated one |
-| F4 | Feedback-driven iteration: human reports outrank queue items | **ACTIVE 2026-08-11** — F5–F8 below are the first exercise of it |
-| F5 | Mobile session control: "New" is invisible on a phone **and** switching modes silently corrupts the session (**4** coupled bugs — a 4th found 2026-08-11 pm, and it writes fabricated data to IndexedDB) | **DONE 2026-08-11 (PR #140)** |
-| F6 | Surface Thought Record at phone widths — highest-intent tester never saw the most differentiated mode | **DONE 2026-08-11 (PR #141)** |
-| F7 | Time-of-day correctness: a 00:35 check-in asks how "today" went about a day that already ended | **DONE 2026-08-11 (PR #142)** — gate taken on invariance |
+| F3 | Field-notes intake convention + issue→field-note triage | **QUEUED 2026-08-12 (open, first)** — ACTIVE since 08-11 but never written down; the convention exists only as one worked example. Intake shape is the part that must be recorded: feedback arrives by **private message**, not as an issue |
+| F4 | Feedback-driven iteration: human reports outrank queue items | **ACTIVE 2026-08-11** — F5–F7 were the first exercise of it, and all three shipped within a day of the report |
+| F5 | Mobile session control: "New" is invisible on a phone **and** switching modes silently corrupts the session (**4** coupled bugs — a 4th found 2026-08-11 pm, and it writes fabricated data to IndexedDB) | **DONE 2026-08-11 (PR #140)** — live-verified 2026-08-12 |
+| F6 | Surface Thought Record at phone widths — highest-intent tester never saw the most differentiated mode | **DONE 2026-08-11 (PR #141)** — live-verified 2026-08-12 |
+| F7 | Time-of-day correctness: a 00:35 check-in asks how "today" went about a day that already ended | **DONE 2026-08-11 (PR #142)** — gate taken on invariance; live-verified 2026-08-12 |
+| F9 | Walk T1's exact path on the **live** origin at 375px / 00:35 and capture the after-state | **QUEUED 2026-08-12 (open)** — measurement only, the F1b shape |
 | F8 | Gratitude tone + CBT distortion-naming, batched into ONE gated PR | **BLOCKED** on the QLoRA-to-browser question (field note §C, Blocked on Sharang) — do not queue |
 
 ## Task queue
 
-**Queue rebuilt 2026-08-11 (planner, interactive with Sharang) from the first
-real tester's report.** Spec of record:
-[`docs/field-notes/2026-08-11-first-tester.md`](../field-notes/2026-08-11-first-tester.md).
-F4 is now live, so these three outrank every remaining queued item anywhere in
-the initiatives except a safety-relevant report. **F8 is deliberately absent** —
-it is blocked on the QLoRA-to-browser question and lives under *Blocked on
-Sharang*; do not promote it into this queue without his answer.
+**Queue rebuilt 2026-08-12 (planner) — 2 open: F3, then F9.** F5, F6 and F7 all
+shipped and are **live** (verified this run, see Grounding). Neither open item is
+gate-triggering and neither is invented: **F3 is this initiative's own ACTIVE
+increment and has never been built**, and **F9 is the F1b shape applied to the
+fixes a real tester asked for** — the same "re-check it from the live origin"
+discipline, on the three PRs that answered their report. **F8 stays out of the
+queue** pending the QLoRA-to-browser answer (*Blocked on Sharang*); do not
+promote it without his answer.
 
-- [x] 2026-08-11 · **F5 — Mode switching must start a new session (fixes 3
-  coupled bugs + makes "New" discoverable).** DONE 2026-08-11 (PR #140 — see
-  Ledger). Field note §A1+§A2. In
-  `src/App.tsx`, change `onJournalingModeChange` (`:928`, currently just
-  `setJournalingMode(mode)`) to start a fresh session when the current one
-  already has content: `if (current) handleNewSession();` **before**
-  `setJournalingMode(mode)`. `handleNewSession` (`:189`) already clears
-  `current`/`currentId`/`selectedThread`/input/trim state, and the outgoing
-  session is already persisted by the `useEffect` at `:267-269`, so nothing is
-  lost — it stays in the Sessions list.
-  **Decided design (planner, this run — do not re-litigate):** one rule, no
-  modal. A mode is a distinct exercise, so switching always begins a new entry.
-  This resolves all three defects at once: the new mode's prompt can no longer
-  land on the old mode's transcript (`:581`), the persisted `mode` (`:356`) can
-  no longer disagree with the active mode on reload (`:715`), and
-  `deriveGuidedStep` can no longer inherit the old mode's user-message count and
-  render the new guide as already "Complete" (`CheckInGuide.tsx:63`).
-  **A FOURTH coupled defect, found by this run's grounding pass and worse than
-  the other three — it writes fabricated data to storage.** `App.tsx:283-315`
-  persists a structured `ThoughtRecord` whenever `journalingMode ===
-  "thoughtrecord" && guidedStep > 5 && current`. Nothing in that effect checks
-  which mode the messages were *written* in, and `guidedStep` counts user
-  messages session-wide. So a user who writes 5+ turns in Free Write or Gratitude
-  and then switches to Thought Record has a **fabricated thought record saved to
-  IndexedDB immediately, before they type anything** — their gratitude answers
-  filed as `situation`, `automaticThought`, `evidenceFor` and
-  `alternativeThought`, with `parseEmotions` (`App.tsx:57`) reducing turn 3 to a
-  keyword. It then appears in `ThoughtRecordHistory` as a real record. The other
-  three defects are display/prompt-level and end when the session does; this one
-  leaves permanent junk in the user's own data on a privacy-positioning app, and
-  it is the strongest argument for the decided design below.
-  **Grounding note for execute — no extra reset code is needed.** `guidedStep` is
-  a `useMemo` over `current` (`App.tsx:280`), so `handleNewSession()` setting
-  `current = null` drops it to 1 automatically and the save effect's `!current`
-  guard short-circuits. Do not add a separate step-counter reset; there is no
-  such state to reset (R9 removed it deliberately — see `guidedSession.ts`'s
-  header comment).
-  Add one
-  quiet inline confirmation in the calm register (e.g. *"Started a new
-  Check-in — your previous entry is saved in Sessions."*), styled like existing
-  `text-xs text-slate-400/500` notices, **not** a dialog and not a toast that
-  moves the writing surface.
-  Also make "New" visible on a phone: `App.tsx:862`'s label is
-  `hidden sm:inline`, so at ≤640px the header is four unlabelled icons. Keep the
-  icon-only treatment if the row cannot fit four labels, but the New control must
-  be distinguishable from the other three (it is the only indigo one today —
-  verify that reads as a control, or give it an accessible visible affordance).
-  **Do not** break `ChatPanel.tsx:409` (`onSuggestMode={onJournalingModeChange}`)
-  — the empty-state mode suggestion routes through this same handler, and there
-  `current` is null so behaviour must be unchanged.
-  → **Verify:** `npm run build` + `npm run test` green; new tests that bite
-  pre-change for all **four** defects (prompt/transcript pairing, reload-restored
-  mode, guided step reset, **and no `saveThoughtRecord` call when the mode is
-  switched to `thoughtrecord` on a session with ≥5 user messages written in
-  another mode** — assert on the persistence call, not on the rendered guide).
-  Drive the real app at **375px** via Playwright on
-  `npx vite preview`: send one gratitude turn → switch to Check-in → confirm a
-  fresh session, that the Check-in guide reads **step 1 of 3** and not
-  "Complete", and that the old entry is in Sessions; reload and confirm the mode
-  does not revert. Screenshots to `docs/screenshots/2026-08-11/` (mobile header
-  + post-switch state). **Not gate-triggering** — no `src/prompts/`, no send-path
-  message construction, no safety util.
+- [ ] 2026-08-12 · **F3 — Write the field-note intake convention.** Field note:
+  [`2026-08-11-first-tester.md`](../field-notes/2026-08-11-first-tester.md) — F3
+  has been ACTIVE since that note landed and the convention still exists only as
+  an example, in one file, undocumented. The next report (T2) will otherwise be
+  filed by whatever the planner remembers that day. **New file
+  `docs/field-notes/README.md`, ~50–70 lines**, written from what the 2026-08-11
+  note actually did rather than from theory:
+  1. **Intake shape, stated first, because the loop got this wrong for weeks.**
+     Feedback arrives as a **private message to Sharang, relayed interactively** —
+     not as a GitHub issue. `gh issue list` returning empty is **not** evidence
+     that no feedback exists. `docs/field-notes/` is the primary intake; issues
+     are a secondary channel that has never yet fired.
+  2. **De-identification (hard rule).** Testers are `T1`, `T2`, …; personal
+     disclosures are **paraphrased, never quoted**; raw messages stay in
+     Sharang's inbox and never enter a tracked file, PR body or ntfy body. Cite
+     the two precedents: `2026-06-09-real-user-data-plan.md:4` and the
+     2026-08-11 note's own "Identity and quoting rules" section.
+  3. **Triage means checking each claim against `src/` before queueing it** —
+     with the measured payoff from the 2026-08-11 note, which is the argument for
+     the rule: one reported "bug" was **four** coupled defects (one of them
+     writing fabricated records to IndexedDB), one suggestion was already shipped
+     but undiscoverable, and one tone complaint was a **shipped-model** finding,
+     not a copy finding.
+  4. **The four triage buckets that note used**, kept as the required section
+     shape: **A** confirmed defects · **B** discovery findings · **C** blocked on
+     a model/infra answer · **D** declined, with reasons (D is not optional —
+     §D1's decline is written using the tester's own reasoning).
+  5. **File naming** `YYYY-MM-DD-<slug>.md`, and the closing **"Sequencing this
+     note implies"** section, which is what the planner turns into queue items.
+  6. One line pointing at the README's **field-note carve-out** and its five
+     conditions — a note is what makes the carve-out available, so the two
+     documents have to reference each other.
+  Then add one line to [`README.md`](README.md)'s *How the loop works* pointing at
+  it. **Do not** invent process the loop has not actually performed — no cadence
+  promises, no triage SLA, no templates for feedback nobody has sent.
+  → **Verify:** `docs/field-notes/README.md` exists with all six elements; every
+  claim in it is traceable to the 2026-08-11 note or the initiatives README (no
+  new policy); `npm run build` + `npm run test` green (docs-only — but the
+  cross-links must not break a link test). **Not gate-triggering** — no `src/`.
 
-- [x] 2026-08-11 · **F6 — Make Thought Record reachable on a phone.** DONE 2026-08-11
-  (PR #141 — see Ledger). Field note
-  §B1: the tester whose stated primary use case is CBT distortion work never saw
-  the mode. Two independent causes, both verified this run — fix both.
-  (a) `JournalingModeSelector.tsx` renders `inline-flex gap-0.5 overflow-x-auto
-  max-w-full` with every button `whitespace-nowrap flex-shrink-0`, and "Thought
-  Record" is the widest label **last of four**, inside `ChatPanel.tsx:565-569`'s
-  `min-w-0 flex-1` beside `PromptSelector`. At ~375px the row overflows with no
-  visible scroll affordance. Change the container to wrap (`flex-wrap`, keeping
-  `gap-0.5` and the `role="radiogroup"`) so all four modes are always visible;
-  if two rows look wrong in the calm register, an explicit scroll affordance is
-  the fallback — but four-visible is the goal.
-  (b) **The only in-app surface that ever names Thought Record is unreachable to
-  a new user.** `ChatPanel.tsx:180` suggests it, but that line sits behind
-  `moods.length >= 5` **and** ≥2 of the last 5 moods being
-  anxious/frustrated/angry (`:169-181`), so a first-time user with no mood
-  history can never see it. Additionally at T1's hour the `else` branch (`:162`)
-  leaves `suggestion` **null**, so the empty state offered no mode at all. Widen
-  discovery for the zero-data case — but **respect
-  `WelcomeEmptyState.tsx:25-26`'s deliberate "at most one auxiliary element"
-  rule and `pickAuxiliaryElement`**: route any new hint through the existing
-  suggestion slot rather than adding a second element, or `VisualCalmGuards` /
-  `WelcomeEmptyState` / `PersonalizedWelcome` tests will (correctly) fight it.
-  → **Verify:** `npm run build` + `npm run test` green; a test that all four mode
-  labels are reachable without horizontal scroll at 375px, and one that the
-  zero-mood empty state can surface Thought Record. Playwright on
-  `npx vite preview` at **375px and 390px**, fresh profile with **no mood data**:
-  screenshot showing all four modes visible, and complete one Thought Record
-  step-1 exchange entered from that surface. Screenshots to
-  `docs/screenshots/2026-08-11/`. **Not gate-triggering** — UI only, no prompt
-  text, no safety util.
+- [ ] 2026-08-12 · **F9 — Walk T1's exact path on the live URL and capture the
+  before/after.** Field note
+  [`2026-08-11-first-tester.md`](../field-notes/2026-08-11-first-tester.md) §A1,
+  §A2, §A3, §B1. The planner confirmed at the **bundle** level that all three
+  fixes are deployed (Grounding, this doc); this item confirms them at the
+  **behaviour** level on the origin a tester actually opens, which is the F1b
+  precedent (measurement on `https://guzzler.github.io/QuietNote/`, **not**
+  `vite preview`). Chromium via Playwright, **375px**, clean profile, clock
+  pinned to **00:35** to reproduce T1's hour:
+  1. First paint: is the empty state's Thought Record suggestion shown, and are
+     **all four** mode labels visible without horizontal scroll?
+     (`document.scrollWidth === window.innerWidth`.)
+  2. Is **New** labelled and visible in the header?
+  3. Write one Gratitude turn, switch to Check-in: fresh session, the quiet
+     inline notice, guide reads **Step 1 of 3** (not "Complete"), old entry in
+     Sessions.
+  4. Start a Check-in at the pinned 00:35 clock and confirm the **Late-night**
+     variant is what renders — the surface T1 hit.
+  **Model download:** the run needs the model once (~2 GB, MediaPipe default) —
+  it is the same cost F1b paid; reuse the browser profile across steps rather
+  than clearing it between them, and clear only what step 1 requires.
+  → **Verify:** an **F9 result** block in this doc — one line per step, pass/fail,
+  plus anything that behaves differently on the live origin than it did on
+  `vite preview` — and screenshots into `docs/screenshots/<date>/` covering the
+  mobile header, the four-mode strip, and the late-night check-in. Console errors
+  logged, count stated. **Measurement only — no `src/` diff.** If something is
+  broken on the live origin, file it as a proposed item and **do not fix it in the
+  same run**. **Not gate-triggering.**
 
-- [x] 2026-08-11 · **F7 — A 00:35 check-in must not ask how "today" went.** DONE
-  2026-08-11 (PR #142 — see Ledger).
-  Field note §A3. `isMorning()` (`src/prompts/systemPrompts.ts:186`) is
-  `hour >= 5 && hour < 12`, so every hour from 12:00 to 04:59 selects
-  `CHECKIN_EVENING_INSTRUCTION`, whose step 1 is "How their day was overall" —
-  which at 00:35 asks about a day that ended 35 minutes ago. **Second, separate
-  defect found this run: the app carries two disagreeing clocks.**
-  `ChatPanel.tsx:150-164` uses four bands (morning 5–12, afternoon 12–17,
-  evening 17–21, else "Hello") while `isMorning()` uses two, so after midnight
-  the greeting is correctly neutral while the system prompt is confidently
-  "Evening". Unify on one time model — a single shared helper both call — per the
-  **decided design below**, which this run wrote so F7 is a pure implementation
-  task. Keep the existing 3-step shape and every safety carveout **verbatim**.
+**Closed item bodies (F1, F1a, F2, F1b, F5, F6, F7) are archived verbatim**
+(2026-08-12) in
+[`archive/human-feedback-2026-08-12.md`](archive/human-feedback-2026-08-12.md);
+their spec of record is now the shipped artifact plus the Ledger row below. The
+share message immediately after this line stayed live: it is **unsent to testers
+2–10** and is still the copy Sharang would paste.
 
-  **Decided (planner, 2026-08-11 pm — do not re-litigate):**
-  1. **One shared helper, four bands.** New `src/utils/timeOfDay.ts` exporting
-     `getTimeBand(now: Date = new Date()): "morning" | "afternoon" | "evening" |
-     "night"` — morning 05:00–11:59, afternoon 12:00–16:59, evening 17:00–20:59,
-     **night 21:00–04:59**. These are `ChatPanel.tsx:150-164`'s existing four
-     bands, unchanged, so the greeting's behaviour is **byte-identical at every
-     hour** after the refactor (verified this run: its `else` branch is exactly
-     21:00–04:59 → "Hello"). The greeting keeps its current strings; only the
-     source of the band moves.
-  2. **A third check-in variant, `CHECKIN_NIGHT_INSTRUCTION`**, selected for the
-     `night` band; `morning` → MORNING, `afternoon` **and** `evening` → EVENING
-     (unchanged from today for those hours).
-  3. **Build all three by composition, not by copy-paste.** The three constants
-     differ only in the header line, the 3-step block and the closing pair;
-     everything else — the medical rule, FIRST LINE RULE, UNINTELLIGIBLE INPUT
-     RULE, END-OF-RESPONSE RULE, SAFETY CARVEOUT, Empathy/Continuity/Format — is
-     duplicated verbatim today. Extract that shared body once and assemble the
-     three variants from it. A third hand-copied ~2000-token block is the failure
-     mode this avoids: it would be the fourth place a safety carveout has to be
-     edited in lockstep. **Constraint:** MORNING and EVENING must come out
-     **byte-identical to today's constants** — assert it with an equality test
-     against a frozen snapshot, not by eye.
-  4. **The night copy (decided text — the only new prose).** Header: `You are
-     Quietnote in Late-night Check-in mode.` Steps:
-     > Guide the user through a 3-step late-night reflection:
-     > 1. How they're feeling right now
-     > 2. What is still on their mind at this hour
-     > 3. What would help them set it down for tonight
+<details><summary>Superseded 2026-08-11 queue material (F5/F6/F7 specs, closed bodies, prior status block)</summary>
 
-     Closing pair, replacing evening's "encourage self-compassion" / "Help them
-     close their day with peace": *After each response, gently acknowledge what
-     they shared and encourage self-compassion.* / *Be warm, brief (2-3
-     sentences), and unhurried. Help them put the day down — but always end with
-     a question.*
-     **Why this wording:** it never asserts *which* day it is, which is the whole
-     defect — "right now", "at this hour", "tonight" are all true at 00:35 and at
-     23:00. It keeps evening's self-compassion beat (the small hours are not the
-     moment to switch to morning's intention-setting), and it does not
-     editorialise about being awake late — T1's "odd state" observation is a
-     reason to avoid asserting a false frame, not a licence to comment on the
-     user's sleep.
-  → **Verify:** `npm run build` + `npm run test` green, with tests pinning the
-  band boundaries (04:59 / 05:00 / 11:59 / 12:00 / 16:59 / 17:00 / 20:59 /
-  21:00 / 00:35) against **injected** clocks, a test that the greeting and the
-  system-prompt selection agree at all 24 hours, and the byte-identity assertion
-  from (3).
-  **GATE-TRIGGERING — `src/prompts/` is touched**, and that status does not
-  change. **How the read may be taken, ruled this run:** the eval already pins
-  `morning: false` at every generate site (`scripts/run-eval.ts:261, 395, 462,
-  496`), so it always assembles CHECKIN_EVENING_INSTRUCTION and **never reaches
-  the night variant**. If (3)'s byte-identity assertion holds, this PR provably
-  cannot alter what the model is asked in the eval — which is exactly the
-  **invariance** shape R15b established (`README.md:62-73`). So: land the
-  byte-identity test first, then take the gate as a `--rescore` of the preserved
-  3-seed corpora and show identical per-mode summaries at 11/22/33, saying in the
-  PR body that invariance is what is being claimed. **If that assertion cannot be
-  made to hold — if MORNING or EVENING moves by a single byte — the composition
-  refactor has failed its own precondition and the item reverts to a fresh 3-seed
-  generate read** (~2.75h). Conservative in the safe direction, per the replay
-  rule: when in doubt, generate.
-  **Correction to this item as first written (2026-08-11 am):** it said to "pin
-  the check-in variant explicitly via `opts.morning` so the eval stays
-  reproducible" — that is **already done** at all four sites, so there is nothing
-  to add. The real risk runs the other way: a refactor that changes what
-  `morning: false` *resolves to* (e.g. routing it through the new band enum and
-  landing on `night`) would silently change what the gate measures on every
-  future read. `morning: false` must keep meaning EVENING exactly; pin that with
-  a test.
-  **Sequencing note:** this is the *only* gated item of the three — if gate time
-  is short in a run, ship F5 and F6 first; they are independent of it.
+All in [`archive/human-feedback-2026-08-12.md`](archive/human-feedback-2026-08-12.md).
+F1b's result tables and the F2 WELCOME.md outline are one archive earlier, in
+[`archive/human-feedback-2026-08-11.md`](archive/human-feedback-2026-08-11.md).
 
-- [x] 2026-07-10 · **F1 — Feedback channel** (DONE 2026-07-12, PR #85 — see
-  Ledger. The decided 2026-07-12 issue-template spec is pruned here on
-  2026-07-23: it shipped verbatim, so `.github/ISSUE_TEMPLATE/feedback.yml`,
-  `bug.yml`, `config.yml` and `FeedbackChannelGuards.test.ts` are now the
-  spec of record — with the one correction filed as F1a below.)
-
-- [x] 2026-07-23 · **F1a — Correct the engine-picker path in both issue
-  templates** (DONE 2026-07-23, PR #109 — see Ledger. Chooser rendering
-  stays unverifiable until the repo is public — re-check at R4 with the
-  rest of F1.)
-- [x] 2026-08-08 · **F2 — Soft-launch kit** (DONE 2026-08-08, PR #135 — see
-  Ledger. All six sections shipped, sizes re-read off the code, README linked
-  with the decided line. **R14 had not landed when this was written, so line 5's
-  hedge was left alone as the item instructs** — R14 owns it and is the next PR
-  this run. **Nothing was shared with anyone**: the share message is in the PR
-  body and the ntfy, and sending it stays Sharang's.)
-- [x] 2026-08-08 · **F2 — Soft-launch kit** (**ungated** — R4 fired 2026-08-07;
-  `docs/beta/` does not exist yet, verified this run). Write
-  `docs/beta/WELCOME.md` per the decided outline below — which is a spec, not a
-  draft: follow its six sections in order, in its stated tone, under ~80 lines,
-  no screenshots. Then link it from `README.md` in the "An honest note on what
-  this is" area as one plain line (`If you're one of the first testers, start
-  with [the welcome note](docs/beta/WELCOME.md).`). Put the decided share
-  message below **verbatim** in the PR body and a pointer to it in the ntfy
-  notification. **Sharing with testers is Sharang's action, never the loop's** —
-  do not open a discussion, post anywhere, or email anyone.
-  **Standing rule that has already bitten once:** re-read the three download
-  sizes off `src/inference/types.ts` (`MODEL_DOWNLOAD_SIZES`) and the mode
-  labels/order off `JournalingModeSelector.tsx` at write time rather than
-  copying them from the outline. (Planner re-checked both this run: sizes are
-  still `~1.5 GB` / `~3.2 GB` / `~2.0 GB` with **mediapipe the default**, so
-  §2's numbers are correct as written — check anyway, cheaply.)
-  → **Verify:** the file exists at `docs/beta/WELCOME.md` and covers all six
-  sections; the live URL in it is `https://guzzler.github.io/QuietNote/` with
-  **no "activating at release" hedge** (R14 removes the same hedge from the
-  README — if R14 has not landed, say so in the PR rather than editing line 5
-  twice); every number in it matches `src/inference/types.ts`; `npm run build`
-  and `npm run test` green (docs-only, but the README link must not break any
-  link test). **Not gate-triggering** — no `src/`, no prompts, no safety util.
-
-- [x] 2026-08-08 · **F1b — Re-check the feedback path from the live origin.**
-  F1 and F1a both deferred a "re-check at R4" that has now half arrived: the
-  repo is public, so the in-app links resolve for a stranger for the first time.
-  Do the half the loop can do, on **https://guzzler.github.io/QuietNote/**
-  itself (not `vite preview` — the point is the deployed origin), Chromium via
-  Playwright: confirm the footer renders all four `·`-separated links, that
-  "Share feedback" href is `…/issues/new/choose` and "open source" is the repo
-  root, and that **both now return a real GitHub page rather than a 404** when
-  followed anonymously (the accepted dormancy R3b recorded has ended — check it
-  actually ended). Record the `mailto:` href verbatim without opening it.
-  → **Verify:** an **F1b result** note here with the four hrefs as read from the
-  live DOM, the HTTP status of the two GitHub links followed logged-out, and one
-  screenshot of the live footer into `docs/screenshots/<date>/`. **Measurement
-  only — no `src/` diff.** If a link 404s or the chooser errors, file it as a
-  proposed item; do not fix it in the same run. Note in the write-up that the
-  chooser's *rendering* stays unverifiable logged-out (302 to login) — that
-  piece is Sharang's one-click check, below.
-
-**F1b's full result section and the F2 WELCOME.md outline are archived** (2026-08-11 pm)
-— both describe finished work whose spec of record is now the shipped artifact, not this doc:
-the outline is superseded by `docs/beta/WELCOME.md` itself, and F1b's four-href /
-HTTP-status tables are reproduced in full in the snapshot. Verbatim in
-[`archive/human-feedback-2026-08-11.md`](archive/human-feedback-2026-08-11.md)
-(`grep -n "F1b result"`).
-Two things were kept live out of that material because they still bind: the share message below
-(unsent to testers 2-10) and its 2026-08-08 honesty correction.
+</details>
 
 **Decided (2026-07-23) — F2 share message (execute: put this in the PR body
 and the ntfy notification verbatim; Sharang sends it, the loop never does).**
@@ -412,26 +269,21 @@ link, or anything that reads like a survey invite — the in-app footer link
 and `WELCOME.md` §6 carry the reporting path. Do not name the model or the
 engine; testers don't need it, and §2 of WELCOME.md covers alternates.
 
-**Queue status (2026-08-11, after the execute run): 0 open.** F5 (#140), F6
-(#141) and F7 (#142) all shipped this run, in that order, each as its own PR
-with build and tests green. F7's gate was taken on **invariance** exactly as the
-item ruled — byte-identity held, so a `--rescore` at seeds 11/22/33 replaced a
-~2.75 h generate read, and it reproduced the R15b baseline in every dimension at
-all three seeds. **No pass is claimed against the floors**; that is still M16's
-to answer. F8 stays out of the queue pending the QLoRA-to-browser answer, so this
-initiative has no workable open item until Sharang answers it or a new field note
-arrives. Three item premises turned out incomplete and were built honestly
-smaller/wider rather than glossed — the END-OF-RESPONSE RULE differing between
-MORNING and EVENING, the third clock (`currentTimeBucket`, left alone), and the
-check-in *guide* needing to move with the prompt. All three are in the ledger
-rows and in `docs/decisions.md`.
+**Queue status (2026-08-12, planner — current): 2 open, F3 then F9.** Everything
+T1 reported that the loop could fix without a model answer is **fixed and
+deployed** (Grounding, this doc). The queue that replaces it is deliberately
+small and deliberately not new product work: F3 writes down the intake convention
+this initiative has been running on informally since the first note, and F9 checks
+the three fixes on the origin a tester opens rather than on `vite preview`. **F8
+remains out of the queue** pending the QLoRA-to-browser answer, and **no pass
+against the gate floors is claimed anywhere** — that is M16's to answer.
 
-The three superseded queue-status blocks (2026-08-09, 2026-08-08, 2026-07-23)
-are verbatim in
-[`archive/human-feedback-2026-08-11.md`](archive/human-feedback-2026-08-11.md);
-the two standing points they carried are already live elsewhere in this doc —
-R15b's relevance to the send is in *Blocked on Sharang*, and the "preparing the
-kit is not sending it" reading of the model-quality blocker is in the same place.
+**What this initiative is actually waiting on is a second human.** T1 is one
+datapoint; F3/F4 exist to turn a stream of them into queue items, and the loop
+cannot generate that stream. The T1 follow-up message and the send to testers
+2–10 are both in *Blocked on Sharang* below. Superseded queue-status blocks:
+[2026-08-11](archive/human-feedback-2026-08-12.md),
+[2026-08-09 and earlier](archive/human-feedback-2026-08-11.md).
 
 ## Ledger
 
@@ -467,41 +319,64 @@ kit is not sending it" reading of the model-quality blocker is in the same place
 - **The one-click chooser check** — see the grounding note above; still one
   signed-in click, still not machine-verifiable by the loop.
 
-- ~~**Sharing the link with testers**~~ — **DONE 2026-08-11. Sharang sent it and
-  the first tester reported back**; the resulting queue is F5–F8 above. Kept for
-  the record because the reasoning below shows what the decision cost and what it
-  bought: it was sent with the 10-turn bar still unmet, and the tester's report
-  vindicates that call — the six items are worth more than the wait would have
-  been, and none of them is a safety incident. Historical text follows.
+- **Tell T1 their report landed — and ask for one second pass. (New 2026-08-12;
+  this run's decided copy, unsent.)** Four of the six things T1 raised are fixed
+  and **live** (verified this run: deploy `31556317142` succeeded and the shipped
+  bundle carries all three fixes). A tester who reports six things and hears
+  nothing back is a tester who does not report a seventh — and T1 is currently the
+  entire human-feedback pipeline. Two things make a second pass unusually cheap
+  for them: the model is **already cached in their browser** (`inference/index.ts`
+  has not changed since R7, well before their visit, so the ~2 GB is not re-paid),
+  and the one mode they said they most wanted — the CBT thought record — is the
+  thing they never saw. **Sending is yours; the loop never sends.** Message,
+  written to be pasted as-is (~120 words, no links besides the one they already
+  have, no deadline, no survey framing, and — per the standing honesty rule that
+  bound the F2 copy — **no speed promise and no quality claim**):
 
-- *(historical)* **Sharing the link with testers** (after F2 + the release gate
-  pass) — the loop prepares; Sharang sends. **~~Now the only thing standing
-  between a live app and its first human user.~~** The kit is being written this cycle (F2); the
-  message is decided and corrected, verbatim above. Two things to weigh when you
-  decide: your own 2026-07-12 ruling gates this on the 10-turn quality bar,
-  which is **still unmet**, and R10a measured the guided modes at **0 of 7**
-  turns aligned — Free Write is the surface that has been walked repeatedly and
-  is the one that holds up. Sending to 5–10 people who know it's rough is a
-  legitimate reading of that; so is waiting for M4. The loop won't decide it.
-  **Third input, added 2026-08-09:** the live app currently answers ordinary
-  sentences containing the word *cutting* ("cutting back on coffee", "he was
-  cutting everyone short") with the full 988 crisis wall — `public-release` R15,
-  now ruled, with the fix queued as **R15b**. It is one list change plus a gate
-  read, so it is days not weeks, and it is the single defect most likely to make
-  a tester distrust the safety surface. Worth waiting for; still your call.
-- **Fourth input, added 2026-08-10 — read this one before the other three.** The
-  "release gate pass" that the kit and this initiative have been assuming as a
-  precondition **does not exist and cannot currently be obtained**: every
-  preserved eval corpus is the M-series fine-tune candidate, not the model the
-  live app runs, and those corpora fail the floors on their own (details and the
-  ruling in [`public-release.md`](public-release.md)). So the honest statement
-  about the live build is *"it has been walked end-to-end by hand on the live URL
-  and it works; it has never been scored"* — not *"it passed the gate"*. Nothing
-  the loop has written to testers claims otherwise (checked this run:
-  `docs/beta/WELCOME.md` and the decided share message make no gate or quality
-  claim), and nothing may. `model-quality`'s **M16** is the read that would close
-  it and is now first in that queue. This does not change whose decision the send
-  is — it changes what you would be saying if you made it.
+  > Quick follow-up: the things you flagged are fixed and already live at the
+  > same link. Nothing to reinstall, and it won't re-download the AI — that part
+  > is still cached on your phone.
+  >
+  > - There's a labelled **New** button on phones now, so you don't have to
+  >   refresh to start again.
+  > - Switching modes starts a **fresh entry** instead of continuing the old one.
+  >   The previous one is saved under Sessions.
+  > - **Thought Record** — the 5-step CBT one, evidence for and against, then a
+  >   balanced reframe — is now visible on a phone. That's the closest thing to
+  >   what you said you actually use it for, and it was there the whole time; you
+  >   just couldn't see it.
+  > - A late-night check-in no longer asks how "today" went.
+  >
+  > The tone thing you noticed is real and is a bigger fix — that one's a model
+  > problem, not a wording problem, and I'm working on it.
+  >
+  > No rush at all. If you open it again, tell me where it still feels off.
+
+  **Why each line is defensible, since tester-facing copy inherits the `src/`
+  honesty guards:** "already live" is the verified deploy; "won't re-download the
+  AI" is true because the model URL is unchanged; the Thought Record description
+  matches `THOUGHT_RECORD_INSTRUCTION`'s actual 5 steps; and the tone sentence
+  states the §C1 finding plainly rather than promising a date. **Do not** add the
+  eval numbers, name the model, or say anything about gate floors — nothing about
+  the live build has ever been scored (see below).
+
+- ~~**Sharing the link with testers**~~ — **DONE 2026-08-11.** Sharang sent it,
+  T1 reported back, and the resulting work (F5–F7) has shipped. The decision cost
+  and what it bought, the R15/R15b input, and the "the gate pass does not exist"
+  ruling are verbatim in
+  [`archive/human-feedback-2026-08-12.md`](archive/human-feedback-2026-08-12.md).
+  **The one point from it that is still live and still binding:** the honest
+  statement about the shipped build is *"walked end-to-end by hand on the live URL
+  and it works; it has never been scored"* — **not** *"it passed the gate"*.
+  `model-quality`'s **M16** is the read that would change that, and nothing the
+  loop writes for a tester may claim otherwise in the meantime.
+
+- **Testers 2–10 — still unsent, and now the binding constraint on this
+  initiative.** The mission is 5–10 people; one has used it. The share message
+  above the queue is unchanged and still ready to paste. Nothing in the loop's
+  queue substitutes for this, and the loop will not invent work to fill the gap
+  it leaves.
+
 - **One-click check only you can do: does the issue-template chooser render?**
   Open https://github.com/Guzzler/QuietNote/issues/new/choose while logged in
   and confirm you see the two forms plus the "Prefer email?" contact link. The
