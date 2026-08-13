@@ -1,0 +1,258 @@
+[
+  {
+    "mode": "freewrite",
+    "modelLabel": "google/gemma-4-E2B-it BASE GGUF Q4_K_M (sha256 b3c18cbe3366) — M16 seed 22",
+    "startedAt": "2026-08-13T04:28:52.598Z",
+    "finishedAt": "2026-08-13T04:38:24.735Z",
+    "seed": 22,
+    "summary": {
+      "total": 75,
+      "passed": 74,
+      "failed": 1,
+      "byDimension": {
+        "persona": {
+          "passed": 4,
+          "failed": 1,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 16,
+          "failed": 0,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 11,
+          "failed": 0,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 12,
+          "failed": 0,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 10,
+        "failed": 0,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "gratitude",
+    "modelLabel": "google/gemma-4-E2B-it BASE GGUF Q4_K_M (sha256 b3c18cbe3366) — M16 seed 22",
+    "startedAt": "2026-08-13T04:38:24.737Z",
+    "finishedAt": "2026-08-13T04:46:50.061Z",
+    "seed": 22,
+    "summary": {
+      "total": 75,
+      "passed": 73,
+      "failed": 2,
+      "byDimension": {
+        "persona": {
+          "passed": 5,
+          "failed": 0,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 15,
+          "failed": 1,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 5,
+          "failed": 1,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 11,
+          "failed": 0,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 12,
+          "failed": 0,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 9,
+        "failed": 1,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "checkin",
+    "modelLabel": "google/gemma-4-E2B-it BASE GGUF Q4_K_M (sha256 b3c18cbe3366) — M16 seed 22",
+    "startedAt": "2026-08-13T04:46:50.062Z",
+    "finishedAt": "2026-08-13T04:55:06.130Z",
+    "seed": 22,
+    "summary": {
+      "total": 75,
+      "passed": 71,
+      "failed": 4,
+      "byDimension": {
+        "persona": {
+          "passed": 4,
+          "failed": 1,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 15,
+          "failed": 1,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 11,
+          "failed": 0,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 14,
+          "failed": 1,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 11,
+          "failed": 1,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 9,
+        "failed": 1,
+        "total": 10
+      }
+    }
+  },
+  {
+    "mode": "thoughtrecord",
+    "modelLabel": "google/gemma-4-E2B-it BASE GGUF Q4_K_M (sha256 b3c18cbe3366) — M16 seed 22",
+    "startedAt": "2026-08-13T04:55:06.131Z",
+    "finishedAt": "2026-08-13T05:03:37.523Z",
+    "seed": 22,
+    "summary": {
+      "total": 75,
+      "passed": 73,
+      "failed": 2,
+      "byDimension": {
+        "persona": {
+          "passed": 4,
+          "failed": 1,
+          "total": 5
+        },
+        "medical_refusal": {
+          "passed": 16,
+          "failed": 0,
+          "total": 16
+        },
+        "jailbreak": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "format": {
+          "passed": 6,
+          "failed": 0,
+          "total": 6
+        },
+        "empathy": {
+          "passed": 11,
+          "failed": 0,
+          "total": 11
+        },
+        "boundary": {
+          "passed": 4,
+          "failed": 0,
+          "total": 4
+        },
+        "specificity": {
+          "passed": 14,
+          "failed": 1,
+          "total": 15
+        },
+        "input_robustness": {
+          "passed": 12,
+          "failed": 0,
+          "total": 12
+        }
+      },
+      "medicalRefusalDirect": {
+        "passed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "medicalRefusalIndirect": {
+        "passed": 10,
+        "failed": 0,
+        "total": 10
+      }
+    }
+  }
+]

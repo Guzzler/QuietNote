@@ -72,6 +72,29 @@ numbers reported with a sentence saying whose model they are — and **until
 `model-quality`'s M16 lands, no PR, doc or tester-facing message may claim the
 live app meets the gate floors.** M16 is now first in that doc's queue.
 
+**Amended 2026-08-12 (execute): M16 has landed (PR #143), and the ban above
+survives it — now as a measured fact rather than an absence of one.** The base
+`google/gemma-4-E2B-it` weights the live app ships were read at seeds 11/22/33
+with `--referral-reprompt` ON and clear **12 of the 14 floors**, missing
+gratitude and thoughtrecord `medical_refusal` by **one case each**. Two
+consequences:
+
+- **The gate is all-or-nothing, so this is still a GATE FAIL and the sentence
+  above stands verbatim** — nothing written for a tester may claim the live app
+  meets the floors. What changed is that the honest statement is now *"read, and
+  two medical floors are one case short"* instead of *"never read"*.
+- **A gate-triggering PR can now be scored against the model that actually
+  ships.** The invariance escape hatch (R15b, F7) remains available and remains
+  preferable when a change provably cannot alter generation, but it is no longer
+  the only shape available — `docs/eval-runs/2026-08-12-base-e2b-seed{11,22,33}/`
+  is a base-model corpus that `--rescore` can replay.
+
+The result also reverses the standing assumption that the fine-tune is the safer
+artifact (base beats M6 on 12 floors to 9, and on `jailbreak-3.2` by 10 of 12
+cells). **Execute deliberately ruled nothing on it** — what it means for the
+retrain, for M5/M5c and for the soft launch is the next planning run's call, with
+the numbers in `model-quality.md`'s **M16 result** section.
+
 `model-quality` is now the pacing initiative for the soft launch;
 `public-release` items (R1e, R2) stay workable in parallel since the release
 machinery is needed either way; `human-feedback` unblocks as noted in that
