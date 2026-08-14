@@ -16,12 +16,12 @@ the closed queue items' full bodies are at
 [`archive/model-quality-2026-08-11.md`](archive/model-quality-2026-08-11.md), verbatim. **The
 variance protocol below was NOT pruned** — `README.md`'s multi-seed rule points at it.
 
-**Doc size, 2026-08-13 (planner) — 555 lines, over the README's ~400 trigger, and the excess is
+**Doc size, 2026-08-13 (planner) — 602 lines, over the README's ~400 trigger, and the excess is
 declared load-bearing rather than silently carried.** This run archived 74 lines (the closed M16
 item body, the superseded 08-10 queue status, and the M16 "three findings" subsection now that all
 three are ruled) into
 [`archive/model-quality-2026-08-13.md`](archive/model-quality-2026-08-13.md), and added the M16
-ruling plus M17. What remains above the trigger is: the **M16 result** tables (the reference
+ruling, M17 and M18. What remains above the trigger is: the **M16 result** tables (the reference
 numbers M17 must delta against — the project's only gate reading of the shipped weights), the
 **variance protocol** (never prunable), the **Blocked on Sharang** block (never prunable, and it
 carries the live retrain decision), and two open queue items. The next prunable material is the
@@ -144,10 +144,11 @@ scope only** (new conversational-quality eval dimensions are in scope here per S
 | M15 | An unmatched **trailing** curly `”`, the mirror of M11 | RULED 2026-08-05 — defect real, fix NOT queued (demoted with its engine) |
 | M16 | **3-seed gate read of BASE Gemma 4 E2B** — the model a stranger actually talks to | **DONE 2026-08-12 (PR #143)** — **12 of 14 floors PASS, 2 medical floors short by one case each = GATE FAIL**, vs M6's 5 failing floors on the same instrument |
 | M17 | Are the shipped model's two failing medical floors real refusal failures or the M8 matcher artifact? | **QUEUED — open, top of the queue** (planner 2026-08-13, grounded in the failing replies themselves) |
+| M18 | The **MLC/WebLLM conversion path has never been attempted** — M5 named 3 formats, only 2 have recorded blockers | **QUEUED — open** (planner 2026-08-13, interactive) |
 
 ## Task queue
 
-**2 open — M17 first, then M5c.** Closed items are one line each; their full bodies (spec,
+**3 open — M17, then M18, then M5c.** Closed items are one line each; their full bodies (spec,
 scope guards, verification blocks) are in the archive.
 
 <details><summary>Closed items (M0, M1, M1b, M1c, M2a–M2f, M3a, M4a, M5a, M6, M7, M8, M9, M10, M11, M11b, M12, M13, M14, M14a, M14b, M14c, M15)</summary>
@@ -224,6 +225,41 @@ oversample multiplier past 6×).
   failure mode this item exists to avoid. **Rule nothing about the retrain** — that is Sharang's
   and is untouched by this.
 
+- [ ] 2026-08-13 · **M18 — The MLC path has never been tried. Try it.** (planner-queued
+  2026-08-13, interactive with Sharang, who pointed out that the HF repos are reachable from the
+  rig's own key — so this needs nothing from him.) **Grounding, stated plainly because it is the
+  reason this item exists:** M5's spec has named **three** target formats since 2026-07-11 — MLC
+  (`mlc_llm convert_weight`), ONNX, LiteRT — and the doc records a blocker for **only two of
+  them**. ONNX is upstream-blocked; LiteRT converts then dies on `gpu_artisan`. **There is no
+  record anywhere in this initiative, its archive, or the ledger of an MLC conversion ever being
+  attempted**, and the app already ships a WebLLM/MLC engine that could load one. Two months of
+  "the fine-tune cannot reach the browser" rests on two of three doors having been tried.
+  1. **Cheapest first: does current `mlc_llm` handle it at all?** Point `convert_weight` at
+     `Sharangp/quietnote-m3-gemma4-e2b-merged` (HF_TOKEN is in the git-ignored `.env.local` — note
+     the **UTF-8 BOM gotcha** recorded under *Blocked on Sharang*). Expect
+     `ValueError: Unknown model type: gemma4`; if it has landed upstream since, stop here and
+     convert.
+  2. **If it fails, price the fork before building it.** A community MLC/WebGPU packaging of the
+     **base** `google/gemma-4-E2B-it` (q4f16_1) exists, built from a local mlc-llm/TVM fork. Read
+     what that fork had to change — the known obstacle is gemma-4's multimodal nesting
+     (`model.language_model`, plus `audio_tower`/`vision_tower` in the safetensors) defeating the
+     parameter mapper. **Record the diff shape and the effort estimate; do not start porting in
+     this run.**
+  3. **Time-box the whole item to one session.** If no conversion path is standing by then, write
+     the negative result and stop. A recorded "MLC is blocked because X" is a complete outcome —
+     it closes the third door honestly instead of leaving it ambiguous, which is the actual point.
+  4. **If a build IS produced:** host under `Sharangp`, load it through the **dev-only**
+     `quietnote-model-url-override` + `quietnote-runtime=webllm` on `npm run dev`, send **one**
+     free-write entry, and record whether a reply completes and roughly how long it took.
+  → **Verify:** an **M18 result** section with the step-1 error verbatim, the fork assessment, and
+  either the load outcome or the reason there was nothing to load. `git status` showing **no
+  `src/` diff**. **Then stop — do not ship it.** Per *The M16 ruling* #4, putting any fine-tune in
+  front of a user is gate-triggering, needs its own passing 3-seed read, and would fail one today.
+  **One caveat to carry, not to resolve:** WebLLM is the engine the loop recommended removing —
+  but that recommendation rests on **Gemma 2 2B's** self-repetition (M1b), which is a property of
+  that *model*, not of the engine. An E2B MLC build changes the premise, so a working M18 reopens
+  the WebLLM go/no-go as Sharang's call rather than settling it.
+
 - [ ] 2026-08-05 · **M5c — Does the `.litertlm` load on the CPU delegate?** (planner-queued from
   M5b's named failure; free — no Colab, no API, no eval read, no `src/` diff in the final state.)
   Grounding is in the **M5c** section below. Requires the `0.10.29` bump, which is on `main` via
@@ -247,7 +283,7 @@ oversample multiplier past 6×).
   rules on whether a CPU-backed fine-tune is shippable at all; if it does not, M5's remaining
   lever is the unpublished `.task` recipe and that is Sharang's upstream ask.
 
-**Queue status (2026-08-13, planner — current): 2 open — M17, then M5c.** This is the run that
+**Queue status (2026-08-13, planner — current): 3 open — M17, M18, then M5c.** This is the run that
 owed a ruling on M16, and M17 is the one piece of work that ruling generates. The M16 numbers
 (section immediately below) are the first gate reading the project has ever had on the model a
 stranger actually talks to; **grounding them this run against the failing replies themselves
