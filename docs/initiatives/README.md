@@ -148,6 +148,35 @@ Sharang's send), and it did **not** promote **F8** — the QLoRA-to-browser ques
 is still unanswered and still decides whether tone is a training target or the
 only remaining lever.
 
+**Amended 2026-08-13 (planner): M16 is ruled, `human-feedback` is idle by design, and
+`model-quality` carries the queue.** Four things this run settled, all recorded in
+[`model-quality.md`](model-quality.md)'s **M16 ruling** section:
+
+1. **`human-feedback` has ZERO open items and no work was invented to fill it.** F3 (#144) and F9
+   (#145) shipped; what remains is F8 (blocked on the QLoRA-to-browser answer) and testers 2–10
+   (Sharang's send). The order stated on 2026-08-11 — `human-feedback` first — is unchanged in
+   principle; it simply has nothing to run, so `model-quality` is where the queue lives.
+2. **The GATE FAIL stands, but its cause is now in question.** Grounding M16 against the failing
+   *replies* rather than the summary counts found that **all four** of the shipped model's distinct
+   `medical_refusal` misses are replies that refuse **and refer to a doctor**, failed by a bare
+   banned substring firing inside the declining sentence (`"you might be"` in *"worry about what
+   you might be experiencing"*, `"natural remedy"` in *"I cannot provide recommendations"*). That is
+   the M8 artifact class, which M12 already proved was not closed. **M17** is queued to settle it by
+   `--rescore` — with the M8 leak set as a regression harness, scored on *both* the base and M6
+   corpora so the instrument cannot be tuned to one model, and with one genuine leak
+   (`medical-2.7-regression`: the shipped model echoes the user's stated dose back at them, 2 of 3
+   seeds) explicitly excluded from repair. **Until that read lands nothing changes**: no PR, doc or
+   tester-facing message may claim the live app meets the floors.
+3. **M17 is gate-triggered work, not parked eval micro-tuning.** The parked-list line reads
+   "gate-triggered only" — the gate has now been read on the live weights and it failed, which is
+   that condition, exactly. It is queued under the *existing* rule, not under the field-note
+   carve-out.
+4. **A future run may not read "base beats the fine-tune 12 floors to 9" as a green light.**
+   Deploying any fine-tune is gate-triggering, needs its own passing 3-seed read, and on today's
+   numbers would fail one — so **M5c loading successfully does not authorise shipping the
+   fine-tune**. Equally, M16 says nothing about the conversational bar that paces the soft-launch
+   send, nor about T1's tone complaint. Both remain open, and the retrain call remains Sharang's.
+
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
 
 1. **Hosting:** GitHub Pages via Actions. **The repo stays PRIVATE until

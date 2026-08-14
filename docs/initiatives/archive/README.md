@@ -34,6 +34,12 @@ click from the live doc while getting it out of the per-run read.
 | [`human-feedback-2026-08-11.md`](human-feedback-2026-08-11.md) | `human-feedback.md` @ 520 lines | 2026-08-11 (pm) | Partial prune of the **only initiative with an open queue** — so it is conservative by design. The live doc keeps all three open items (F5, F6, F7) with the new grounding, the mission, the F2 share message (still unsent to testers 2–10) and its honesty correction, the full *Blocked on Sharang* section, and a one-line-per-PR ledger. Here: F1b's four-href and HTTP-status tables, the F2 `WELCOME.md` outline (superseded by the shipped `docs/beta/WELCOME.md`), three stale queue-status blocks, and the two essay-length ledger rows in full. |
 | [`model-quality-2026-08-11.md`](model-quality-2026-08-11.md) | `model-quality.md` @ 2,488 lines | 2026-08-11 | Still the active pacing initiative, so this is a partial prune: the live doc keeps the standing decisions, the increments table, the two open items (M16, M5c) and **the variance protocol verbatim** (`../README.md`'s multi-seed rule points at it). The superseded eval reads — M1/M1b baselines, M4/M4a/M6/M6b, M8–M13's ruling and re-score sections, M14/M14a/M14b/M14c, M15, the M5a/M5b results — and the closed queue items' full bodies are here. |
 
+| [`model-quality-2026-08-13.md`](model-quality-2026-08-13.md) | `model-quality.md` @ 505 lines | 2026-08-13 | Small, targeted prune taken while the doc was being *added* to (the M16 ruling + M17). Here: the closed **M16 queue-item body** (DONE, PR #143 — its result tables and Ledger row stay live because M17 must delta against them), the superseded **2026-08-10 queue status**, and the M16 result's *"three findings the next planning run owns"* subsection, now that all three are ruled in the live doc. The live doc declares its remaining excess over the ~400 trigger load-bearing, item by item. |
+
+Note: [`human-feedback-2026-08-12.md`](human-feedback-2026-08-12.md) (F5/F6/F7 specs, the closed
+F1/F1a/F2/F1b bodies, two resolved *Blocked on Sharang* entries) was taken 2026-08-12 and is
+described in the live `human-feedback.md`.
+
 ## Finding something
 
 Both files are the complete original, so the live doc's headings still work as search keys —

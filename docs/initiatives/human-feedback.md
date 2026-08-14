@@ -314,7 +314,19 @@ link, or anything that reads like a survey invite — the in-app footer link
 and `WELCOME.md` §6 carry the reporting path. Do not name the model or the
 engine; testers don't need it, and §2 of WELCOME.md covers alternates.
 
-**Queue status (2026-08-12, planner — current): 2 open, F3 then F9.** Everything
+**Queue status (2026-08-13, planner — current): ZERO open, and no work was invented to fill it.**
+F3 (#144) and F9 (#145) both shipped, so **every item this initiative can act on without a human
+is done.** What is left is exactly two things, both of them Sharang's and both already written
+below: **F8** stays out of the queue pending the QLoRA-to-browser answer, and **testers 2–10** is
+the binding constraint on the mission itself. Per the loop's own rule — queue empty and only
+gated steps remaining means *say so*, not manufacture an F10 — this initiative is **idle by
+design**, and `model-quality` (M17, then M5c) carries this run's queue. The one new fact that
+touches this doc is upstream: M16's failing floors were re-read this run and every one of them is
+a reply that **refuses and refers to a doctor**, tripped by a bare banned substring (see
+`model-quality.md`'s **M16 ruling**). That does **not** license any tester-facing gate claim —
+the verdict on the books is still FAIL, and the binding sentence below is unchanged.
+
+**Superseded — queue status (2026-08-12, planner): 2 open, F3 then F9.** Everything
 T1 reported that the loop could fix without a model answer is **fixed and
 deployed** (Grounding, this doc). The queue that replaces it is deliberately
 small and deliberately not new product work: F3 writes down the intake convention
