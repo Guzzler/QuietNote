@@ -144,11 +144,12 @@ scope only** (new conversational-quality eval dimensions are in scope here per S
 | M15 | An unmatched **trailing** curly `”`, the mirror of M11 | RULED 2026-08-05 — defect real, fix NOT queued (demoted with its engine) |
 | M16 | **3-seed gate read of BASE Gemma 4 E2B** — the model a stranger actually talks to | **DONE 2026-08-12 (PR #143)** — **12 of 14 floors PASS, 2 medical floors short by one case each = GATE FAIL**, vs M6's 5 failing floors on the same instrument |
 | M17 | Are the shipped model's two failing medical floors real refusal failures or the M8 matcher artifact? | **DONE 2026-08-13 (PR #146)** — 3 of 4 were artifacts; **base now clears 13 of 14 floors, still GATE FAIL** on gratitude `medical_refusal` alone. Prediction met exactly |
+| M19 | Re-read M1's conversational bar on the **shipped** MediaPipe path — M1b's pass is stale (pre-M1c, pre-R7) | **QUEUED — open, top of the queue** (planner 2026-08-13, interactive) |
 | M18 | The **MLC/WebLLM conversion path has never been attempted** — M5 named 3 formats, only 2 have recorded blockers | **QUEUED — open** (planner 2026-08-13, interactive) |
 
 ## Task queue
 
-**2 open — M18, then M5c** (M17 closed 2026-08-13, PR #146). Closed items are one line each; their full bodies (spec,
+**3 open — M19, then M18, then M5c** (M17 closed 2026-08-13, PR #146). Closed items are one line each; their full bodies (spec,
 scope guards, verification blocks) are in the archive.
 
 <details><summary>Closed items (M0, M1, M1b, M1c, M2a–M2f, M3a, M4a, M5a, M6, M7, M8, M9, M10, M11, M11b, M12, M13, M14, M14a, M14b, M14c, M15)</summary>
@@ -225,6 +226,36 @@ oversample multiplier past 6×).
   failure mode this item exists to avoid. **Rule nothing about the retrain** — that is Sharang's
   and is untouched by this.
 
+- [ ] 2026-08-13 · **M19 — Re-read M1's conversational bar on the SHIPPED path.** (planner-queued
+  2026-08-13, interactive with Sharang, when "what is the recommendation" forced the question of
+  what is *actually* blocking the soft launch.) **This is the quality half of what M16 did for
+  safety, and unlike M16 it is not a hole — it is a stale reading.** M1b measured MediaPipe on
+  2026-07-16 (PR #95): *"engaged multi-turn, all scenarios rubric-pass"*, 7/10 no-echo with one
+  0.84 near-verbatim mirror, plus the `<end_of_turn>` leak. **Three things have changed since, all
+  in the direction of making that read unrepresentative:** M1c shipped the marker filter (PR #96),
+  **R7 made MediaPipe the default engine** (PR #125) so this path is now what a stranger meets,
+  and a real tester has since complained about exactly the weak spot the read recorded — echo and
+  gratitude-mode register (field note §C1).
+  1. Run the in-browser M1 baseline (`m1BrowserRunner.ts`, the "Run M1 baseline" EvalPanel
+     section) on **MediaPipe**, on `npx vite preview`, exactly as M1b did — three 10-turn
+     scenarios, the 0–2 × 5 rubric, and the echo metric. Reuse M1b's procedure; do not redesign
+     the instrument (the one-variable rule applies to the measuring stick too).
+  2. Report to `docs/eval-runs/<date>-m19-mediapipe/` with the full transcripts, and put the
+     scenario percentages and echo counts **side by side with M1b's July numbers** and with the
+     headless base baseline (95/92/95, mean overlap 0.11).
+  3. **Do not rule on the launch.** State whether the bar's *measurable* clauses (≥85% per
+     scenario, zero critical zeros on continuity/support) hold on the shipped path today. The
+     bar's qualitative clause — "feels akin to a journal with a therapy aspect to it" — is
+     **Sharang's read, not a number**, and step 4 exists to serve it.
+  4. Pull **three transcripts** into the result section in full — one per scenario — so the
+     qualitative half can be judged by a human in ten minutes instead of inferred from a
+     percentage.
+  → **Verify:** an **M19 result** section with the comparison table, the echo count, the three
+  transcripts, and one sentence naming any dimension that moved since July. **Measurement only —
+  no `src/` diff, no gate read** (M1's harness is additive and does not touch `EVAL_CASES` or the
+  floors). If a scenario now fails the rubric, file it as a proposed item and **do not fix it in
+  the same run**.
+
 - [ ] 2026-08-13 · **M18 — The MLC path has never been tried. Try it.** (planner-queued
   2026-08-13, interactive with Sharang, who pointed out that the HF repos are reachable from the
   rig's own key — so this needs nothing from him.) **Grounding, stated plainly because it is the
@@ -283,7 +314,9 @@ oversample multiplier past 6×).
   rules on whether a CPU-backed fine-tune is shippable at all; if it does not, M5's remaining
   lever is the unpublished `.task` recipe and that is Sharang's upstream ask.
 
-**Queue status (2026-08-13, execute — current): 2 open — M18, then M5c.** M17 landed the same day
+**Queue status (2026-08-13, planner — current): 3 open — M19, M18, then M5c.** M19 was added after M17 landed, when the question "what is actually blocking the soft launch?" turned out to rest on a **stale** conversational read (M1b, 2026-07-16 — pre-M1c, pre-R7) rather than a missing one. It is measurement only and costs no gate read.
+
+**Superseded (2026-08-13, execute): 2 open — M18, then M5c.** M17 landed the same day
 it was queued (PR #146; the **M17 result** section below carries its numbers). The planner text
 that follows is preserved as written. This is the run that
 owed a ruling on M16, and M17 is the one piece of work that ruling generates. The M16 numbers
