@@ -205,6 +205,33 @@ time.** Four things settled:
    by name** in the doc, as this README requires. `human-feedback` stays at **zero** open items and
    no work was invented to fill it.
 
+**Amended 2026-08-15 (execute): every initiative is now at ZERO open items, and the
+queue-empty audit found nothing to file.** M20 (#149) and M5c (#150) closed
+`model-quality`'s last two items this run; `human-feedback` and `personalization` were
+already at zero by design. Per the queue-empty rule the run ended with an audit pass on
+the **live origin** rather than invented work, and it is recorded here rather than as
+proposed items **because nothing broke**:
+
+- **Cold start, truly empty state** (`localStorage`, `quietnote-db` and `mediapipe-cache`
+  all cleared on `https://guzzler.github.io/QuietNote/`): first paint shows the honest
+  download copy (*"Downloading your personal AI (this only happens once)… ~2.0 GB"*), and
+  a usable writing surface arrives at **188 s** on this connection.
+- **Stranger's path** — pick a mode, one exchange, reload: Thought Record selects with
+  F5's quiet notice (*"Started a new Thought Record — your previous entry is saved in
+  Sessions"*), the guide reads **Step 1 of 5** → **Step 2 of 5** after a coherent reply
+  (**12.1 s**), the AI-limitations disclaimer and **Crisis resources** render alongside the
+  transcript, and a reload restores the app in **~1.0 s** with both sessions intact.
+  Reopening the saved session restores **mode = Thought Record** and **Step 2 of 5**.
+- **0 console errors on the live origin** (the two warnings are the pre-existing benign
+  MediaPipe WebGPU ones F9 recorded). Screenshot:
+  `docs/screenshots/2026-08-15/audit-live-thoughtrecord-restored.png`.
+
+**No P0, and no new queue item.** What every initiative is waiting on is unchanged and is
+Sharang's: the QLoRA-to-browser answer (now narrowed to **three measured doors** — ONNX,
+MLC per M18, LiteRT per M5c), the retrain call, the T1 follow-up, and the send to testers
+2–10. **The gate verdict is untouched by this walk** — the app was walked, not scored, and
+the standing sentence still binds: nothing may claim the live app meets the gate floors.
+
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
 
 1. **Hosting:** GitHub Pages via Actions. **The repo stays PRIVATE until
