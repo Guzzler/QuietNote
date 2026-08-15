@@ -135,11 +135,41 @@ is intended to be replaced. A 3-seed gate read costs ~2.75h (measured; see
 each gate-triggering. **Batch every prompt-touching change into one PR and take
 one gate read**, and sequence it after the model question resolves.
 
+**C1 addendum (planner, 2026-08-14) — T1 was right, and the rate is now measured: 6 of 30.**
+When this note was written, C1 rested on one tester noticing one phrase. It has since been counted.
+M19 (PR #148) drove three 10-turn arcs on the **shipped** MediaPipe path and committed all 30
+replies to `docs/eval-runs/2026-08-13-m19-mediapipe/report.md`. Counting literal sentence-initial
+matches against the seven phrases `systemPrompts.ts:18-21` bans:
+
+| scenario | replies opening with a banned phrase |
+|---|---|
+| qb-freewrite-arc | 2 / 10 — *"It sounds like"* ×2 |
+| qb-checkin-days | 3 / 10 — *"It sounds like"* ×3 |
+| qb-thoughtrecord-arc | 1 / 10 — *"I hear that"* |
+| **total** | **6 / 30 = 20 %** |
+
+**One reply in five opens with a phrase the system prompt forbids as its strictest rule, and the
+phrase T1 named by name is five of the six.** The only exception the prompt carries (unintelligible
+input) applies to none of them. Two consequences: F9's softer finding — that *"sounds like"* showed
+up only **mid-sentence**, which does not violate the rule — is **superseded** on the arc data; and
+this is the strongest evidence the project has for the standing M0 decision that prompt-side fixes
+cannot close this gap. A fourth restatement of a rule the model breaks 20 % of the time is not a
+plan. **The ruling below is unchanged** — this is evidence for the batched, gated F8, not a reason
+to unblock it early.
+
 **C2 — distortion-naming is a genuine gap.** The 5 steps do evidence-for/against
 and a balanced perspective (steps 4–5 are the reframe T1 wants), but the prompt
 never *names* the distortion — "catastrophising", "mind-reading". That is the one
 real feature gap T1's ask implies. Prompt + dataset change ⇒ gate-triggering ⇒
 batches with C1.
+
+**C3 — a third register defect, found by the loop rather than reported (added 2026-08-14).** All
+ten thoughtrecord replies in M19's arc open with a perception verb — *"I understand… / I notice… /
+I see… / I hear… / I recognize…"* — reflect-then-question, ten times running. T1 did not report
+this (they never reached Thought Record — see §B1), so it is **not** a carve-out item on its own;
+it qualifies only because it is the **same register defect as C1**, on the mode T1 said they most
+wanted, and it is in scope for the batch C1 already justifies. Prompt-touching ⇒ gate-triggering
+⇒ **one batched PR with C1 and C2**, not three separate 2.75 h reads.
 
 ### D. Declined, with reasons
 
@@ -165,7 +195,8 @@ privacy trade — shipping it badly costs more than shipping it late.
 2. **B1** — surface Thought Record at phone widths. No gate. Cheapest real win.
 3. **A3** — time-of-day correctness. Touches `systemPrompts.ts` ⇒ gate applies.
 4. **M16**, then the model question (below).
-5. **C1 + C2 as one batched, gated PR** — only after 4.
+5. **C1 + C2 + C3 as one batched, gated PR** — only after 4. (C3 added 2026-08-14; the batch is
+   three components now, still one gate read.)
 
 ## Blocked on Sharang (do not queue)
 

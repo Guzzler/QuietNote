@@ -177,6 +177,34 @@ only remaining lever.
    fine-tune**. Equally, M16 says nothing about the conversational bar that paces the soft-launch
    send, nor about T1's tone complaint. Both remain open, and the retrain call remains Sharang's.
 
+**Amended 2026-08-14 (planner): the order is unchanged, `model-quality` carries a 2-item queue, and
+the run's finding is that the shipped model breaks the prompt's own strictest rule 20 % of the
+time.** Four things settled:
+
+1. **Execute's two proposed items from M19 are ruled.** **P-M19a** (a verbatim sentence repeat
+   three turns apart on the **default** engine — the M14 class, past the two-turn exposure M14c
+   measured) becomes **M20**, a measurement-only item that starts with the 30 replies already on
+   disk and only runs fresh arcs if those are ambiguous. **P-M19b** (formulaic thoughtrecord
+   openers) is **not queued** — it is prompt-touching, and the batching rule sends it into
+   `human-feedback`'s **F8**, which stays blocked. One becomes work, one becomes evidence.
+2. **The FIRST LINE RULE is broken on 6 of 30 committed M19 replies — 20 %, measured this run at
+   zero cost from evidence already on disk.** `systemPrompts.ts:18-21` bans seven openers as its
+   *"strictest rule, never break"*; five replies open with *"It sounds like"* and one with *"I hear
+   that"*, on the path a stranger meets. **That is the exact phrase T1 named**, so their tone
+   complaint is now quantified rather than corroborated, and F9's softer mid-sentence finding is
+   superseded on arc data. It changes **nothing** about the gate (a safety instrument, still FAIL)
+   and it is **not** a queue item — it is F8's evidence.
+3. **M5c is reordered behind M20 but is the more valuable of the two, and its value is now
+   cross-initiative.** With M18 shutting the MLC door, M5c is the last cheap probe of the last of
+   M5's three formats — i.e. the measurement that makes `human-feedback`'s *"if structurally
+   blocked, F8 is promoted"* branch fire on evidence instead of assumption. Recorded in both docs;
+   **nothing is promoted on it yet.**
+4. **`model-quality.md`: 946 → ~620 lines, the largest prune it has had**, with the M16 result
+   section archived in full now that M17 has replaced every number in it — exactly the condition
+   the 2026-08-13 note named. The remaining excess over the ~400 trigger is **declared load-bearing
+   by name** in the doc, as this README requires. `human-feedback` stays at **zero** open items and
+   no work was invented to fill it.
+
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
 
 1. **Hosting:** GitHub Pages via Actions. **The repo stays PRIVATE until
