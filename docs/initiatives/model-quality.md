@@ -130,10 +130,10 @@ scope only** (new conversational-quality eval dimensions are in scope here per S
 | M3 / M3a | QLoRA fine-tune + the Colab training notebook | notebook DONE (PR #98); training is Sharang's to run |
 | M4 | Eval the merged model against M1 + full gate floors | four runs (357 pilot / 1892 full / M6 6× / M6b 8×): **all GATE FAIL** |
 | M4a | GGUF + llama-server bridge + pilot-model eval | DONE (PRs #105, #106) — quality up decisively, safety floors failed |
-| M5 | Convert + deploy merged → MLC / ONNX / LiteRT | **BLOCKED** — ONNX upstream-blocked; LiteRT bundle converts but fails on `gpu_artisan`. Next lever is **M5c** |
+| M5 | Convert + deploy merged → MLC / ONNX / LiteRT | **BLOCKED, and all three doors are now measured.** ONNX upstream-blocked; MLC needs a new model definition (M18); LiteRT fails on `gpu_artisan` **on the CPU delegate too** (M5c) — the remaining lever is the unpublished web-`.task` recipe, which is Sharang's upstream ask |
 | M5a | Dev-only model override + LiteRT conversion notebook | DONE (PR #107) — bundle converts (5.07 GB); app cannot load it |
 | M5b | Bump `tasks-genai` 0.10.27 → 0.10.29 | DONE 2026-08-05 — **negative for M5, positive for grounding**: failure moved from opaque to named (`gpu_artisan`) |
-| M5c | Probe `delegate: "CPU"` against the 5.07 GB `.litertlm` | **QUEUED — open** |
+| M5c | Probe `delegate: "CPU"` against the 5.07 GB `.litertlm` | **DONE 2026-08-15 (PR #150)** — **NEGATIVE**: byte-identical `gpu_artisan` failure on CPU; the control (stock `.task`, same edit) loads **and** completes an exchange. The bundle is rejected during file parsing, before any backend runs |
 | M6 | Safety-mirror oversampling 6× in the TRAIN split only | DONE — dilution confirmed, still GATE FAIL. Best model to date |
 | M6b | Oversample 8× + 22 targeted exemplars | DONE 2026-07-28 — **GATE FAIL, net WORSE than M6.** Oversampling exhausted |
 | M7 | Teacher-side fluency + style pass (generator only) | DONE — bites only on a regenerated dataset ($-gated, Sharang's) |
@@ -229,7 +229,9 @@ not queue them. Both are ruled here; **one becomes a queue item, one does not.**
   the denominator sentence from step 3, and one line saying whether **M14's demotion still
   stands** on the default engine. `git status` showing **no `src/` diff**.
 
-- [ ] 2026-08-05 · **M5c — Does the `.litertlm` load on the CPU delegate?** (planner-queued from
+- [x] 2026-08-15 · **M5c — Does the `.litertlm` load on the CPU delegate?** DONE 2026-08-15 (PR
+  #150 — see the **M5c result** section below and the Ledger). Original item body follows.
+  (planner-queued from
   M5b's named failure; free — no Colab, no API, no eval read, no `src/` diff in the final state.)
   Grounding is in the **M5c** section below. Requires the `0.10.29` bump, which is on `main` via
   R7.
@@ -329,11 +331,84 @@ is gate-triggering and belongs in F8's batch, not in a 2.75 h read of its own. N
 worth carrying: the looping sentences are thoughtrecord *scaffolding* lines, which is the same
 surface as P-M19b's formulaic opener - one batch, not two.
 
-**Queue status (2026-08-15, execute - current): 1 open - M5c.** M20 closed this run (PR #149;
-result section above). The 2026-08-14 note below says *"if execute has the evening, M5c is the more
-valuable of the two"* - this run had the evening and took both, M20 first because it is free and
-its step 1 is a five-minute scan. `human-feedback` remains at **zero** open items by design and no
-work was invented to fill it.
+**Queue status (2026-08-15, execute - current): ZERO open.** Both items closed this run - **M20**
+(PR #149) and **M5c** (PR #150). The 2026-08-14 note below says *"if execute has the evening, M5c
+is the more valuable of the two"* - this run had the evening and took both, M20 first because it is
+free and its step 1 is a five-minute scan. `human-feedback` is also at **zero** by design, and
+`personalization` stays gated. **No work was invented to fill any of them.** What every initiative
+is now waiting on is written down and is Sharang's: the QLoRA-to-browser answer (now narrowed to
+three measured doors - see the M5c result), the retrain call, the T1 follow-up, and the send to
+testers 2-10.
+
+## M5c result - the CPU delegate is not the lever, and the bundle never reaches a backend (execute, 2026-08-15)
+
+**Outcome: NEGATIVE, and it is a cleaner negative than the item anticipated.** With
+`delegate: "CPU"` the 5.07 GB `.litertlm` fails with the **byte-identical** `gpu_artisan` error it
+gives on GPU, while the **control** - the stock `.task`, same edit in place - loads *and* completes
+a coherent exchange. So CPU delegation works fine; the container is what is rejected.
+**No `src/` diff in the final state, no gate read, no Colab, no API.**
+
+### The three outcomes the item asked for
+
+| # | arm | outcome |
+|---|---|---|
+| 1 | fine-tune `.litertlm`, `delegate: "CPU"` | **FAILS - same error as GPU**: `File parsing failed: could not find gpu_artisan .bin file in .litertlm package`, thrown from `_GetLiteRtModelOffset` in `genai_wasm_internal.wasm` and surfaced at `mediapipe-engine.ts:225`. UI: *"Something went wrong loading the model."* Screenshot `m5c-01-litertlm-cpu-gpu-artisan.png` |
+| 2 | reply on the fine-tune | **n/a** - nothing loaded, so there was nothing to send to |
+| 3 | **control**: stock `.task`, `delegate: "CPU"` | **LOADS, 0 console errors, and completes an exchange** - one free-write entry in, a coherent reply back. Screenshot `m5c-02-stock-task-cpu-control.png` |
+
+**The control is what makes this conclusive, and it is why step 3 was not skippable.** Had CPU
+delegation broken the stock model too, the probe would have said nothing about the container. It
+did not: the same one-line edit that leaves the shipped model working still rejects the fine-tune,
+in the same place, with the same message.
+
+### What the error location adds, beyond what the item asked
+
+The failure is raised inside **`_GetLiteRtModelOffset`** - i.e. while *parsing the package*, before
+a backend is selected or any graph is built. That reframes `gpu_artisan` from a *runtime backend
+requirement* (which a delegate switch could plausibly route around, the item's hypothesis) to a
+**required member of the container format**. `tasks-genai@0.10.29` expects a `gpu_artisan .bin`
+inside any `.litertlm` it opens, whatever backend it is later asked to run on. **That is the reason
+the CPU lever cannot work, and it also means no other `LlmBaseOptions` value can: the field is read
+after the parse that fails.**
+
+### Sub-finding: the delegate flag is not being ignored
+
+Worth pinning, because "CPU made no difference" invites the reading that the option is inert. On
+the **stock** model, one send with the same prompt took **13.1 s / 149 chars on CPU** against
+**11.1 s / 233 chars on GPU** - roughly **16 vs 33 characters per second**, i.e. CPU delegation
+costs about half the throughput. n=1 per arm and a wall-clock order of magnitude, not a benchmark -
+but it is direct evidence that `delegate` reaches the runtime, so arm 1's identical failure is a
+statement about the container and not about a dead flag.
+
+### Method
+
+Bundle downloaded from `Sharangp/quietnote-m3-gemma4-e2b-litert` to the rig and served from a local
+CORS static server at `http://127.0.0.1:8080/model.litertlm` - **5,071,591,376 bytes, matching M5a's
+recorded size exactly**. Driven on `npm run dev` (the override is `import.meta.env.DEV`-gated) with
+`quietnote-model-url-override` + `quietnote-runtime=mediapipe` in localStorage; the DEV-override
+warning is in the console log, and the static server logged the full-length GET. The temporary edit
+was `"GPU"` -> `"CPU"` at `mediapipe-engine.ts:312` - **the planner's 2026-08-14 grounding
+correction was right**: the line already set a delegate explicitly, so this was a change, not an
+addition. Reverted before committing; `git status` shows no `src/` diff. The 5 GB override entry
+was deleted from `mediapipe-cache` afterwards, leaving only the stock `.task` (usage back to
+3.50 GB).
+
+### What this settles, and what it does not
+
+- **M5's last cheap lever is spent.** All three formats now have a measured blocker: ONNX (upstream
+  version deadlock), MLC (M18 - unsupported model type, and the fork is a new model definition),
+  LiteRT (this - the container is missing a member the loader requires, on **every** delegate). The
+  remaining LiteRT lever is the **unpublished web-`.task` recipe**, which is an upstream ask and
+  Sharang's.
+- **It does not decide F8.** The planner's note says M5c is the measurement that lets
+  `human-feedback`'s branch (*"if structurally blocked, prompt-only is the permanent shipped ceiling
+  and F8 is promoted"*) fire on evidence. This run supplies the evidence for the **LiteRT** half and
+  M18 supplied it for MLC - but promoting F8 is a **planner ruling**, not execute's, and the
+  QLoRA-to-browser question stays in *Blocked on Sharang* until he answers whether the "weird
+  limitations" he referred to are these three or something none of them found.
+- **It changes nothing about shipping.** Per *The M16 ruling* #4, putting any fine-tune in front of
+  a user is gate-triggering and would fail a read today. A successful load would not have been a
+  green light, and this failure is not a loss of one.
 
 **Superseded - queue status (2026-08-14, planner): 2 open - M20, then M5c.** M17 (#146), M18 (#147)
 and M19 (#148) all closed on 2026-08-13. **M5c has been reordered behind M20 deliberately and the
@@ -515,6 +590,11 @@ on Sharang* stands unchanged and is Sharang's call, not the loop's.
 
 ## M5c — why `delegate: "CPU"` is the next lever (planner, 2026-08-05)
 
+**ANSWERED 2026-08-15 (PR #150) — see the M5c result section above. The hypothesis below ("if the
+runtime asks for `gpu_artisan` only on the GPU path…") is measured and it is FALSE: the runtime
+asks for it while parsing the package, before any backend is chosen, so the failure is identical on
+CPU. Kept as written because it is the reasoning the probe tested.**
+
 Grounded in the installed 0.10.29 typings, not in a guess:
 `node_modules/@mediapipe/tasks-genai/genai.d.ts:48` declares
 `LlmBaseOptions.delegate?: "CPU" | "GPU"` — *"Overrides the default backend to use for the
@@ -592,6 +672,7 @@ Full outcome text for every row is in
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-15 | M5c — does the 5.07 GB `.litertlm` load on the CPU delegate? | #150 | **NEGATIVE, and cleanly so.** With `delegate: "CPU"` the fine-tune fails with the **byte-identical** error it gives on GPU — `File parsing failed: could not find gpu_artisan .bin file in .litertlm package` — while the **control** (stock `.task`, same edit in place) **loads with 0 console errors and completes a coherent exchange**. CPU delegation works; the container is what is rejected, and step 3 is what makes that conclusive. **Beyond the item:** the throw site is `_GetLiteRtModelOffset`, i.e. *package parsing*, before a backend is selected — so `gpu_artisan` is a **required member of the container format**, not a runtime backend requirement, which is why the delegate lever cannot work and why no other `LlmBaseOptions` value can either (the field is read after the parse that fails). **Sub-finding pinned so "no difference" is not misread as "inert flag":** on the stock model the same prompt took **13.1 s / 149 chars on CPU** vs **11.1 s / 233 chars on GPU** (~16 vs ~33 chars/s, n=1 per arm, order of magnitude not benchmark) — the delegate does reach the runtime. Bundle served from a local CORS server at **5,071,591,376 bytes, matching M5a exactly**; run on `npm run dev` with the DEV override; the planner's 2026-08-14 grounding correction confirmed (line 312 already read `delegate: "GPU"`, so this was a change not an addition); edit reverted, **no `src/` diff**, and the 5 GB override entry deleted from `mediapipe-cache` afterwards. **All three of M5's formats now have a measured blocker**; the remaining LiteRT lever is the unpublished web-`.task` recipe, which is Sharang's upstream ask. Does **not** promote F8 (planner's ruling, not execute's) and does **not** change shipping (M16 ruling #4). Screenshots: `docs/screenshots/2026-08-15/m5c-0{1,2}`. |
 | 2026-08-15 | M20 — does the M14 verbatim-repeat class survive on the default engine over a 10-turn arc? | #149 | **Yes. 2 of 6 arcs repeat verbatim, and M14's demotion does not survive at conversation length.** Step 1 (free, on-disk) found **exactly one** hit in M19's three arcs — checkin turns 5→8, distance 3 — and **nothing near it**: lowering the near-miss threshold from Jaccard 0.7 to 0.45 added **zero** pairs, which is precisely the ambiguity trigger the item set, so step 2 was required. Step 2 drove three fresh arcs on the same instrument (EvalPanel "Run M1 baseline", MediaPipe, `npm run dev` + `?eval`, **no instrument edits** per the one-variable rule): freewrite 0, checkin 0, **thoughtrecord 19 repeated pairs across 3 distinct sentences** — *"Let's develop a more balanced perspective."* opening **six consecutive turns (4–9)**, a closing question shared by turns 6/7/8, and turns 8→9 differing by one word (Jaccard **0.96**); turn 9 asks the same question twice in one reply. **That arc still passes the rubric at 89 %** with zero critical zeros, so the M19 quality bar does not catch this — the reason a rate was needed. **Denominator stated explicitly, per step 3:** M14a/b/c measured *turn 2 repeating turn 1* (1 ordered pair per unit, MediaPipe 0/3); M20 measures *any turn repeating any earlier turn* over ten (**45 ordered pairs per arc**) — not comparable numbers. **Run-to-run spread is itself a finding:** the same scenario/engine/weights gave **0** repeats on 08-13 and **19** on 08-15. **No fix ruled, per step 4** — MediaPipe has no repetition-penalty knob, so no engine-side fix exists, and a prompt-side one is gate-triggering and belongs to F8's batch (same surface as P-M19b's formulaic opener — one batch, not two). Recommendation to the planner: rewrite M14's status from *resolved by demotion* to *live on the default engine at conversation length*; the increments table already points here. Report + fresh transcripts: `docs/eval-runs/2026-08-15-m20-repeat-rate/`. **Measurement only — no `src/` diff, no gate read.** |
 | 2026-08-13 | M19 — re-read M1's conversational bar on the SHIPPED MediaPipe path | #148 | **The measurable bar HOLDS; echo is what moved, and it moved down.** All three 10-turn scenarios pass — **94 % / 93 % / 94 %** against an 85 % floor, **zero** turns scoring 0 on continuity or support, and context trimming never fired. **Echo regressed: 5 of 10 cases open cleanly vs M1b's 7 of 10**, mean opening overlap **0.27** against the headless base's 0.11 (worst case 0.52, better than M1b's 0.84 mirror). **M1c's marker filter holds** — the `<end_of_turn>` leak M1b recorded is gone. **Procedure discrepancy recorded:** the item said `npx vite preview`, but `EvalPanel.tsx:46` is `import.meta.env.DEV`-gated so the panel cannot exist in a production build and M1b cannot have used one; run on `npm run dev` + `?eval` instead, same engine and weights. Instrument untouched (one-variable rule). **Two defects observed and deliberately NOT fixed**, filed as proposed items: a **verbatim sentence repeat three turns apart inside one 10-turn checkin arc** — the M14 repeat class, seen on the default engine for the first time, and beyond M14c's two-turn exposure — and a **formulaic first-person opener on all ten thoughtrecord turns** ("I understand… / I notice… / I see…"), which is the register T1 complained about in field note §C1 and that `systemPrompts.ts:18` bans as its strictest rule. **No launch ruling**, per the item; the qualitative clause is Sharang's read and the three full transcripts are in `docs/eval-runs/2026-08-13-m19-mediapipe/report.md` so it can be judged in ten minutes. Safety verdict untouched — the gate is still a FAIL. No `src/` diff, no gate read. |
 | 2026-08-13 | M18 — the MLC conversion door, never previously tried | #147 | **NEGATIVE, and the third door is now honestly shut.** `mlc_llm`'s registry carries `gemma`/`gemma2`/`gemma3`/`gemma3_text` and **no `gemma4`** (raise site `mlc_llm/support/auto_config.py:152`), while `merged-m6/config.json` declares `model_type: gemma4` — the item's expected `ValueError`, confirmed. **Caveat recorded rather than dressed up:** the CLI could not *emit* it, because the only two published Windows CPU nightlies (`mlc-ai-nightly-cpu 0.26.dev246`, `mlc-llm-nightly-cpu 0.26.dev5`) are mutually incompatible and the import dies at `tvm/ir/op.py:186`; no matching pair is pinnable. **The item's fork premise was too optimistic and that is the durable finding.** The multimodal-nesting half is real and measured — of 2011 tensors only **600 are `model.language_model.*`**, with 751 audio-tower + 658 vision-tower — but `text_config` also names **per-layer input embeddings, 20-of-35 shared-KV layers and a double-wide MLP**, none of which exist anywhere in mlc_llm's gemma3. So the fork is `gemma4_model.py` + `gemma4_loader.py`, **a new model definition, not a prefix remap** — days of TVM-Relax work plus a WebGPU build, not a config patch. E2B's MoE block is OFF, the one thing that does not have to be ported. No porting started, closed inside its time box, **no `src/` diff**. Changes nothing about shipping (M16 ruling #4). WebLLM go/no-go stays open and stays Sharang's. |
