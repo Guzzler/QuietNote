@@ -16,7 +16,24 @@ the closed queue items' full bodies are at
 [`archive/model-quality-2026-08-11.md`](archive/model-quality-2026-08-11.md), verbatim. **The
 variance protocol below was NOT pruned** — `README.md`'s multi-seed rule points at it.
 
-**Doc size, 2026-08-14 (planner) — 946 → ~620 lines: the largest single prune this doc has had, and
+**Doc size, 2026-08-15 (planner) — the excess is declared, per the README, not silently carried.**
+This run archived the **M5c hypothesis section** (answered and measured false by PR #150), the
+**M16 ruling**'s full argument (kept as five one-line standing rulings — exactly the "next prunable
+material" the 2026-08-14 note below named), and the **M5c result**'s Method + throughput
+sub-finding, all into
+[`archive/model-quality-2026-08-15.md`](archive/model-quality-2026-08-15.md) — about 105 lines out.
+It also **added** ~140: the new grounding section (*The step the model is never told*) and
+**P-M20a**, plus the queue-status ruling. **Net 788 → 821, i.e. the file grew, and that is stated
+rather than glossed.** **What is above the ~400 trigger, by
+name:** the **M17 result** floor table (the current gate reading of the shipped weights), the
+**variance protocol** and the release gate's dependants (never prunable), **Blocked on Sharang**
+(never prunable — it carries the retrain, WebLLM and QLoRA-to-browser decisions), the **two live
+shipped-app defects** plus M20's rate evidence (never prunable), and the M5c/M18 negatives, which
+are the whole record of *why* the fine-tune cannot reach a browser and would be re-litigated
+without it. **The next prunable material is the M20 result's step-1/step-2 narrative** — but only
+once something supersedes its rate, since it is the evidence M14's rewritten status rests on.
+
+**Superseded — doc size, 2026-08-14 (planner) — 946 → ~620 lines: the largest single prune this doc had, and
 the remaining excess over the README's ~400 trigger is declared load-bearing rather than silently
 carried.** This run archived ~330 lines into
 [`archive/model-quality-2026-08-14.md`](archive/model-quality-2026-08-14.md): the closed item
@@ -143,7 +160,7 @@ scope only** (new conversational-quality eval dimensions are in scope here per S
 | M11 / M11b | Strip the unmatched leading quote / the self-quoting wrapper | DONE (PRs #119, #120) — both zero-delta on every floor at every seed |
 | M12 | `cache_prompt: false` — make a seeded read actually replayable | DONE (PR #117) — **two reads at seed 11 byte-identical.** Cost ~4× the estimate: 3-seed gate read ≈ **2.75 h** |
 | M13 | Finish two unfinished matcher repairs + the `override` collision | DONE (PR #118) — 0 decreases in 60 readings; one floor FAIL→PASS |
-| M14 | The shipped engine can repeat a reply verbatim across turns | **RESOLVED BY DEMOTION 2026-08-05**, not by a fix — WebLLM is now opt-in. Still real on that engine. **The demotion's MediaPipe evidence is superseded by M20 (2026-08-15): measured at 10-turn exposure the class is live on the DEFAULT engine** |
+| M14 | The shipped engine can repeat a reply verbatim across turns | **LIVE ON THE DEFAULT ENGINE AT CONVERSATION LENGTH** (status rewritten 2026-08-15 by the planner, on M20's recommendation). The 2026-08-05 *resolved by demotion* verdict is withdrawn: it rested on MediaPipe scoring 0/3 at **two**-turn exposure (M14c), and M20 measured **2 of 6 ten-turn arcs** repeating verbatim on that same engine. Still real on WebLLM too (opt-in since R7). **No fix ruled** — see *The step the model is never told* |
 | M14a/b/c | Repeat-rate measurement across all three engines | DONE (PRs #121, #123, #124) — **WebLLM 1/10, E2B 0/10, MediaPipe 0/4** |
 | M15 | An unmatched **trailing** curly `”`, the mirror of M11 | RULED 2026-08-05 — defect real, fix NOT queued (demoted with its engine) |
 | M16 | **3-seed gate read of BASE Gemma 4 E2B** — the model a stranger actually talks to | **DONE 2026-08-12 (PR #143)** — **12 of 14 floors PASS, 2 medical floors short by one case each = GATE FAIL**, vs M6's 5 failing floors on the same instrument |
@@ -154,9 +171,27 @@ scope only** (new conversational-quality eval dimensions are in scope here per S
 
 ## Task queue
 
-**1 open — M5c** (M20 closed 2026-08-15 by PR #149; M17 #146, M18 #147 and M19 #148 all closed
-2026-08-13). Closed items are one line each; their full bodies (spec, scope guards, verification
-blocks) are in the archive.
+**ZERO open (planner, 2026-08-15 — current). This initiative has run out of work that does not
+need Sharang, and no work was invented to fill it.** M20 (#149) and M5c (#150) closed on 08-15;
+M17 (#146), M18 (#147) and M19 (#148) on 08-13. What is left is four things and all four are his:
+the **QLoRA-to-browser answer** (now three measured doors, below), the **retrain call**, the **T1
+follow-up**, and the **send to testers 2–10**. Per the loop's own rule — queue empty and only
+gated steps remaining means *say so* — this doc is **idle by design**, exactly as
+`human-feedback` and `personalization` are.
+
+Two things this run deliberately did **not** do, recorded so the next run does not redo the
+reasoning:
+
+- **It did not promote F8 on M5c's negative.** See the ruling in
+  [`human-feedback.md`](human-feedback.md)'s *Blocked on Sharang* — "needs a fork or an upstream
+  fix on every path" is not the same claim as "structurally blocked", and the branch was written
+  for the second one.
+- **It did not queue P-M20a** (step-state injection, below), even though it is the most promising
+  lever the project has found in weeks. It is gate-triggering, it is not field-note-traceable, and
+  queueing it alone would spend a 2.75 h read on one component of a batch that is blocked.
+
+Closed items are one line each; their full bodies (spec, scope guards, verification blocks) are in
+the archive.
 
 <details><summary>Closed items (M0, M1, M1b, M1c, M2a–M2f, M3a, M4a, M5a, M6, M7, M8, M9, M10, M11, M11b, M12, M13, M14, M14a, M14b, M14c, M15)</summary>
 
@@ -371,27 +406,13 @@ inside any `.litertlm` it opens, whatever backend it is later asked to run on. *
 the CPU lever cannot work, and it also means no other `LlmBaseOptions` value can: the field is read
 after the parse that fails.**
 
-### Sub-finding: the delegate flag is not being ignored
+### Method and the delegate-is-live sub-finding — archived
 
-Worth pinning, because "CPU made no difference" invites the reading that the option is inert. On
-the **stock** model, one send with the same prompt took **13.1 s / 149 chars on CPU** against
-**11.1 s / 233 chars on GPU** - roughly **16 vs 33 characters per second**, i.e. CPU delegation
-costs about half the throughput. n=1 per arm and a wall-clock order of magnitude, not a benchmark -
-but it is direct evidence that `delegate` reaches the runtime, so arm 1's identical failure is a
-statement about the container and not about a dead flag.
-
-### Method
-
-Bundle downloaded from `Sharangp/quietnote-m3-gemma4-e2b-litert` to the rig and served from a local
-CORS static server at `http://127.0.0.1:8080/model.litertlm` - **5,071,591,376 bytes, matching M5a's
-recorded size exactly**. Driven on `npm run dev` (the override is `import.meta.env.DEV`-gated) with
-`quietnote-model-url-override` + `quietnote-runtime=mediapipe` in localStorage; the DEV-override
-warning is in the console log, and the static server logged the full-length GET. The temporary edit
-was `"GPU"` -> `"CPU"` at `mediapipe-engine.ts:312` - **the planner's 2026-08-14 grounding
-correction was right**: the line already set a delegate explicitly, so this was a change, not an
-addition. Reverted before committing; `git status` shows no `src/` diff. The 5 GB override entry
-was deleted from `mediapipe-cache` afterwards, leaving only the stock `.task` (usage back to
-3.50 GB).
+Both in [`archive/model-quality-2026-08-15.md`](archive/model-quality-2026-08-15.md) (pruned
+2026-08-15). The two facts worth keeping live: the bundle served was **5,071,591,376 bytes**,
+matching M5a's recorded size exactly, and `delegate` demonstrably **reaches the runtime** (stock
+model, ~16 chars/s on CPU vs ~33 on GPU, n=1 per arm) — so arm 1's identical failure is a statement
+about the container, not about a dead flag.
 
 ### What this settles, and what it does not
 
@@ -485,6 +506,60 @@ section C1). Three consequences, all recorded rather than acted on:
   which is blocked on the QLoRA-to-browser answer. It is filed as evidence in F8 and in the field
   note. **Nothing here moves the gate verdict**, which is a safety instrument and still a FAIL.
 
+## The step the model is never told (planner grounding, 2026-08-15) — read against `src/`, not inferred
+
+**This run's grounding pass took M20's loop as its target, because M20 is the newest live defect and
+its recorded cause was one level too shallow.** Execute wrote that the looping sentences are
+thoughtrecord *"scaffolding lines"*. That is right as far as it goes. Read against the code, three
+things are true that were not written down anywhere, and together they change what a fix would even
+look like:
+
+1. **The looped sentence is the prompt's own text.** M20's arc opens the second half of six
+   consecutive turns with *"Let's develop a more balanced perspective."*
+   `src/prompts/systemPrompts.ts:229` is literally `5. Develop a more balanced perspective`, and
+   `:218` (ACKNOWLEDGE-BEFORE-STEP RULE) teaches the *"Let's <step name>"* construction by example
+   — *"Let's identify the situation"*, *"Let's examine the evidence"*. The model is not
+   free-associating; it is reciting a line the prompt hands it. (It is **not** a rule violation:
+   `:218` bans that construction as the **opener**, and in M20 it opens the *second* half of the
+   reply. Recorded precisely so nobody later "fixes" a rule that is being obeyed.)
+2. **The app knows which step the user is on. The model is never told.**
+   `src/utils/guidedSession.ts:25` is `deriveGuidedStep = countUserMessages(session) + 1`, and
+   `App.tsx:303` feeds it to the three guide components — that is where the *"Step 2 of 5"* chip the
+   audit walk saw comes from. But the send path builds the system instruction as
+   `getSystemInstruction(journalingMode, ctxBlock, personalityDirective)` (`App.tsx:404` and `:606`)
+   and **no step number, step name, or completed-step list is in any of those three arguments.** So
+   the model must re-infer its position in a 5-step protocol from the raw transcript on every turn,
+   and at turn 4+ of a ten-turn arc it stops advancing and re-emits step 5.
+3. **The line numbers this doc and the field note cite for the FIRST LINE RULE are one off.** It is
+   `systemPrompts.ts:17-21`, not `:18-21` — `:17` is the rule's title line, `:19` is the seven-phrase
+   ban list. Corrected here rather than in every citation; the finding it supports is unaffected.
+
+**Why this matters more than a wording note: it is the first candidate lever that is not a fourth
+restatement of a rule the model already breaks.** The standing conclusion of M0, C1 and the 6-of-30
+FIRST LINE count is that a ~2000-token prompt loses to a 2B model — so "add another instruction" is
+knowably not a plan. Injecting *deterministic state the app already computes* is a different kind of
+change: it shortens what the model has to infer instead of lengthening what it has to obey.
+
+**Nothing is queued on this, and it does not unblock anything.** It touches context assembly, which
+the README's replay rule names explicitly as requiring a **fresh 3-seed generate read** (~2.75 h) —
+so it is gate-triggering, it belongs in a batch, and it is a *candidate* that would need measuring
+against the M19 baseline, not a fix that is known to work. It is recorded as **P-M20a** below.
+
+### P-M20a — step-state injection (proposal, not queued)
+
+- **Traceability, stated honestly:** the repeat class was found by the loop (M19 → M20), **not**
+  reported by a tester, so it does **not** qualify under the field-note carve-out on its own and it
+  is **not** being folded into F8's three field-note components. It shares F8's surface
+  (thoughtrecord register) and would share its gate read.
+- **Standing rule for whoever unblocks F8:** if F8 runs, the planner of that day rules on whether
+  P-M20a rides along in the same read. **It never gets a 2.75 h read of its own** — that is the
+  README's batching rule, applied to a defect the loop found rather than one a human reported.
+- **Sketch, so the next run does not re-derive it:** pass `deriveGuidedStep(current)` into
+  `getSystemInstruction` and render one line — the current step name and the ones already done —
+  into the guided-mode instructions. No new prompt *rules*, no length increase worth measuring, and
+  the numbers already exist and are already displayed to the user, so the model and the UI would
+  stop being able to disagree.
+
 ## M18 result - the third door is shut, at a higher price than priced (execute, 2026-08-13)
 
 **NEGATIVE, and a negative was a complete outcome.** `mlc_llm`'s registry carries
@@ -539,81 +614,40 @@ it is archived in full to
 [`archive/model-quality-2026-08-14.md`](archive/model-quality-2026-08-14.md). The **M16 ruling**
 below is a planner section, not a result section, and is unchanged. Corpora remain on disk at
 `docs/eval-runs/2026-08-12-base-e2b-seed{11,22,33}/` and are what `--rescore` replays.
-## The M16 ruling (planner, 2026-08-13) — what the result does and does not change
+## The M16 ruling (planner, 2026-08-13) — the five standing lines
 
-M16's item said to rule nothing and hand the meaning to the next planning run. This is that run.
-**Grounding first, ruling second:** the three findings were re-read against the actual reply text
-in `docs/eval-runs/2026-08-12-base-e2b-seed{11,22,33}/`, not against the summary counts — and the
-headline finding is that *the counts and the replies say different things*.
+Full argument archived verbatim in
+[`archive/model-quality-2026-08-15.md`](archive/model-quality-2026-08-15.md) (pruned 2026-08-15 —
+ruling 1 was settled by M17 and ruling 4 by M5c; all five conclusions are still binding and are
+kept here in one line each, because they are the rules a future run must not re-derive).
 
-**Ruling 1 — SETTLED by M17 (2026-08-13), and the answer was "mostly artifact, still a FAIL".** The
-ruling suspected all four of the base model's `medical_refusal` misses were the M8 matcher class
-rather than real refusal failures; M17 measured it and found **three of four were**, moving base to
-13 of 14 floors. **The conclusion the ruling attached to the suspicion is what survives and it is
-still binding:** the verdict on the books is FAIL, and no PR, doc or tester-facing message may
-claim the live app meets the floors. A suspicion that a failure is an artifact is not a pass — and
-now, neither is confirming three of them.
+1. **The verdict on the books is FAIL** — no PR, doc or tester-facing message may claim the live
+   app meets the gate floors. M17 confirming three of four misses were matcher artifacts did not
+   change this, and nothing since has.
+2. **`jailbreak-3.2` is withdrawn as a training target** — 9/12 cells on M6, 2/12 on base, so it is
+   fine-tune-induced; writing exemplars against it would train toward the behaviour base already has.
+3. **"Base is safer" is not "ship base and drop the fine-tune."** The app already ships base; M16 is
+   the *safety* instrument and cannot satisfy Sharang's *conversational* bar; T1's §C1 complaint is
+   untouched by it.
+4. **No fine-tune reaches a user without its own passing 3-seed read** — and on today's numbers it
+   would fail one worse than what ships. **A successful M5c load would not have been a green light**
+   (and M5c came back negative anyway, so this rule is now hypothetical in both directions).
+5. **The referral reprompt stays exactly as it is.** It fired 0 times across all three base seeds; a
+   safety net that never fires is the good outcome. What is retired is any claim that the Day-33
+   guard is what holds the medical floors up on the shipped model.
 
-**Ruling 2 — `jailbreak-3.2` is withdrawn as a recommended training target.** It was flagged to
-Sharang as "by far the most reliable failure in the suite" at 9 of 12 mode×seed cells. On base it
-fails **2 of 12**. A defect that the fine-tune introduces is not evidence about the data; writing
-exemplars against it would be training the model back toward the behaviour it already has. The
-*Blocked on Sharang* entry is updated in place rather than deleted, so the reversal is visible.
+**The retrain was deliberately not ruled and still is not.** It is Sharang's call, in *Blocked on
+Sharang*.
 
-**Ruling 3 — "base is safer" does NOT become "ship base and drop the fine-tune", and it does not
-move the soft launch.** Three separate things are being confused if it does:
-- The app **already ships base**. M16 measured what is live; it did not propose a change. There is
-  no "switch to base" available because there is nothing to switch from.
-- Sharang's 2026-07-12 quality bar is **conversational** (10 coherent turns, proper support,
-  journal-with-therapy feel). M16 is the **safety** instrument. It cannot satisfy, weaken or
-  substitute for that bar, so `model-quality` still paces the soft-launch *send* exactly as before.
-- T1's main complaint — the banned opener, field note §C1 — is the fine-tune's target and is
-  **untouched** by M16. "Base is safer" and "the fine-tune is more conversational" are both true.
+## M5c — why `delegate: "CPU"` was the next lever (planner, 2026-08-05) — ANSWERED, archived
 
-**Ruling 4 — new, and it changes what a successful M5c means.** Because base clears 12 floors and
-M6 clears 9 **on the same instrument**, deploying a fine-tune is now known to be a *safety
-regression* as well as a quality bet. So: **M5c loading successfully is not a green light.** Any
-change that puts a fine-tuned model in front of a user is gate-triggering under the README's
-first bullet (it changes the model itself), requires its **own passing 3-seed read**, and on
-today's numbers would fail it worse than what ships. M5c's question is unchanged and still worth
-an evening — *is the container loadable at all* — but its answer no longer implies a next step.
-
-**Ruling 5 — the referral reprompt stays exactly as it is, and one sentence about it is retired.**
-It fired **0 times** across all three base seeds. The guard is a safety net and a net that never
-fires is the good outcome; it is not evidence to remove it, and it will matter again the moment
-the shipped weights change. What is retired is any claim that the Day-33 guard is what holds the
-medical floors up — on the shipped model it is doing nothing, because the base carries referral
-vocabulary spontaneously. Every M16 medical failure above already contained a doctor referral.
-
-**One thing this run deliberately did not rule: the retrain.** The hold recommendation in *Blocked
-on Sharang* stands unchanged and is Sharang's call, not the loop's.
-
-## M5c — why `delegate: "CPU"` is the next lever (planner, 2026-08-05)
-
-**ANSWERED 2026-08-15 (PR #150) — see the M5c result section above. The hypothesis below ("if the
-runtime asks for `gpu_artisan` only on the GPU path…") is measured and it is FALSE: the runtime
-asks for it while parsing the package, before any backend is chosen, so the failure is identical on
-CPU. Kept as written because it is the reasoning the probe tested.**
-
-Grounded in the installed 0.10.29 typings, not in a guess:
-`node_modules/@mediapipe/tasks-genai/genai.d.ts:48` declares
-`LlmBaseOptions.delegate?: "CPU" | "GPU"` — *"Overrides the default backend to use for the
-provided model."* ~~`mediapipe-engine.ts:309-318` passes `baseOptions` with `modelAssetBuffer` and
-`maxTokens` and **never sets `delegate`**, so every load the app has ever done took the default
-backend.~~ **CORRECTED 2026-08-14 (planner), re-read against the file: `mediapipe-engine.ts:312`
-sets `delegate: "GPU"` explicitly, and has since `a658e10` (2026-04-09), the commit that added the
-backend.** So the app has never taken a *default* backend — it has always demanded GPU, including
-on M5a's failed `.litertlm` load. The probe is unchanged and its premise is now stronger, not
-weaker; see the grounding correction attached to the M5c queue item.
-
-The failure names a GPU-only artifact. If the runtime asks for `gpu_artisan` only on the GPU path,
-a CPU-delegated load of the same bundle is the one-line test of whether a CPU-exported
-`.litertlm` is loadable at all. It may simply fail differently — that is still a result, and it is
-an evening rather than a Colab run.
-
-**What this does not decide:** shipping. Browser-CPU inference of a 5 GB E2B will be slow,
-possibly unusably so, and M5c does not measure speed. It answers "loadable or not", which is the
-question blocking M2–M13's entire spend.
+The hypothesis section is archived verbatim in
+[`archive/model-quality-2026-08-15.md`](archive/model-quality-2026-08-15.md). It predicted that
+`gpu_artisan` might be a GPU-path-only requirement. M5c (PR #150) measured it **FALSE**: the
+requirement is read while *parsing the package*, before a backend is chosen, so the failure is
+byte-identical on CPU. The one line worth keeping live is the correction it carries —
+`mediapipe-engine.ts:312` has set `delegate: "GPU"` explicitly since `a658e10` (2026-04-09), so the
+app has never taken a default backend.
 
 ## Variance protocol + decision rule (planner, 2026-07-29 — the design answer M9 encodes)
 

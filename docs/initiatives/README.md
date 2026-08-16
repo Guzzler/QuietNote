@@ -232,6 +232,38 @@ MLC per M18, LiteRT per M5c), the retrain call, the T1 follow-up, and the send t
 2–10. **The gate verdict is untouched by this walk** — the app was walked, not scored, and
 the standing sentence still binds: nothing may claim the live app meets the gate floors.
 
+**Amended 2026-08-15 (planner): every initiative is still at ZERO open items, the F8 branch was
+read and did NOT fire, and the run's finding is that the app knows which CBT step the user is on
+and never tells the model.** Four things settled, none of them a queue item:
+
+1. **The *If structurally blocked → promote F8* branch does not fire on M5c's negative.** The
+   branch (in `human-feedback.md`'s *Blocked on Sharang*) needs *"prompt-only is the **permanent**
+   shipped ceiling"*. What the three probes actually measured is a **price on every door**, not a
+   wall: ONNX waits on an upstream release, MLC needs a new model definition (M18), LiteRT needs
+   the unpublished web-`.task` recipe (M5c). The entry says the loop must not guess "either way",
+   and reading a price as a wall is that guess. **F8 stays blocked, and no gate read was spent.**
+2. **Instead of guessing, the decision was made cheap.** The *Blocked on Sharang* entry is
+   rewritten as one question with all three doors in a table and **both answers' consequences
+   pre-written**, so Sharang's reply can be a sentence. That is this run's design advance.
+3. **Grounding found a lever that is not another prompt rule.** `utils/guidedSession.ts:25`
+   derives the guided step as `countUserMessages + 1` and `App.tsx:303` shows it to the user — but
+   `getSystemInstruction` (`App.tsx:404`, `:606`) is never given it, so the model re-infers its
+   position in a 5-step protocol every turn and, in M20's arc, re-emits `systemPrompts.ts:229`'s
+   step 5 for six turns running. Filed as **P-M20a** in `model-quality.md`, **not queued**: it is
+   gate-triggering (context assembly ⇒ fresh 3-seed read), and it is **not** field-note-traceable,
+   so it does not enter F8's carve-out batch — it may only ever *ride* F8's read, never take one of
+   its own.
+4. **M14's status is rewritten, per M20's recommendation** — from *resolved by demotion* to **live
+   on the default engine at conversation length**. The demotion rested on a two-turn measurement;
+   M20 measured 2 of 6 ten-turn arcs. `model-quality.md` was pruned into
+   [`archive/model-quality-2026-08-15.md`](archive/model-quality-2026-08-15.md) and its remaining
+   excess over the ~400 trigger is declared by name, as this README requires.
+
+**So the standing statement is unchanged and is now the whole status: release-ready, waiting on
+Sharang.** Four things, all his: the QLoRA-to-browser answer, the retrain call, the T1 follow-up,
+and the send to testers 2–10. The gate verdict is untouched — nothing may claim the live app meets
+the floors.
+
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
 
 1. **Hosting:** GitHub Pages via Actions. **The repo stays PRIVATE until

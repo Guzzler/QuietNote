@@ -133,7 +133,7 @@ it ships correct the moment R4 lands:
 | F6 | Surface Thought Record at phone widths — highest-intent tester never saw the most differentiated mode | **DONE 2026-08-11 (PR #141)** — live-verified 2026-08-12 |
 | F7 | Time-of-day correctness: a 00:35 check-in asks how "today" went about a day that already ended | **DONE 2026-08-11 (PR #142)** — gate taken on invariance; live-verified 2026-08-12 |
 | F9 | Walk T1's exact path on the **live** origin at 375px / 00:35 and capture the after-state | **DONE 2026-08-12 (PR #145)** — all four steps PASS on the live origin, 0 console errors; F5/F6/F7 confirmed at the behaviour level, not just the bundle level |
-| F8 | Gratitude tone + CBT distortion-naming + **thoughtrecord opener monotony** (third component added 2026-08-14), batched into ONE gated PR | **BLOCKED** on the QLoRA-to-browser question (field note §C, Blocked on Sharang) — do not queue |
+| F8 | Gratitude tone (§C1) + CBT distortion-naming (§C2) + **thoughtrecord opener monotony** (§C3, added 2026-08-14), batched into ONE gated PR. **Still exactly three components** — `model-quality`'s **P-M20a** is a candidate to ride the same read, not a fourth component (planner, 2026-08-15) | **BLOCKED** on the QLoRA-to-browser question (field note §C, *Blocked on Sharang*) — **re-confirmed blocked 2026-08-15**: M5c's negative did **not** fire the *structurally blocked* branch. Do not queue |
 
 ## Task queue
 
@@ -224,7 +224,37 @@ link, or anything that reads like a survey invite — the in-app footer link
 and `WELCOME.md` §6 carry the reporting path. Do not name the model or the
 engine; testers don't need it, and §2 of WELCOME.md covers alternates.
 
-**Queue status (2026-08-14, planner — current): still ZERO open, still nothing invented; but F8's
+**Queue status (2026-08-15, planner — current): ZERO open, and the branch that was waiting on a
+measurement did NOT fire.** M5c came back **negative** on 2026-08-15 (PR #150) — the `.litertlm` is
+rejected while the package is *parsed*, before any backend is chosen, so no delegate value can help
+— which spends the last cheap probe of the last of M5's three formats. The 2026-08-14 note below
+said that when M5c returned, the *If structurally blocked → promote F8* branch would "fire on
+evidence rather than on assumption". **This run read the evidence and rules that it does not fire.
+F8 stays blocked.** The reasoning, in full, so it is not re-argued:
+
+- **What was measured is "needs a fork or an upstream fix on every path", not "structurally
+  blocked".** ONNX is a version deadlock upstream, MLC needs a new model definition (M18), LiteRT
+  needs a container the published converter does not produce (M5c). Every one of those has a
+  named, non-zero route through it. The branch's premise — *prompt-only is the **permanent**
+  shipped ceiling* — requires a wall, and what the loop found is a price.
+- **The entry says the loop must not guess this "either way".** Promoting F8 on a reading of
+  "blocked" that the measurements do not support is exactly the guess it forbids, and it would
+  spend a 2.75 h gate read on the basis of it.
+- **What the loop can do instead of guessing is make the decision cheap**, which is this run's
+  design advance: the *Blocked on Sharang* entry below is rewritten as a **yes/no with both
+  consequences pre-written**, so answering it costs a sentence rather than a research session.
+
+**One new thing arrived for F8's eventual batch, and it is a candidate lever rather than a fourth
+restatement of a rule.** This run's grounding pass found that the app computes the guided step
+deterministically (`utils/guidedSession.ts:25`, `deriveGuidedStep = countUserMessages + 1`) and
+displays it to the user, but **never passes it to the model** — `getSystemInstruction` takes mode,
+context block and personality directive only (`App.tsx:404`, `:606`). M20's six-turn loop is the
+model re-emitting `systemPrompts.ts:229`'s step 5 because nothing tells it the step advanced. Filed
+in `model-quality.md` as **P-M20a**, explicitly **not** folded into F8's three field-note components
+(the repeat class was found by the loop, not reported by a tester, so it does not qualify under the
+carve-out on its own) and explicitly **not** queued.
+
+**Superseded — queue status (2026-08-14, planner): still ZERO open, still nothing invented; but F8's
 spec grew and its unblocking condition is now a dated measurement rather than an open question.**
 Two changes this run, both upstream in `model-quality.md` and neither of them a queue item here:
 
@@ -279,6 +309,15 @@ cannot generate that stream. The T1 follow-up message and the send to testers
 [2026-08-11](archive/human-feedback-2026-08-12.md),
 [2026-08-09 and earlier](archive/human-feedback-2026-08-11.md).
 
+**Doc size, 2026-08-15 (planner): 401 → 460, over the README's ~400 trigger, declared not
+archived.** The growth is one block — the F8-branch ruling above and the rewritten
+QLoRA-to-browser decision packet below. Neither is prunable: the first is the reasoning that stops
+a future run promoting F8 on a misreading of M5c, and the second is a **Blocked on Sharang** entry,
+which the README lists among the five things never pruned at any size. Everything closed here was
+already archived on 08-12/08-14. **The next prunable material is the F2 share message plus its
+2026-08-08 copy correction** (~35 lines) — but only once it has actually been sent to testers 2–10,
+since until then it is live copy waiting to be pasted.
+
 ## Ledger
 
 | date | item | PR | outcome |
@@ -330,6 +369,35 @@ cannot generate that stream. The T1 follow-up message and the send to testers
   point promoting F8 becomes a decision worth your five minutes rather than a guess. Your "weird
   limitations" comment may still name something none of these three found, which is why this stays
   yours.
+
+  **M5c returned NEGATIVE on 2026-08-15 (PR #150), so this is now a decision rather than an
+  investigation — and it is one question with two pre-written consequences. (planner, 2026-08-15.)**
+  The loop ruled that the branch **does not auto-fire** (see the queue status above: three doors
+  with a price on each is not the same as a wall), so nothing moves until you answer. All three
+  measurements, one line each:
+
+  | door | status | what would open it |
+  |---|---|---|
+  | ONNX | version deadlock — `gemma4` needs transformers 5.x, `optimum-onnx` pins `<4.58` | an upstream release |
+  | MLC / WebLLM | `mlc_llm` has no `gemma4`; the fork is a **new model definition** (M18, #147) | days of TVM-Relax work + a WebGPU build |
+  | LiteRT | the `.litertlm` is rejected **during package parsing** — missing `gpu_artisan`, on **every** delegate (M5c, #150) | the unpublished web-`.task` recipe, i.e. an upstream ask |
+
+  **The question, and it is the only thing the loop needs from you here:** do the "weird
+  limitations" you referred to name a **fourth** obstacle none of these three found — and is any of
+  the three routes above worth spending (or asking upstream for)?
+
+  - **"Yes, one of these routes is worth it" →** F8 stays blocked and tone stays a *training*
+    target. Nothing in any queue changes, and the loop keeps not spending gate reads on prompt
+    fixes for a model that is meant to be replaced.
+  - **"No — none of it is worth it" →** that is the *structurally blocked* branch, and **F8 is
+    promoted to the top of this initiative's queue** as one batched, gated PR: §C1 gratitude tone +
+    §C2 distortion-naming + §C3 opener monotony, with `model-quality`'s **P-M20a** (step-state
+    injection) ruled in or out by the planner of that day. **One gate read, not four.**
+  - **"There is a fourth thing you haven't tried" →** name it and the loop measures it, the way it
+    measured the other three.
+
+  Nothing about the live app changes on either answer today. What changes is whether the prompt is
+  the last lever or an interim one — and the loop will keep declining to guess which.
 
 - **The one-click chooser check** — see the grounding note above; still one
   signed-in click, still not machine-verifiable by the loop.
