@@ -264,6 +264,37 @@ Sharang.** Four things, all his: the QLoRA-to-browser answer, the retrain call, 
 and the send to testers 2–10. The gate verdict is untouched — nothing may claim the live app meets
 the floors.
 
+**Amended 2026-08-16 (execute): every initiative is still at ZERO open items, the queue-empty
+audit ran again on a path no prior walk had taken, and this time it found something.** The
+2026-08-15 walk drove **Thought Record** on desktop; this one drove **Gratitude at 390 px**,
+cold, on the live origin. Result:
+
+- **The stranger's path is healthy.** Fresh state (`localStorage`, `quietnote-db`,
+  `mediapipe-cache` cleared), first paint shows the honest download copy, all four modes —
+  including Thought Record, F6's fix — are reachable at phone width. One exchange returned a
+  coherent, on-mode reply in **~25 s** that does **not** open with a banned opener, with the
+  AI-limitations disclaimer and **Crisis resources** rendered alongside. Reload restored in
+  **~15 s**, the continuity card quoted the entry back correctly (*"Earlier today, you wrote…"* —
+  F7's time-of-day fix behaving), and reopening the saved session restored **mode = Gratitude**
+  and **Step 2 of 3**. **0 console errors** (the two warnings are the pre-existing benign
+  MediaPipe WebGPU ones).
+- **One real defect, filed as `public-release`'s R16 (PROPOSED, not queued).** The sessions-panel
+  summary read **"Worked through grateful feelings around gratitude."** — `sessionReflection.ts:24`
+  fills its two slots from two extractors that share the word *"grateful"*, so **every** Gratitude
+  entry that uses the mode's own vocabulary stutters. Filed with a second observation on the same
+  sentence (*"worked through"* mis-frames positive emotions). Display-only, **not
+  gate-triggering**; execute did **not** fix it, per the audit rule — the planner prices it.
+- **One measurement worth recording because it contradicts yesterday's number, and it is not a
+  defect.** The cold 2.0 GB download took **~19 minutes** on this connection today against
+  **188 s** yesterday on the same origin. Nothing in the app changed; this is network variance,
+  and it is exactly why R11 forbade promising a speed. It is evidence *for* the shipped copy
+  ("a few seconds, no download" describes only the warm load), not against it.
+
+**No P0.** The standing statement is unchanged: **release-ready, waiting on Sharang** — the
+QLoRA-to-browser answer, the retrain call, the T1 follow-up, and the send to testers 2–10. **The
+gate verdict is untouched by this walk** — the app was walked, not scored, and nothing may claim
+the live app meets the gate floors.
+
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)
 
 1. **Hosting:** GitHub Pages via Actions. **The repo stays PRIVATE until

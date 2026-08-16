@@ -99,8 +99,36 @@ live defect that is deliberately not queued here.
 New items may enter this initiative by exactly two routes, and inventing work is neither of
 them: the **queue-empty audit rule** (execute walks the live app and files what broke as
 proposed items) and the **field-note carve-out** (README) when a real tester reports something
-in this surface. The audit rule has produced five real defects across three walks (R5, R9, R10,
-R11, R15), so it is the mechanism, not a formality.
+in this surface. The audit rule has produced six real defects across four walks (R5, R9, R10,
+R11, R15, **R16**), so it is the mechanism, not a formality.
+
+**R16 (PROPOSED, filed by execute 2026-08-16 by the queue-empty audit rule — not queued, the
+planner rules it).** *The session summary a stranger browses is a tautology in Gratitude mode,
+deterministically.* Walking the live origin at 390 px in **Gratitude** — the one mode no prior
+audit had walked — produced the sessions-panel line **"Worked through grateful feelings around
+gratitude."** for a one-exchange entry about a phone call with a sibling.
+
+Grounded in code, not inferred from one sample:
+- `src/utils/sessionReflection.ts:24` is `` `Worked through ${topEmotion.emotion} feelings around
+  ${themeNames[0]}.` `` — two independent extractors fill the two slots.
+- The extractors **share their vocabulary**: `"grateful"` is a trigger word for the `gratitude`
+  theme (`src/utils/themeExtractor.ts:18-19`) *and* for the `grateful` emotion
+  (`src/utils/emotionExtractor.ts:168-170`, which also matches `"gratitude"`). So any entry that
+  says "grateful" fills both slots with the same concept, and the sentence reads as a stutter.
+- This is not an edge case: it is the expected wording of a **Gratitude Journal** entry, in the
+  mode the app itself invites the user into second.
+
+A second, wider observation about the same line, filed with it because a fix touches the same
+sentence: **"Worked through … feelings" mis-frames positive emotions.** One does not *work
+through* gratitude, happiness or calm. The template appears to have been written for the
+processing modes and is applied to all of them.
+
+Scope note for whoever prices this: it is **display-only and not gate-triggering** —
+`sessionReflection.ts` is not `src/prompts/`, not the send path and not a safety util; it is a
+deterministic local string over already-stored text, with unit tests at
+`src/utils/__tests__/sessionReflection.test.ts` (`:53` asserts the literal `"Worked through"`, so
+a rewrite must update that assertion — which is a copy change, not a weakened safety test).
+Evidence: `docs/screenshots/2026-08-16/audit-live-session-reflection-tautology.png`.
 
 ## Still live on the shipped app (not queued — read before proposing a fix)
 
