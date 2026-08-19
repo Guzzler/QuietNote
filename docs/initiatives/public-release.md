@@ -5,11 +5,13 @@
 README tells them honestly what they are getting. Rules of engagement: [`README.md`](README.md)
 (standing decisions, release gate, queue format).
 
-**Status 2026-08-11: COMPLETE. All 16 increments DONE, zero open queue items.** The app is
-public and live at https://guzzler.github.io/QuietNote/. This doc is kept as the initiative's
-index and as the home of the two defects that are still live on the shipped app (below) — it is
-**not** where the loop's remaining work lives. That is `human-feedback` (F5–F7), then
-`model-quality` (M16, M5c).
+**Status 2026-08-16: all 16 original increments DONE; the app is public and live at
+https://guzzler.github.io/QuietNote/.** The initiative was marked COMPLETE on 2026-08-11 and
+kept as the index plus the home of the defects still live on the shipped app. It is **not
+reopened** — but the queue-empty audit rule has since filed **R16** here (a deterministic copy
+defect on the sessions list), and as of 2026-08-16 that is the **only open queue item anywhere
+in the initiatives**: `human-feedback`, `model-quality` and `personalization` are all at zero
+and idle by design, waiting on Sharang.
 
 **Pruned 2026-08-11 (1,223 → this).** The full doc — the R4 live-URL smoke matrix, R10a's desync
 table, both R13a arms, the R15/R15a/R15b rulings, four audit walks, and the unabridged ledger
@@ -90,11 +92,12 @@ as evidence, never as a current fact.
 | R15b | Retire the bare `"cutting"` keyword in favour of self-directed forms | DONE (PR #137) |
 | R13b | The Thought Record card drops two captured fields and asserts unsupportable labels | DONE (PR #138) |
 | R13c | The Thought Record's third answer is destroyed at save time, not merely hidden | **PROPOSED — awaiting a planner ruling, see below** |
+| R16 | The session summary is a tautology in Gratitude mode, and discards the entry's subject | **QUEUED 2026-08-16** — display-only, not gate-triggering |
 
 ## Task queue
 
-**0 open.** Every increment above is DONE, REJECTED with its reasoning, or carried below as a
-live defect that is deliberately not queued here.
+**1 open: R16, ruled and queued 2026-08-16 (planner).** Every other increment above is DONE,
+REJECTED with its reasoning, or carried below as a live defect that is deliberately not queued.
 
 New items may enter this initiative by exactly two routes, and inventing work is neither of
 them: the **queue-empty audit rule** (execute walks the live app and files what broke as
@@ -102,33 +105,78 @@ proposed items) and the **field-note carve-out** (README) when a real tester rep
 in this surface. The audit rule has produced six real defects across four walks (R5, R9, R10,
 R11, R15, **R16**), so it is the mechanism, not a formality.
 
-**R16 (PROPOSED, filed by execute 2026-08-16 by the queue-empty audit rule — not queued, the
-planner rules it).** *The session summary a stranger browses is a tautology in Gratitude mode,
-deterministically.* Walking the live origin at 390 px in **Gratitude** — the one mode no prior
-audit had walked — produced the sessions-panel line **"Worked through grateful feelings around
-gratitude."** for a one-exchange entry about a phone call with a sibling.
+- [ ] 2026-08-16 · **R16 — the session summary stops stuttering, and stops saying you *worked
+  through* gratitude.** Files: `src/utils/sessionReflection.ts` and
+  `src/utils/__tests__/sessionReflection.test.ts` — **those two only**. Two changes to
+  `generateReflection`, both to the one branch at `:23-25`:
+  1. **Synonym dedupe.** Add a module-local
+     `const EMOTION_THEME_SYNONYMS: Partial<Record<MoodEmotion, PromptCategory>> = { grateful:
+     "gratitude" }` — **one entry, and one is correct**: `grateful`/`gratitude` is the only
+     name collision between the two unions (`MoodEmotion`, `src/types.ts:48-58`, 10 members;
+     `PromptCategory`'s 7 theme keys, `themeExtractor.ts:18-147`). When the top emotion's
+     synonym equals `themeNames[0]`, use `themeNames[1]` if it exists; if it does not, fall
+     through to the existing emotion-only branch (`:29-31`) unchanged.
+  2. **Valence split on the verb.** `const SETTLED_EMOTIONS: MoodEmotion[] = ["happy", "calm",
+     "excited", "content", "grateful"]`. Decided copy, verbatim — settled emotions get
+     `` `Noticed ${emotion} feelings around ${theme}.` ``; every other emotion keeps
+     `` `Worked through ${emotion} feelings around ${theme}.` `` unchanged.
 
-Grounded in code, not inferred from one sample:
-- `src/utils/sessionReflection.ts:24` is `` `Worked through ${topEmotion.emotion} feelings around
-  ${themeNames[0]}.` `` — two independent extractors fill the two slots.
-- The extractors **share their vocabulary**: `"grateful"` is a trigger word for the `gratitude`
-  theme (`src/utils/themeExtractor.ts:18-19`) *and* for the `grateful` emotion
-  (`src/utils/emotionExtractor.ts:168-170`, which also matches `"gratitude"`). So any entry that
-  says "grateful" fills both slots with the same concept, and the sentence reads as a stutter.
-- This is not an edge case: it is the expected wording of a **Gratitude Journal** entry, in the
-  mode the app itself invites the user into second.
+  **The other three branches are out of scope and must not change** — `Reflected on …` (`:27`),
+  `Sat with … feelings.` (`:30`) and the 10-word fallback (`:33-34`). "Sat with grateful
+  feelings" is honest; leave it.
 
-A second, wider observation about the same line, filed with it because a fix touches the same
-sentence: **"Worked through … feelings" mis-frames positive emotions.** One does not *work
-through* gratitude, happiness or calm. The template appears to have been written for the
-processing modes and is applied to all of them.
+  → **Verification: six exact strings, measured on the current code this run** (`npx tsx` over
+  the two extractors, so the *before* column is fact, not prediction). Assert each in
+  `sessionReflection.test.ts`:
 
-Scope note for whoever prices this: it is **display-only and not gate-triggering** —
-`sessionReflection.ts` is not `src/prompts/`, not the send path and not a safety util; it is a
-deterministic local string over already-stored text, with unit tests at
-`src/utils/__tests__/sessionReflection.test.ts` (`:53` asserts the literal `"Worked through"`, so
-a rewrite must update that assertion — which is a copy change, not a weakened safety test).
-Evidence: `docs/screenshots/2026-08-16/audit-live-session-reflection-tautology.png`.
+  | user text | today | required after R16 |
+  |---|---|---|
+  | `I'm so grateful for the call with my sister today` | Worked through grateful feelings around gratitude. | **Noticed grateful feelings around relationships.** |
+  | `I really appreciate my partner` | Worked through grateful feelings around gratitude. | **Noticed grateful feelings around relationships.** |
+  | `counting my blessings after a hard week` | Worked through grateful feelings around gratitude. | **Sat with grateful feelings.** |
+  | `I'm grateful I finally made progress on my goal this week` | Worked through grateful feelings around goals. | **Noticed grateful feelings around goals.** |
+  | `I'm really anxious and worried about my relationship with my partner after our argument` | Worked through anxious feelings around relationships. | *unchanged* |
+  | `Today I noticed the bright side of a rough morning` | Reflected on gratitude. | *unchanged* |
+
+  Plus one guard: no output may contain both `grateful` and `gratitude`. → `npm run test` and
+  `npm run build` green; screenshot the Sessions panel after a Gratitude exchange on
+  `vite preview`.
+
+**Why it is queueable at all, stated so nobody re-derives it:** it arrived by the audit rule
+(one of this doc's two legitimate routes), it is a defect **live on the shipped app**, and it is
+**display-only and not gate-triggering** — `sessionReflection.ts` is not `src/prompts/`, not the
+send path and not a safety util; its only callers (`App.tsx:501`, `:704`) assign the returned
+string to `session.reflection`, which `SessionsPanel.tsx:96` renders as the preview line. No
+model input is touched. It needs no eval read.
+
+### R16's grounding, re-measured 2026-08-16 (planner) — the audit understated it twice
+
+Execute filed R16 off one sample and named `"grateful"` as the shared word. Running the real
+extractors over ten sentences found the defect is **wider than reported, and one scope note in
+the filing is wrong**:
+
+1. **Seven trigger words, not one.** The `gratitude` theme (`themeExtractor.ts:18-30`) and the
+   `grateful` emotion (`emotionExtractor.ts:167-178`) share **`grateful`, `thankful`,
+   `appreciate`, `blessed`, `fortunate`, `lucky`, `counting my blessings`** — 7 of the theme's
+   12 triggers. All seven were measured to produce the identical sentence *"Worked through
+   grateful feelings around gratitude."* `generateReflection` calls `extractThemes` directly
+   rather than `getTopTheme`, so there is no confidence floor: **one** matching word is enough.
+2. **The stutter is not the worst of it — the entry's actual subject is discarded.** Theme
+   confidence is `matches × 0.25 + 0.2`, so a one-word gratitude match and a one-word
+   relationships match **tie at 0.45**, and the tie is broken by `Object.entries` order, where
+   `gratitude` is the first key. Measured: *"I'm so grateful for the call with my sister today"*
+   ranks `gratitude 0.45 [grateful]` above `relationships 0.45 [sister]` — the sibling is
+   dropped from the summary. In Gratitude mode, where a gratitude word is near-guaranteed, the
+   theme slot is effectively **pinned** regardless of what the entry is about. The dedupe in
+   change 1 fixes this for the gratitude case as a side effect; the general tie-break is
+   **observed and deliberately not addressed** (outside the reported problem).
+3. **Correction to the filing's scope note.** It said `sessionReflection.test.ts:53` asserts the
+   literal `"Worked through"` and so "a rewrite must update that assertion". It does not need
+   updating: that test's sample is *anxious*, which keeps `Worked through` under change 2. R16
+   is test **additions** only — no existing assertion is loosened or deleted.
+
+Evidence: `docs/screenshots/2026-08-16/audit-live-session-reflection-tautology.png` (execute's
+live-origin sighting) plus this run's extractor probe, whose outputs are the *today* column above.
 
 ## Still live on the shipped app (not queued — read before proposing a fix)
 

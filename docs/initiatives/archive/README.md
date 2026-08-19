@@ -36,9 +36,13 @@ click from the live doc while getting it out of the per-run read.
 
 | [`model-quality-2026-08-13.md`](model-quality-2026-08-13.md) | `model-quality.md` @ 505 lines | 2026-08-13 | Small, targeted prune taken while the doc was being *added* to (the M16 ruling + M17). Here: the closed **M16 queue-item body** (DONE, PR #143 — its result tables and Ledger row stay live because M17 must delta against them), the superseded **2026-08-10 queue status**, and the M16 result's *"three findings the next planning run owns"* subsection, now that all three are ruled in the live doc. The live doc declares its remaining excess over the ~400 trigger load-bearing, item by item. |
 
+| [`initiatives-README-2026-08-16.md`](initiatives-README-2026-08-16.md) | `../README.md` @ 518 lines | 2026-08-16 | **The first snapshot of the rules doc itself.** Its dated amendment log had reached eleven entries (2026-08-08 → 2026-08-16) and pushed the file past the ~400 trigger it defines. The live doc replaced the log with one distilled *What the amendment log settled* block; **every rule that still binds was restated there, not dropped** — the ordering rule, the GATE FAIL sentence, the read shapes, the batching rule, the two negatives, the live findings, and the queue-empty rule. Nothing here is authoritative: standing decisions, the release gate, the multi-seed and replay rules, the field-note carve-out, the queue format and the doc-size rule were never in the log and were not touched. |
+
 Note: [`human-feedback-2026-08-12.md`](human-feedback-2026-08-12.md) (F5/F6/F7 specs, the closed
 F1/F1a/F2/F1b bodies, two resolved *Blocked on Sharang* entries) was taken 2026-08-12 and is
-described in the live `human-feedback.md`.
+described in the live `human-feedback.md`. `human-feedback-2026-08-14.md`,
+`model-quality-2026-08-14.md` and `model-quality-2026-08-15.md` follow the same pattern and are
+described in their live docs.
 
 ## Finding something
 
