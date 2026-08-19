@@ -92,12 +92,14 @@ as evidence, never as a current fact.
 | R15b | Retire the bare `"cutting"` keyword in favour of self-directed forms | DONE (PR #137) |
 | R13b | The Thought Record card drops two captured fields and asserts unsupportable labels | DONE (PR #138) |
 | R13c | The Thought Record's third answer is destroyed at save time, not merely hidden | **PROPOSED — awaiting a planner ruling, see below** |
-| R16 | The session summary is a tautology in Gratitude mode, and discards the entry's subject | **QUEUED 2026-08-16** — display-only, not gate-triggering |
+| R16 | The session summary is a tautology in Gratitude mode, and discards the entry's subject | DONE (PR #151) — display-only, no gate read spent |
 
 ## Task queue
 
-**1 open: R16, ruled and queued 2026-08-16 (planner).** Every other increment above is DONE,
+**ZERO open as of 2026-08-18 — R16 shipped (PR #151).** Every increment above is DONE,
 REJECTED with its reasoning, or carried below as a live defect that is deliberately not queued.
+With `human-feedback`, `model-quality` and `personalization` also at zero, the whole backlog is
+empty and waiting on Sharang; no work was invented to fill it.
 
 New items may enter this initiative by exactly two routes, and inventing work is neither of
 them: the **queue-empty audit rule** (execute walks the live app and files what broke as
@@ -105,7 +107,7 @@ proposed items) and the **field-note carve-out** (README) when a real tester rep
 in this surface. The audit rule has produced six real defects across four walks (R5, R9, R10,
 R11, R15, **R16**), so it is the mechanism, not a formality.
 
-- [ ] 2026-08-16 · **R16 — the session summary stops stuttering, and stops saying you *worked
+- [x] 2026-08-16 · **R16 — the session summary stops stuttering, and stops saying you *worked
   through* gratitude.** Files: `src/utils/sessionReflection.ts` and
   `src/utils/__tests__/sessionReflection.test.ts` — **those two only**. Two changes to
   `generateReflection`, both to the one branch at `:23-25`:
@@ -252,6 +254,7 @@ Full outcome text for every row is in
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-18 | R16 — the session summary stops stuttering, and stops discarding the subject | #151 | Two files only, as scoped. All six decided strings assert exactly, including the two the dedupe changes structurally (`Sat with grateful feelings.` when gratitude is the only theme; `relationships` restored when it tied and lost). Existing assertions untouched — **test additions only**, nothing loosened. Display-only, **no gate read spent**; the shipped generation path is unchanged and the gate verdict is untouched. |
 | 2026-08-10 | R13b — Thought Record card stops dropping fields and asserting unsupportable labels | #138 | Display-only; all five positional entries render under the question each answers. Save path, `types.ts` and stored shape untouched and guarded. **One premise of the item was wrong and is recorded, not glossed** → R13c. |
 | 2026-08-10 | R15b — Retire the bare `"cutting"` keyword | #137 | One list, no matcher change; seven self-directed phrases in, exactly one authorised test string amended, 7 new cases. Gate taken as a 3-seed `--rescore` with the replay precondition **discharged by measurement** (148 eval user turns, **0 `isCrisis` changes**) and the delta proven **identical at all three seeds**. Below-floor absolutes disclosed as the pre-existing model deficit. |
 | 2026-08-08 | R14 — Unmark the live URL; give the public repo a description | #136 | Decided copy verbatim, `~2.0 GB` re-read off the code; "activating" now appears nowhere in `README.md`. `gh repo edit` run with `--description`/`--homepage` only. Also renumbered #134's colliding "R14" finding to **R15**. |
