@@ -62,6 +62,51 @@ describe("generateReflection", () => {
     expect(reflection).toBe("hello");
   });
 
+  // R16: the summary used to stutter ("grateful feelings around gratitude") and
+  // pin the theme slot to gratitude, discarding the entry's actual subject.
+  const r16Cases: { text: string; expected: string }[] = [
+    {
+      text: "I'm so grateful for the call with my sister today",
+      expected: "Noticed grateful feelings around relationships.",
+    },
+    {
+      text: "I really appreciate my partner",
+      expected: "Noticed grateful feelings around relationships.",
+    },
+    {
+      text: "counting my blessings after a hard week",
+      expected: "Sat with grateful feelings.",
+    },
+    {
+      text: "I'm grateful I finally made progress on my goal this week",
+      expected: "Noticed grateful feelings around goals.",
+    },
+    {
+      text: "I'm really anxious and worried about my relationship with my partner after our argument",
+      expected: "Worked through anxious feelings around relationships.",
+    },
+    {
+      text: "Today I noticed the bright side of a rough morning",
+      expected: "Reflected on gratitude.",
+    },
+  ];
+
+  it.each(r16Cases)("summarises $text", ({ text, expected }) => {
+    const session = makeSession([{ role: "user", content: text }]);
+    expect(generateReflection(session)).toBe(expected);
+  });
+
+  it("never names both grateful and gratitude in one summary", () => {
+    for (const { text } of r16Cases) {
+      const reflection = generateReflection(
+        makeSession([{ role: "user", content: text }]),
+      ).toLowerCase();
+      expect(
+        reflection.includes("grateful") && reflection.includes("gratitude"),
+      ).toBe(false);
+    }
+  });
+
   it("truncates long fallback text with ellipsis", () => {
     const session = makeSession([
       { role: "user", content: "one two three four five six seven eight nine ten eleven twelve" },
