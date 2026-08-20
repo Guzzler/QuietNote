@@ -46,7 +46,12 @@ function formatEmotions(emotions: { emotion: string; intensity: number }[]): str
  * user captured is invisible on the card. Empty entries are skipped rather
  * than rendered as a bare header.
  */
-function entriesForRecord(record: ThoughtRecord): { label: string; value: string }[] {
+// Exported for R13c's tests, which assert the rendered "How you felt" value for
+// real records. It cannot move to a util: R13b's source guards
+// (ThoughtRecordCardLabels.test.ts:43-64) assert that the five `record.*` reads
+// live in this file, in this order.
+// eslint-disable-next-line react-refresh/only-export-components
+export function entriesForRecord(record: ThoughtRecord): { label: string; value: string }[] {
   return [
     { label: THOUGHT_RECORD_CARD_LABELS.situation, value: record.situation },
     {
@@ -55,7 +60,11 @@ function entriesForRecord(record: ThoughtRecord): { label: string; value: string
     },
     {
       label: THOUGHT_RECORD_CARD_LABELS.emotions,
-      value: formatEmotions(record.emotions),
+      // R13c — prefer the sentence the user actually wrote. Records saved before
+      // R13c have no `emotionsText` and render from the keyword parse exactly as
+      // they do today; their original text is not in IndexedDB and is not
+      // recoverable, so it is never re-derived.
+      value: record.emotionsText?.trim() || formatEmotions(record.emotions),
     },
     {
       label: THOUGHT_RECORD_CARD_LABELS.evidenceFor,

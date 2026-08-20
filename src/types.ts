@@ -96,6 +96,11 @@ export interface ThoughtRecord {
   situation: string;
   automaticThought: string;
   emotions: { emotion: string; intensity: number }[];
+  // R13c — the step-3 answer exactly as the user wrote it. `emotions` above is a
+  // 16-word keyword parse that falls back to the entry's first two words, so on
+  // its own it silently discards the sentence. Optional: records saved before
+  // R13c do not carry it and must keep rendering from `emotions` alone.
+  emotionsText?: string;
   evidenceFor: string[];
   evidenceAgainst: string[];
   alternativeThought: string;
