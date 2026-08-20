@@ -214,6 +214,84 @@ and should be re-checked then.
 Three things are true of the app a stranger uses today. **One of them (R13c) stopped being
 unqueued on 2026-08-19** and is now the open item above; the other two stay unqueued for the
 stated reasons, and all three should be re-read before anyone opens an item against them.
+**R17 (PROPOSED 2026-08-19, below) is a fourth**, filed by that day's audit walk and awaiting a
+planner ruling.
+
+### R17 (PROPOSED, filed by execute 2026-08-19 by the audit rule) — two common English words are read as feelings, and one of them outranks the feeling the user named
+
+The 2026-08-19 walk drove **Check-in at 1280 px on the live origin** and wrote one entry ending
+*"…and I still feel bad about it."* The sidebar summarised it as **"Sat with calm feelings."**
+Sighting: `docs/screenshots/2026-08-19/audit-live-calm-from-still.png`.
+
+Measured against the real extractor afterwards (`npx tsx`, read-only, no `src/` diff):
+
+1. **`"still"` is a `calm` keyword** (`emotionExtractor.ts:110`) and **`"down"` is a `sad`
+   keyword** (`:56`). Matching in `extractEmotions` (`:235-273`) is `\b`-anchored but
+   sense-blind, so the adverb *still* and the preposition/particle *down* both count as feelings:
+
+   | text | extracted |
+   |---|---|
+   | `I still feel bad about how I handled that conversation` | **calm** 0.5 [`still`] |
+   | `I am still not over the argument with my brother` | **calm** 0.5 [`still`] |
+   | `I sat down and wrote out everything that went wrong today` | **sad** 0.5 [`down`] |
+   | `The server was down all afternoon and I got nothing done` | **sad** 0.5 [`down`] |
+   | `I walked down to the store to clear my head after the argument` | **sad** 0.5 [`down`] |
+
+2. **One incidental word is enough to clear every threshold.** Confidence is
+   `matches × 0.3 + 0.2`, so a single hit scores **0.5** against `getTopEmotion`'s default and
+   `ChatPanel.tsx:27`'s `EMOTION_CONFIDENCE_THRESHOLD` of **0.4**.
+
+3. **The false emotion beats the one the user literally named.** Ties break on declaration
+   order, where `sad` precedes `angry` and `anxious`. Measured:
+   `Let me write this down before I forget how angry I was` → `sad 0.5 [down]` **ranked above**
+   `angry 0.5 [angry]`; `I am anxious about tomorrow and I sat down to breathe` → `sad` above
+   `anxious`. This is the emotion-side twin of the theme tie-break recorded under R16.
+
+**Why this is wider than R16 was.** `extractEmotions`/`getTopEmotion` has **two** consumers, not
+one: `sessionReflection.generateReflection` (the sidebar summary, the sighting above) **and**
+`ChatPanel.tsx:239`, which raises the **mood-suggestion card** — so the app can offer to log
+**Calm** to someone who just wrote about snapping at their roommate, or **Sad** to someone who
+wrote *anxious*. `ChatPanel.tsx:265` also consults it at 0.3 to suppress gratitude prompts after
+negative entries; a false `calm` defeats that suppression.
+
+**Not gate-triggering:** `emotionExtractor.ts` is not `src/prompts/`, not the send path, and not
+one of the five safety utils. Nothing changes about what the model is asked. **No eval read.**
+
+**A proposed shape, deliberately narrow** (the planner rules it, not execute): drop bare
+`"still"` from `calm` — the list keeps twelve other keywords and *still* has no unambiguous
+feeling sense in journal prose — and replace bare `"down"` in `sad` with the framed forms
+(`feeling down`, `feel down`, `felt down`, `down about`), alongside the `"feeling low"` that list
+already carries. **`"loss"`** (`:46`) mis-fires the same way on *"the loss of the contract"* and
+is **observed and deliberately left alone** as outside the walked defect. The declaration-order
+tie-break is likewise recorded, not proposed — fixing the two keywords dissolves every case
+measured above. Checked, so the ruling need not re-derive it: **no existing test asserts on
+either word** (`emotionExtractor.test.ts`, `sessionReflection.test.ts`), so this would be test
+**additions only**, nothing loosened — the same filing shape as R16 and R13c.
+
+### What else the 2026-08-19 walk found (nothing queueable)
+
+The stranger's path was otherwise healthy at 1280 px: R16 **verified live** in the deployed
+bundle (`assets/index-BG_bhA0m.js` carries the `Noticed`/`Worked through` split and the synonym
+dedupe), Check-in's banner and Step 1→2 advance correct, the AI-limitations disclaimer and
+**Crisis resources** rendered on the exchange, the reply coherent and on-subject, the session
+persisted, and reopening it from the sidebar restored **mode and step** intact. **0 console
+errors** (2 benign MediaPipe/Chromium WebGPU warnings). Three non-items, recorded so nobody
+re-files them:
+
+- **The reply ended a declarative clause with a question mark** (*"…it is okay to acknowledge
+  that part of the day?"*). Model output, not app code — `responseShaping.ts` only *reads* for
+  `"?"` (`:57`) and never rewrites punctuation. Prompt/model territory, i.e. **F8**, which is
+  blocked.
+- **The reply opened with *"It sounds like"***, the FIRST LINE RULE break already carried as F8
+  evidence. Not new.
+- **One mode-radio click was swallowed** during the render churn seconds after the 2.0 GB model
+  finished loading; it did not reproduce on a settled page, where real clicks select correctly.
+  **One sighting on an automation profile** — same class as the R4 `about:blank` sighting, and it
+  should not be written up as a defect until someone sees it in a real browser.
+
+Old sessions keep their stored reflection after a fix like R16 or R17 — `shouldRegenerate`
+(`sessionReflection.ts`) only re-runs when the session itself updates. That is by design, not a
+missed migration.
 
 **1. R10 — the guided banner promises a structure the reply does not follow. 100 % of the
 time.** Structural, and unfixed by design. `getSystemInstruction`
