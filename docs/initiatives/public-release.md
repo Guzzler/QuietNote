@@ -9,9 +9,11 @@ README tells them honestly what they are getting. Rules of engagement: [`README.
 https://guzzler.github.io/QuietNote/.** The initiative was marked COMPLETE on 2026-08-11 and
 kept as the index plus the home of the defects still live on the shipped app. It is **not
 reopened** — but it remains the only initiative with an intake route that does not need a human,
-and it carries the one open queue item in the project: **R13c**, ruled and queued this run after
-sitting PROPOSED since 2026-08-10. `human-feedback`, `model-quality` and `personalization` are
-all at zero and idle by design, waiting on Sharang.
+and both of that route's products landed here on 2026-08-19: **R13c**, ruled and queued after
+sitting PROPOSED since 2026-08-10 and **shipped the same day (PR #152)**, and **R17**, filed
+PROPOSED by that day's audit walk and awaiting a ruling. The queue is **back to zero**;
+`human-feedback`, `model-quality` and `personalization` are all at zero and idle by design,
+waiting on Sharang.
 
 **R16 is live, not merely merged (verified 2026-08-19, planner).** Shipping to `main` is not
 shipping to a tester — the same discipline the F-series was held to — so the deployed bundle was
@@ -105,11 +107,13 @@ as evidence, never as a current fact.
 
 ## Task queue
 
-**ONE open as of 2026-08-19 — R13c, ruled in this run.** R16 shipped (PR #151) and is **live**
-(see Status). The item that replaces it is not new work and was not invented: **R13c has been
-sitting in this doc as PROPOSED since 2026-08-10**, filed by execute while shipping R13b, with
-the words *"awaiting a planner ruling"* against it. Ruling it is this run's job, and the ruling
-is **queue it** — the reasoning and the re-measurement are below the item.
+**ZERO open as of 2026-08-19 — R13c shipped (PR #152), hours after the planner ruled it in.**
+R16 shipped (PR #151) and is **live** (see Status). R13c was not new work and was not invented:
+it had been sitting in this doc as PROPOSED since 2026-08-10, filed by execute while shipping
+R13b, with the words *"awaiting a planner ruling"* against it; the ruling was **queue it**, and
+the reasoning and re-measurement are kept below the closed item. **One new item, R17, is
+PROPOSED** under *Still live on the shipped app* — filed the same day by the queue-empty audit
+walk, and awaiting a planner ruling in exactly the way R13c was.
 
 New items may enter this initiative by exactly two routes, and inventing work is neither of
 them: the **queue-empty audit rule** (execute walks the live app and files what broke as
@@ -121,7 +125,7 @@ R16's closed queue-item body and its planner grounding section are frozen verbat
 [`archive/public-release-2026-08-19.md`](archive/public-release-2026-08-19.md); the ledger row
 below is its live record.
 
-- [ ] 2026-08-19 · **R13c — the Thought Record keeps the sentence you actually wrote.** Files:
+- [x] 2026-08-19 · **R13c — the Thought Record keeps the sentence you actually wrote.** Files:
   `src/types.ts`, `src/App.tsx`, `src/components/ThoughtRecordHistory.tsx` and their tests —
   **those only**. Three changes, all additive:
   1. **`types.ts:93-106`** — add `emotionsText?: string;` to `ThoughtRecord`, directly after
@@ -166,6 +170,29 @@ below is its live record.
   `evalRunner.ts`. Nothing changes about what the model is asked or how it is sampled. **No eval
   read is spent** — which, with the gate read priced at ~2.75 h and every other initiative
   waiting on Sharang, is the whole reason this item can move now.
+
+### Two discrepancies between R13c's spec and the code, recorded rather than glossed
+
+The item shipped exactly as scoped — three additive changes, three files plus tests, no existing
+assertion loosened. Two things the spec assumed did not survive contact, and both were built as
+the honest smaller version (R13b's precedent):
+
+1. **Asserting the seven card lines for real required exporting `entriesForRecord`.** The spec's
+   verification table is a claim about *rendered values*, and the repo has no jsdom, so the only
+   way to assert values rather than source strings was to export the pure builder. That trips
+   `react-refresh/only-export-components`, and the obvious fix — move it to a util — is
+   **forbidden**: R13b's guards (`ThoughtRecordCardLabels.test.ts:43-64`) assert that the five
+   `record.*` reads live in `ThoughtRecordHistory.tsx`, in order. Resolved with a one-line scoped
+   `eslint-disable-next-line` carrying that reason. **Net new lint errors: 0** (baseline 164
+   problems / 158 errors, unchanged and pre-existing).
+2. **The storage round-trip could not be a unit test.** The spec asked that a record carrying
+   `emotionsText` round-trip through `saveThoughtRecord`/`listThoughtRecords` with no DB version
+   change. The repo has **no `fake-indexeddb` and no storage tests at all**, so that assertion
+   was built two ways instead: source guards (`const DB_VERSION = 4;` and the whole-object
+   `put(record)`) **and a real measurement in the running app** — after the five-step walk on
+   `vite preview`, IndexedDB held the new record with `emotionsText` verbatim, `emotions` still
+   the lossy `[{emotion: "i felt", intensity: 9}]`, and **`db.version === 4`**, alongside three
+   pre-R13c records that still render from the parse.
 
 ### R13c's grounding, measured 2026-08-19 (planner) — the filing was right and understated
 
@@ -368,6 +395,7 @@ Full outcome text for every row is in
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-19 | R13c — the Thought Record keeps the sentence you actually wrote | #152 | Three additive changes, three files plus tests, as scoped: optional `emotionsText`, the raw turn saved beside the parse, and the card preferring it. All six measured `today` strings pinned and all six now render verbatim; the legacy record renders unchanged. **No migration, no DB version bump** — verified in the running app, not argued (`db.version === 4`, `emotionsText` stored verbatim, three pre-R13c records still rendering from the parse). Existing assertions untouched, R13b's guards still bite — **test additions only**. Display-only, **no gate read spent**. Two spec discrepancies recorded above rather than glossed. |
 | 2026-08-18 | R16 — the session summary stops stuttering, and stops discarding the subject | #151 | Two files only, as scoped. All six decided strings assert exactly, including the two the dedupe changes structurally (`Sat with grateful feelings.` when gratitude is the only theme; `relationships` restored when it tied and lost). Existing assertions untouched — **test additions only**, nothing loosened. Display-only, **no gate read spent**; the shipped generation path is unchanged and the gate verdict is untouched. |
 | 2026-08-10 | R13b — Thought Record card stops dropping fields and asserting unsupportable labels | #138 | Display-only; all five positional entries render under the question each answers. Save path, `types.ts` and stored shape untouched and guarded. **One premise of the item was wrong and is recorded, not glossed** → R13c. |
 | 2026-08-10 | R15b — Retire the bare `"cutting"` keyword | #137 | One list, no matcher change; seven self-directed phrases in, exactly one authorised test string amended, 7 new cases. Gate taken as a 3-seed `--rescore` with the replay precondition **discharged by measurement** (148 eval user turns, **0 `isCrisis` changes**) and the delta proven **identical at all three seeds**. Below-floor absolutes disclosed as the pre-existing model deficit. |

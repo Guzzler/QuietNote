@@ -327,6 +327,7 @@ export default function App() {
       situation: userMessages[0].content,
       automaticThought: userMessages[1].content,
       emotions: parseEmotions(userMessages[2].content),
+      emotionsText: userMessages[2].content,
       evidenceFor: [userMessages[3].content],
       evidenceAgainst: [],
       alternativeThought: userMessages[4].content,
