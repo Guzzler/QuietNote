@@ -24,6 +24,15 @@ three fingerprints minified — the synonym lookup, the `a[1]` fall-through, and
 (`` `${ih.includes(i.emotion)?`Noticed`:`Worked through`} ${i.emotion} feelings around ${t}.` ``).
 **A stranger opening the link today gets the fixed summary line.**
 
+**R17 is live too (verified 2026-08-20, execute), by the same method.** Pages deploy
+`32437461115` **completed success** after PR #153 merged, and the anonymously-fetched bundle
+`https://guzzler.github.io/QuietNote/assets/index-B8l2mJW2.js` (500,441 bytes) carries both edits
+minified: the `sad` list reads
+`` …`melancholy`,`gloomy`,`feeling down`,`feel down`,`felt down`,`feeling low` `` with **no bare
+`down`**, and `calm` reads `` `calm`…`grounded`,`settled`,`composed`,`mellow`,`at ease` `` — twelve
+keywords, **no `still`**. A stranger writing *"I wrote down three things I was grateful for"* today
+is no longer told they felt sad.
+
 **Pruned 2026-08-11 (1,223 → this).** The full doc — the R4 live-URL smoke matrix, R10a's desync
 table, both R13a arms, the R15/R15a/R15b rulings, four audit walks, and the unabridged ledger
 rows — is at
