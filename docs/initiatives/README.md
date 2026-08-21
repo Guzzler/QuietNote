@@ -100,8 +100,9 @@ answer**, the **retrain call**, the **T1 follow-up**, and the **send to testers 
    (`utils/guidedSession.ts:25`) and shows it (`App.tsx:303`) but **never tells the model**
    (`App.tsx:404`, `:606`). All three are F8's evidence; none moves the gate, which is a safety
    instrument.
-7. **Queue-empty means say so, not invent work.** Four audit walks under that rule produced six
-   real defects (R5, R9, R10, R11, R15, R16) and two walks that found nothing and said so. The
+7. **Queue-empty means say so, not invent work.** Five audit walks under that rule have produced
+   eight real defects (R5, R9, R10, R11, R15, R16, R13c, **R17** — the last from the 2026-08-19
+   walk of Check-in on the live origin) and two walks that found nothing and said so. The
    2026-08-16 walk drove **Gratitude at 390 px** — the stranger's path was healthy (honest
    download copy, all four modes reachable, coherent reply, disclaimer and Crisis resources
    rendered, reload restored mode and step, 0 console errors) and produced **R16**, now queued.
@@ -109,42 +110,38 @@ answer**, the **retrain call**, the **T1 follow-up**, and the **send to testers 
    before on the same origin, nothing having changed: network variance, and evidence *for* the
    shipped copy that R11 wrote to avoid promising a speed.
 
-**Amended 2026-08-16 (planner): R16 is ruled and queued, and re-measuring it found the audit
-understated the defect.** It is now the **only open queue item anywhere in the initiatives** —
+**Amended 2026-08-20 (planner): R17 is ruled and queued, and the fix it ships is narrower than the
+one that was proposed.** It is the **only open queue item anywhere in the initiatives** —
 `human-feedback`, `model-quality` and `personalization` remain at zero, idle by design, and **no
-work was invented to fill them**. Four things settled, all written into
-[`public-release.md`](public-release.md):
+work was invented to fill them**. (The 2026-08-16 amendment this replaces recorded R16's ruling;
+R16 shipped as PR #151 and R13c as PR #152, and both are ledger rows in
+[`public-release.md`](public-release.md) now.) Three things settled, all written into that doc:
 
-1. **R16 is queueable and was queued.** It arrived by the **queue-empty audit rule** — one of
-   this directory's two legitimate intake routes — and it is a defect **live on the shipped app**,
-   so it is neither invented work nor parked eval micro-tuning. It is **display-only and not
-   gate-triggering**: `sessionReflection.ts` is not `src/prompts/`, not the send path and not a
-   safety util, its callers only assign the returned string, and `SessionsPanel.tsx:96` renders
-   it. **No gate read is spent**, which is the whole reason it can move while everything else
-   waits.
-2. **The defect is 7 words wide, not 1.** Running the real extractors over ten sentences: the
-   `gratitude` theme and the `grateful` emotion share **seven** trigger words (`grateful`,
-   `thankful`, `appreciate`, `blessed`, `fortunate`, `lucky`, `counting my blessings`), and all
-   seven were measured to emit the identical *"Worked through grateful feelings around
-   gratitude."* `generateReflection` uses `extractThemes` rather than `getTopTheme`, so there is
-   no confidence floor — one word does it.
-3. **The stutter is not the worst of it.** Theme confidence is `matches × 0.25 + 0.2`, so a
-   one-word gratitude hit **ties** a one-word subject hit at 0.45 and the tie breaks on
-   declaration order, where `gratitude` is the first key. Measured: *"grateful for the call with
-   my sister"* ranks `gratitude` over `relationships` and **the sibling never reaches the
-   summary**. So in Gratitude mode the theme slot is effectively pinned regardless of subject.
-   The queued dedupe fixes that case; the general tie-break is recorded and deliberately left
-   alone as outside the reported problem.
-4. **The design question this run answered is the replacement copy, decided verbatim**: settled
-   emotions (`happy`, `calm`, `excited`, `content`, `grateful`) get *"Noticed … feelings around
-   …"*; every other emotion keeps *"Worked through …"* unchanged; the other three branches do not
-   move. Six exact before/after strings are in the item as the verification table, the *before*
-   column measured rather than predicted. One filing correction rides along: the existing
-   `"Worked through"` test assertion does **not** need amending (its sample is *anxious*), so R16
-   is test additions only — no assertion is loosened.
+1. **R17 is queueable and was queued.** Same route and same shape as R16 and R13c: filed by the
+   **queue-empty audit rule** (this directory's intake route that does not need a human), a defect
+   **live on the shipped app**, and **not gate-triggering** — `emotionExtractor.ts` is not
+   `src/prompts/`, not the send path and not one of the five safety utils, and nothing changes
+   about what the model is asked. **No gate read is spent**, which is again why it can move while
+   everything else waits on Sharang.
+2. **The filing reproduced exactly and understated the harm twice.** `"still"` (calm) and
+   `"down"` (sad) are matched `\b`-anchored but sense-blind at `matches × 0.3 + 0.2 = 0.50`
+   against a 0.4 threshold. Beyond the filed cases: *"I wrote down three things I was grateful
+   for"* ranks **sad above grateful** — the app's own gratitude exercise read as sadness, on a
+   path that also suppresses gratitude prompts after negative entries (`ChatPanel.tsx:265`) — and
+   *"I calmed down after talking to her"* is stored as **sad**, because `\bcalm\b` does not match
+   *calmed*. For `"still"` the mechanism differs from the filing's: `calm` is declared after
+   `angry`/`anxious` so it **loses** those ties; it does damage as the **sole** match, which is
+   the common case (*"I still feel guilty about missing the call"* → **calm**).
+3. **The design question answered is the replacement keyword list, and three of the four proposed
+   forms were rejected on measurement.** `down about`, `so down` and `really down` each have a
+   measured false positive (*the site was down about an hour*; *so down to earth*; *the server was
+   really down*). Only the verb-framed `feeling down` / `feel down` / `felt down` produced zero
+   false hits, so R17 ships those three and deletes bare `"still"` with no replacement. The recall
+   cost is measured and accepted on a stated principle: **a miss is silent, a false hit is the app
+   telling the user they felt something they did not.**
 
 **Everything else is unchanged and is Sharang's**: the QLoRA-to-browser answer, the retrain call,
-the T1 follow-up, and the send to testers 2–10. **The gate verdict is untouched** — R16 cannot
+the T1 follow-up, and the send to testers 2–10. **The gate verdict is untouched** — R17 cannot
 alter generation, and nothing may claim the live app meets the gate floors.
 
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)

@@ -5,15 +5,14 @@
 README tells them honestly what they are getting. Rules of engagement: [`README.md`](README.md)
 (standing decisions, release gate, queue format).
 
-**Status 2026-08-19: all 16 original increments DONE; the app is public and live at
+**Status 2026-08-20: all 16 original increments DONE; the app is public and live at
 https://guzzler.github.io/QuietNote/.** The initiative was marked COMPLETE on 2026-08-11 and
 kept as the index plus the home of the defects still live on the shipped app. It is **not
 reopened** — but it remains the only initiative with an intake route that does not need a human,
-and both of that route's products landed here on 2026-08-19: **R13c**, ruled and queued after
-sitting PROPOSED since 2026-08-10 and **shipped the same day (PR #152)**, and **R17**, filed
-PROPOSED by that day's audit walk and awaiting a ruling. The queue is **back to zero**;
-`human-feedback`, `model-quality` and `personalization` are all at zero and idle by design,
-waiting on Sharang.
+and that route is now the only thing producing work anywhere in the loop: **R13c** shipped
+2026-08-19 (PR #152), and **R17** — filed PROPOSED by the same day's audit walk — is **ruled in
+and queued this run**, measured, narrowed, and the only open item anywhere. `human-feedback`,
+`model-quality` and `personalization` are all at zero and idle by design, waiting on Sharang.
 
 **R16 is live, not merely merged (verified 2026-08-19, planner).** Shipping to `main` is not
 shipping to a tester — the same discipline the F-series was held to — so the deployed bundle was
@@ -102,198 +101,158 @@ as evidence, never as a current fact.
 | R15a | Word-boundary the crisis keyword match | **REJECTED 2026-08-09** — measured: fixes nothing R15 listed |
 | R15b | Retire the bare `"cutting"` keyword in favour of self-directed forms | DONE (PR #137) |
 | R13b | The Thought Record card drops two captured fields and asserts unsupportable labels | DONE (PR #138) |
-| R13c | The Thought Record's third answer is destroyed at save time, not merely hidden | **QUEUED 2026-08-19** — ruled in, re-measured, spec below |
+| R13c | The Thought Record's third answer is destroyed at save time, not merely hidden | DONE (PR #152) — additive `emotionsText`, no migration, no gate read spent |
 | R16 | The session summary is a tautology in Gratitude mode, and discards the entry's subject | DONE (PR #151) — display-only, no gate read spent |
+| R17 | Two common English words are read as feelings, and one of them outranks the feeling the user named | **QUEUED 2026-08-20** — ruled in, re-measured, spec below |
 
 ## Task queue
 
-**ZERO open as of 2026-08-19 — R13c shipped (PR #152), hours after the planner ruled it in.**
-R16 shipped (PR #151) and is **live** (see Status). R13c was not new work and was not invented:
-it had been sitting in this doc as PROPOSED since 2026-08-10, filed by execute while shipping
-R13b, with the words *"awaiting a planner ruling"* against it; the ruling was **queue it**, and
-the reasoning and re-measurement are kept below the closed item. **One new item, R17, is
-PROPOSED** under *Still live on the shipped app* — filed the same day by the queue-empty audit
-walk, and awaiting a planner ruling in exactly the way R13c was.
+**ONE open as of 2026-08-20: R17**, ruled in this run after being filed PROPOSED by the
+2026-08-19 audit walk — the same route and the same shape R13c and R16 took. R13c shipped
+(PR #152); R16 shipped (PR #151) and is verified **live**, not merely merged (see Status).
+`human-feedback`,
+`model-quality` and `personalization` remain at **zero open**, idle by design and waiting on
+Sharang; **no work was invented to fill them.**
 
-New items may enter this initiative by exactly two routes, and inventing work is neither of
-them: the **queue-empty audit rule** (execute walks the live app and files what broke as
-proposed items) and the **field-note carve-out** (README) when a real tester reports something
-in this surface. The audit rule has produced seven real defects across four walks (R5, R9, R10,
-R11, R15, R16, **R13c**), so it is the mechanism, not a formality.
+R17 needs no carve-out: it arrived by the **queue-empty audit rule** (one of this initiative's
+two named intake routes — the other being the field-note carve-out, which needs a real tester),
+it is a defect **live on the shipped app**, and it is **display-and-suggestion-only, not
+gate-triggering**. `emotionExtractor.ts` is not `src/prompts/`, not the send path, and not one of
+the five safety utils; nothing changes about what the model is asked or how it is sampled.
+**No eval read is spent** — which, at ~2.75 h a read with every other initiative waiting on
+Sharang, is again the whole reason this item can move now.
 
-R16's closed queue-item body and its planner grounding section are frozen verbatim in
-[`archive/public-release-2026-08-19.md`](archive/public-release-2026-08-19.md); the ledger row
-below is its live record.
+R13c's closed queue body, its two spec-vs-code discrepancies and its planner grounding are frozen
+verbatim in [`archive/public-release-2026-08-20.md`](archive/public-release-2026-08-20.md),
+alongside R17 exactly as execute filed it; the ledger rows below are their live record.
 
-- [x] 2026-08-19 · **R13c — the Thought Record keeps the sentence you actually wrote.** Files:
-  `src/types.ts`, `src/App.tsx`, `src/components/ThoughtRecordHistory.tsx` and their tests —
-  **those only**. Three changes, all additive:
-  1. **`types.ts:93-106`** — add `emotionsText?: string;` to `ThoughtRecord`, directly after
-     `emotions`. **Optional, and therefore no migration and no DB version bump**: `storage.ts:199`
-     does a whole-object `put` into a `keyPath: "id"` store, so a new field needs no schema
-     change. Precedent: R9 added `Session.mode` the same way (PR #127).
-  2. **`App.tsx:324-336`** — add `emotionsText: userMessages[2].content,` to the record literal.
-     **Leave `emotions: parseEmotions(userMessages[2].content)` byte-for-byte as it is**, and do
-     not touch `parseEmotions` (`App.tsx:61-69`). R13b's source guard
-     (`ThoughtRecordCardLabels.test.ts:89`) asserts that exact line and must keep passing —
-     **R13c is an addition, not a rewrite, so no existing assertion is loosened**, the same
-     filing shape R16 had.
-  3. **`ThoughtRecordHistory.tsx:56-59`** — the `emotions` entry's value becomes
-     `record.emotionsText?.trim() || formatEmotions(record.emotions)`. `formatEmotions` and
-     `avgIntensity` stay exactly as they are, so **records saved before R13c render precisely as
-     they do today**. Never re-derive an old record's text: it is not in IndexedDB and it is not
-     recoverable. **No label change** — R13b already ruled that "How you felt" is the question
-     the user was asked, and their sentence is its answer.
+- [ ] 2026-08-20 · **R17 — stop reading two ordinary English words as feelings.** Files:
+  `src/utils/emotionExtractor.ts` and `src/utils/__tests__/emotionExtractor.test.ts` —
+  **those only**. Two list edits, no matcher change, no threshold change, no tie-break change:
+  1. **`emotionExtractor.ts:110`** — delete the bare `"still"` entry from `calm`. **No
+     replacement form.** The list keeps its other twelve keywords (`calm`, `peaceful`, `serene`,
+     `tranquil`, `relaxed`, `at peace`, `centered`, `grounded`, `settled`, `composed`, `mellow`,
+     `at ease`), which is where a real statement of calm actually lands. Unlike *down*, *still*
+     has no common first-person feeling frame worth a token — measured cost is below.
+  2. **`emotionExtractor.ts:56`** — replace the bare `"down"` entry in `sad` with exactly three
+     verb-framed forms, in this order: `"feeling down"`, `"feel down"`, `"felt down"`. Leave
+     `"feeling low"` (`:57`) and every other `sad` keyword byte-for-byte as they are.
+     **Do not add `"down about"`, `"so down"`, `"really down"` or `"pretty down"`** — each was
+     measured this run against adversarial text and each has a false positive (below). Adding
+     them would make the defect smaller rather than narrower, which is the opposite of the point.
 
-  → **Verification: seven card lines, the *today* column measured this run** (`npx tsx` over a
-  verbatim copy of `parseEmotions`, read-only, no `src/` diff). Assert each:
+  → **Verification: two tables, the *today* column measured this run** (`npx tsx` over the real
+  `extractEmotions`/`getTopEmotion`, read-only, no `src/` diff). Assert each:
 
-  | the step-3 answer a user typed | card today | required after R13c |
+  **A. False positives that must stop firing** (`getTopEmotion(text, 0.4)`):
+
+  | text | today | required after R17 |
   |---|---|---|
-  | `I felt completely humiliated, like everyone could see it. 9/10` | `i felt (9/10)` | **the sentence, verbatim** |
-  | `Mostly dread. It sat in my chest all afternoon.` | `mostly dread (5/10)` | **verbatim** |
-  | `Embarrassed and small. 6` | `embarrassed and (6/10)` | **verbatim** |
-  | `Lonely, and underneath that resentful. About a 7.` | `lonely and (7/10)` | **verbatim** |
-  | `Terrified. 10 out of 10.` | `terrified out (10/10)` | **verbatim** |
-  | `anxious about the 3 meetings I still had left` | `anxious (3/10)` | **verbatim** |
-  | *a record stored before R13c (no `emotionsText`)* | `anxious (8/10), ashamed (8/10)` | **unchanged** |
+  | `I still feel bad about how I handled that conversation` | `calm` 0.50 [`still`] | **null** |
+  | `I am still not over the argument with my brother` | `calm` 0.50 [`still`] | **null** |
+  | `I still feel guilty about missing the call` | `calm` 0.50 [`still`] | **null** |
+  | `I sat down and wrote out everything that went wrong today` | `sad` 0.50 [`down`] | **null** |
+  | `The server was down all afternoon and I got nothing done` | `sad` 0.50 [`down`] | **null** |
+  | `I calmed down after talking to her` | `sad` 0.50 [`down`] | **null** |
+  | `Let me write this down before I forget how angry I was` | `sad` over `angry` | **`angry`** |
+  | `I am anxious about tomorrow and I sat down to breathe` | `sad` over `anxious` | **`anxious`** |
+  | `I wrote down three things I was grateful for` | `sad` over `grateful` | **`grateful`** |
 
-  Plus two storage assertions: a record carrying `emotionsText` round-trips through
-  `saveThoughtRecord`/`listThoughtRecords` with **no DB version change**, and a record without
-  the field still lists and still renders. → `npm run test` and `npm run build` green;
-  screenshot the Thought Record history card after completing all five steps on
-  `npx vite preview`, using a step-3 answer that is **not** one of the 16 keywords.
+  **B. True positives that must keep firing** (`sad` still detected):
 
-  **Not gate-triggering, stated so nobody re-derives it:** `types.ts`, the persistence effect in
-  `App.tsx` and the history card are not `src/prompts/`, not the send path, and not
-  `crisisDetection.ts` / `responseGuardrails.ts` / `responseShaping.ts` / `referralReprompt.ts` /
-  `evalRunner.ts`. Nothing changes about what the model is asked or how it is sampled. **No eval
-  read is spent** — which, with the gate read priced at ~2.75 h and every other initiative
-  waiting on Sharang, is the whole reason this item can move now.
+  | text | today | required after R17 |
+  |---|---|---|
+  | `I have been feeling down since Monday` | `sad` [`down`] | **`sad`** [`feeling down`] |
+  | `I feel down about how the week went` | `sad` [`down`] | **`sad`** [`feel down`] |
+  | `I felt down all day and could not shake it` | `sad` [`down`] | **`sad`** [`felt down`] |
+  | `I have been feeling low all week` | `sad` [`feeling low`] | **unchanged** |
+  | `I felt calm and settled after the walk` | `calm` 0.80 | **unchanged** |
 
-### Two discrepancies between R13c's spec and the code, recorded rather than glossed
+  → `npm run test` and `npm run build` green. **Test additions only** — checked so nobody
+  re-derives it: no existing assertion in `emotionExtractor.test.ts` or `sessionReflection.test.ts`
+  mentions either word, so nothing is loosened. Screenshot not required (no UI change); if execute
+  wants one, the observable surface is the Sessions sidebar summary and `ChatPanel`'s mood
+  suggestion card.
 
-The item shipped exactly as scoped — three additive changes, three files plus tests, no existing
-assertion loosened. Two things the spec assumed did not survive contact, and both were built as
-the honest smaller version (R13b's precedent):
+### R17's grounding, measured 2026-08-20 (planner) — the filing reproduces exactly, and understates it twice
 
-1. **Asserting the seven card lines for real required exporting `entriesForRecord`.** The spec's
-   verification table is a claim about *rendered values*, and the repo has no jsdom, so the only
-   way to assert values rather than source strings was to export the pure builder. That trips
-   `react-refresh/only-export-components`, and the obvious fix — move it to a util — is
-   **forbidden**: R13b's guards (`ThoughtRecordCardLabels.test.ts:43-64`) assert that the five
-   `record.*` reads live in `ThoughtRecordHistory.tsx`, in order. Resolved with a one-line scoped
-   `eslint-disable-next-line` carrying that reason. **Net new lint errors: 0** (baseline 164
-   problems / 158 errors, unchanged and pre-existing).
-2. **The storage round-trip could not be a unit test.** The spec asked that a record carrying
-   `emotionsText` round-trip through `saveThoughtRecord`/`listThoughtRecords` with no DB version
-   change. The repo has **no `fake-indexeddb` and no storage tests at all**, so that assertion
-   was built two ways instead: source guards (`const DB_VERSION = 4;` and the whole-object
-   `put(record)`) **and a real measurement in the running app** — after the five-step walk on
-   `vite preview`, IndexedDB held the new record with `emotionsText` verbatim, `emotions` still
-   the lossy `[{emotion: "i felt", intensity: 9}]`, and **`db.version === 4`**, alongside three
-   pre-R13c records that still render from the parse.
+Every number in execute's filing was re-run against the real extractor and **all of it
+reproduced**: `"still"` is a `calm` keyword (`:110`), `"down"` a `sad` one (`:56`), matching is
+`\b`-anchored but sense-blind (`:235-273`), confidence is `matches × 0.3 + 0.2` so one incidental
+word scores **0.50** against `getTopEmotion`'s 0.4 default and `ChatPanel.tsx:27`'s threshold of
+0.4, and ties break on declaration order. Two things the filing did not say:
 
-### R13c's grounding, measured 2026-08-19 (planner) — the filing was right and understated
+1. **The tie-break case is worse than "angry" and "anxious": it inverts Gratitude mode.**
+   Measured, *"I wrote down three things I was grateful for"* → `sad 0.50 [down]` ranked **above**
+   `grateful 0.50 [grateful]`. That is the app's own gratitude exercise being read as sadness, and
+   it reaches two surfaces: the mood-suggestion card (`ChatPanel.tsx:239`) can offer to log **Sad**
+   to someone listing what they are thankful for, and `ChatPanel.tsx:265` consults the same
+   extractor at 0.3 to **suppress gratitude prompts after negative entries** — so a false `sad`
+   suppresses gratitude prompting on a gratitude entry.
+2. **`"down"` fires on the phrasal verb that means the opposite.** *"I calmed down after talking
+   to her"* → `sad 0.50 [down]`, and `calm` does **not** match, because `\bcalm\b` does not match
+   *calmed*. The user's own word for feeling better is stored as sadness.
 
-Execute filed R13c off one live artifact (R13a's arm-2 record rendering
-`How you felt — "the thought (5/10)"`). Running a verbatim copy of `parseEmotions`
-(`App.tsx:61-69`) over twelve realistic answers to the step-3 prompt — *"What emotions did you
-feel? How intense were they (1-10)?"* (`journalPrompts.ts:426`) — confirms the defect and finds
-two more things, one of which changes what R13c has to fix and one of which changes what it must
-not bother fixing:
+   For `"still"` the harm mechanism is **different from what the filing implies** and worth
+   recording so the fix is not mis-scoped: `calm` is declared *after* `angry` and `anxious`, so a
+   false `still` **loses** those ties (`I am still angry…` → `angry`; `I am still anxious…` →
+   `anxious`). It does damage when it is the **only** match — and that is the common case in
+   journal prose, because the real feeling word is usually not in any list: *"I still feel guilty
+   about missing the call"* is reported as **calm**.
 
-1. **The loss is the common case, not the edge case.** The keyword list is **16 words**
-   (`App.tsx:65`) and misses most of the vocabulary people actually use for the emotion behind an
-   automatic thought — *humiliated, dread, embarrassed, lonely, hurt, rejected, terrified,
-   resentful* all miss. Every miss stores `words.slice(0, 2).join(" ")`, so what reaches
-   IndexedDB is a two-word fragment of a sentence that is then gone: **`i felt`**,
-   **`embarrassed and`**, **`terrified out`**, **`lonely and`**, **`a sinking`**. 8 of 12 samples
-   came back wrong.
-2. **A second defect the filing never named: the intensity is the first number *anywhere* in the
-   text.** The regex (`App.tsx:62`) has an entirely optional `/10` suffix, so
-   *"anxious about the 3 meetings I still had left"* is stored as **`anxious (3/10)`** — a
-   severity rating fabricated out of a count of meetings, indistinguishable from one the user
-   gave. Same class as F5's fourth bug: **fabricated data written to IndexedDB**. Per-emotion
-   intensities also collapse to one number — *"I felt anxious (8) and also guilty (6)"* stores
-   both at 8.
-3. **But the blast radius is bounded, and this is why R13c does not fix (2).** `reratings` is
-   written **only** as `[]` (`App.tsx:333`) and nothing anywhere else ever populates it, so
-   `hasDelta` at `ThoughtRecordHistory.tsx:162` is **always false** and the
-   `initialAvg → reratedAvg` badge has never rendered for any user. The parsed intensity
-   therefore reaches exactly one surface — the card line — and **once R13c renders `emotionsText`
-   there, the parse becomes invisible for every new record.** Fixing `parseEmotions` would be
-   changing data no one can see, on the save path, for no user-visible gain. **Recorded and
-   deliberately not addressed**, the same call R16 made on the general theme tie-break.
+**The design question this run answered is the replacement keyword list, decided verbatim — and
+the answer is narrower than the proposal.** Execute proposed four framed forms for `down`
+(`feeling down`, `feel down`, `felt down`, `down about`). Measured against adversarial text, three
+candidate forms fail:
 
-**One thing was checked and ruled NOT a defect, so a future run does not file it.** The privacy
-export (`PrivacyDashboard.tsx:101-114`) writes `sessions` and `moods` only, while `clearAll`
-(`storage.ts:229-233`) erases four stores including `thoughtRecords` — export and erase are
-asymmetric, which looks like data loss on the app's most trust-critical surface. It is not:
-every field of a thought record is a **verbatim copy** of `userMessages[0..4]` of its session
-(`App.tsx:324-336`), sessions **are** exported, and the two fields that could hold anything else
-(`reratings`, `detectedDistortions`) are never written. **No user content is missing from the
-export today.** If R13c lands and a rerating or distortion path is ever built, this becomes real
-and should be re-checked then.
+| candidate | false positive measured |
+|---|---|
+| `down about` | *the site was **down about** an hour before anyone noticed*; *he talked me **down about** the deadline* |
+| `so down` | *she was **so down** to earth about the whole thing* |
+| `really down` | *the server was **really down** this time, not just slow* |
+
+Only the three verb-framed forms — `feeling down` / `feel down` / `felt down` — bind the token to
+a first-person feeling and produced **zero** false hits across the seven adversarial and seven
+incidental sentences measured. So R17 ships those three and no others.
+
+**The recall cost is real, measured, and deliberately accepted.** After the fix, *"I am down about
+the result"*, *"I was so down after the call"* and *"Just down, I guess"* no longer register as
+`sad`; dropping bare `"still"` loses *"I finally feel still inside after a long week"*. The trade
+is asymmetric on this surface and that is the whole argument: **a miss is silent** (no mood card,
+a summary that omits an emotion), while **a false hit is the app telling the user they felt
+something they did not** — in a sidebar summary of their own entry, or in a card offering to log
+it. Precision beats recall wherever the app asserts a feeling back to the user.
+
+**Two things are observed and deliberately not fixed**, per the precedent R16 set on the theme
+tie-break and R13c set on `parseEmotions`:
+
+- **`"loss"`** (`:46`) mis-fires the same way — *"the loss of the contract set the whole team
+  back"* → `sad 0.50 [loss]`, measured. Outside the walked defect; recorded, not queued.
+- **`"feel low"` / `"felt low"` are missing** while `"feeling low"` is present, so *"I feel low and
+  tired"* is detected as nothing. That is a **pre-existing recall gap R17 does not create**, and
+  adding coverage is not the reported problem. Recorded, not queued.
+- The declaration-order tie-break itself stays as it is. Fixing the two keywords dissolves every
+  case measured above without touching the ordering rule, which is the smaller change.
+
 
 ## Still live on the shipped app (not queued — read before proposing a fix)
 
-Three things are true of the app a stranger uses today. **One of them (R13c) stopped being
-unqueued on 2026-08-19** and is now the open item above; the other two stay unqueued for the
-stated reasons, and all three should be re-read before anyone opens an item against them.
-**R17 (PROPOSED 2026-08-19, below) is a fourth**, filed by that day's audit walk and awaiting a
-planner ruling.
+Three things are true of the app a stranger uses today. **R13c stopped being one of them on
+2026-08-19** — it shipped as PR #152 and its record is the ledger row below. **R17 is live and is
+now QUEUED** (spec and measurements above); it stays listed here, per the doc-size rule's "never
+prune a defect still live on the shipped app", until its PR lands. The other two stay unqueued for
+the stated reasons and should be re-read before anyone opens an item against them.
 
-### R17 (PROPOSED, filed by execute 2026-08-19 by the audit rule) — two common English words are read as feelings, and one of them outranks the feeling the user named
-
-The 2026-08-19 walk drove **Check-in at 1280 px on the live origin** and wrote one entry ending
-*"…and I still feel bad about it."* The sidebar summarised it as **"Sat with calm feelings."**
-Sighting: `docs/screenshots/2026-08-19/audit-live-calm-from-still.png`.
-
-Measured against the real extractor afterwards (`npx tsx`, read-only, no `src/` diff):
-
-1. **`"still"` is a `calm` keyword** (`emotionExtractor.ts:110`) and **`"down"` is a `sad`
-   keyword** (`:56`). Matching in `extractEmotions` (`:235-273`) is `\b`-anchored but
-   sense-blind, so the adverb *still* and the preposition/particle *down* both count as feelings:
-
-   | text | extracted |
-   |---|---|
-   | `I still feel bad about how I handled that conversation` | **calm** 0.5 [`still`] |
-   | `I am still not over the argument with my brother` | **calm** 0.5 [`still`] |
-   | `I sat down and wrote out everything that went wrong today` | **sad** 0.5 [`down`] |
-   | `The server was down all afternoon and I got nothing done` | **sad** 0.5 [`down`] |
-   | `I walked down to the store to clear my head after the argument` | **sad** 0.5 [`down`] |
-
-2. **One incidental word is enough to clear every threshold.** Confidence is
-   `matches × 0.3 + 0.2`, so a single hit scores **0.5** against `getTopEmotion`'s default and
-   `ChatPanel.tsx:27`'s `EMOTION_CONFIDENCE_THRESHOLD` of **0.4**.
-
-3. **The false emotion beats the one the user literally named.** Ties break on declaration
-   order, where `sad` precedes `angry` and `anxious`. Measured:
-   `Let me write this down before I forget how angry I was` → `sad 0.5 [down]` **ranked above**
-   `angry 0.5 [angry]`; `I am anxious about tomorrow and I sat down to breathe` → `sad` above
-   `anxious`. This is the emotion-side twin of the theme tie-break recorded under R16.
-
-**Why this is wider than R16 was.** `extractEmotions`/`getTopEmotion` has **two** consumers, not
-one: `sessionReflection.generateReflection` (the sidebar summary, the sighting above) **and**
-`ChatPanel.tsx:239`, which raises the **mood-suggestion card** — so the app can offer to log
-**Calm** to someone who just wrote about snapping at their roommate, or **Sad** to someone who
-wrote *anxious*. `ChatPanel.tsx:265` also consults it at 0.3 to suppress gratitude prompts after
-negative entries; a false `calm` defeats that suppression.
-
-**Not gate-triggering:** `emotionExtractor.ts` is not `src/prompts/`, not the send path, and not
-one of the five safety utils. Nothing changes about what the model is asked. **No eval read.**
-
-**A proposed shape, deliberately narrow** (the planner rules it, not execute): drop bare
-`"still"` from `calm` — the list keeps twelve other keywords and *still* has no unambiguous
-feeling sense in journal prose — and replace bare `"down"` in `sad` with the framed forms
-(`feeling down`, `feel down`, `felt down`, `down about`), alongside the `"feeling low"` that list
-already carries. **`"loss"`** (`:46`) mis-fires the same way on *"the loss of the contract"* and
-is **observed and deliberately left alone** as outside the walked defect. The declaration-order
-tie-break is likewise recorded, not proposed — fixing the two keywords dissolves every case
-measured above. Checked, so the ruling need not re-derive it: **no existing test asserts on
-either word** (`emotionExtractor.test.ts`, `sessionReflection.test.ts`), so this would be test
-**additions only**, nothing loosened — the same filing shape as R16 and R13c.
+**1. R17 — two ordinary English words are read as feelings. QUEUED 2026-08-20; still live until it
+ships.** `"still"` is a `calm` keyword and `"down"` a `sad` one (`emotionExtractor.ts:110`, `:56`);
+matching is `\b`-anchored but sense-blind, and one incidental hit scores 0.50 against a 0.4
+threshold. So *"I still feel guilty about missing the call"* is reported as **calm**, *"I calmed
+down after talking to her"* as **sad**, and *"I wrote down three things I was grateful for"* ranks
+**sad above grateful**. It reaches two surfaces — the Sessions summary
+(`sessionReflection.generateReflection`) and the mood-suggestion card (`ChatPanel.tsx:239`), with
+`:265` using the same extractor to suppress gratitude prompts after negative entries. **Not
+gate-triggering.** The full measurement, the three-form replacement list and the two things
+deliberately left alone (`"loss"`, the declaration-order tie-break) are in the queue item above.
 
 ### What else the 2026-08-19 walk found (nothing queueable)
 
@@ -320,7 +279,7 @@ Old sessions keep their stored reflection after a fix like R16 or R17 — `shoul
 (`sessionReflection.ts`) only re-runs when the session itself updates. That is by design, not a
 missed migration.
 
-**1. R10 — the guided banner promises a structure the reply does not follow. 100 % of the
+**2. R10 — the guided banner promises a structure the reply does not follow. 100 % of the
 time.** Structural, and unfixed by design. `getSystemInstruction`
 (`src/prompts/systemPrompts.ts`) takes no step argument and the four `*_SEQUENCE` constants
 (`src/data/journalPrompts.ts`) are imported **only** by the three guide display components —
@@ -343,25 +302,6 @@ Four fixes are REJECTED with reasons, and the reasons still bind:
   it does not make the model follow the sequence. If human feedback says the guided modes need
   the AI to actually run the exercise, that is a priced, scoped item for after the soft launch,
   and it starts with making the eval read able to see the app's system instruction at all.
-
-**2. R13c — the Thought Record's third answer is destroyed at save time, not merely hidden.
-QUEUED 2026-08-19; still live until it ships.** `App.tsx:61`
-`parseEmotions(userMessages[2].content)` keyword-matches the turn against a 16-word emotion list
-and, when nothing matches, stores **the first two words of the entry** with a default intensity
-of 5. The user's sentence is never written to IndexedDB. Measured on the live artifact, not
-argued: R13a's own arm-2 record renders `How you felt — "the thought (5/10)"` — the first two
-words of a sentence that was not an emotion at all, with the rest gone. This is **lossy storage
-of a clinical artifact the user believes they saved**, a larger claim than R13's display defect.
-R13b could not fix it (the fix is in the save path, which R13b explicitly forbade touching).
-
-**The migration ruling it was waiting on, made 2026-08-19: there is no migration, and there must
-not be one.** Records saved before the fix cannot be repaired — the text is not in IndexedDB and
-nothing can re-derive it — so old records render exactly as they do today and the new optional
-field simply does not exist on them. The shape execute proposed (raw turn text alongside the
-parse, in a new optional field) is the one that was adopted; the spec, the seven measured card
-lines, and the two things it deliberately does **not** fix are in the queue item above. **Not
-gate-triggering** either way. This entry stays here, per the doc-size rule's "never prune a
-defect still live on the shipped app", until the PR lands.
 
 **3. Two measurement gaps that are not defects but are not evidence of health either.**
 - **The WebGPU-less state has never been read in real Firefox or Safari.** R2 simulated it by
@@ -395,7 +335,7 @@ Full outcome text for every row is in
 
 | date | item | PR | outcome |
 |---|---|---|---|
-| 2026-08-19 | R13c — the Thought Record keeps the sentence you actually wrote | #152 | Three additive changes, three files plus tests, as scoped: optional `emotionsText`, the raw turn saved beside the parse, and the card preferring it. All six measured `today` strings pinned and all six now render verbatim; the legacy record renders unchanged. **No migration, no DB version bump** — verified in the running app, not argued (`db.version === 4`, `emotionsText` stored verbatim, three pre-R13c records still rendering from the parse). Existing assertions untouched, R13b's guards still bite — **test additions only**. Display-only, **no gate read spent**. Two spec discrepancies recorded above rather than glossed. |
+| 2026-08-19 | R13c — the Thought Record keeps the sentence you actually wrote | #152 | Three additive changes, three files plus tests, as scoped: optional `emotionsText`, the raw turn saved beside the parse, and the card preferring it. All six measured `today` strings pinned and all six now render verbatim; the legacy record renders unchanged. **No migration, no DB version bump** — verified in the running app, not argued (`db.version === 4`, `emotionsText` stored verbatim, three pre-R13c records still rendering from the parse). Existing assertions untouched, R13b's guards still bite — **test additions only**. Display-only, **no gate read spent**. Two spec discrepancies recorded rather than glossed — with the item body and its grounding, in [`archive/public-release-2026-08-20.md`](archive/public-release-2026-08-20.md). |
 | 2026-08-18 | R16 — the session summary stops stuttering, and stops discarding the subject | #151 | Two files only, as scoped. All six decided strings assert exactly, including the two the dedupe changes structurally (`Sat with grateful feelings.` when gratitude is the only theme; `relationships` restored when it tied and lost). Existing assertions untouched — **test additions only**, nothing loosened. Display-only, **no gate read spent**; the shipped generation path is unchanged and the gate verdict is untouched. |
 | 2026-08-10 | R13b — Thought Record card stops dropping fields and asserting unsupportable labels | #138 | Display-only; all five positional entries render under the question each answers. Save path, `types.ts` and stored shape untouched and guarded. **One premise of the item was wrong and is recorded, not glossed** → R13c. |
 | 2026-08-10 | R15b — Retire the bare `"cutting"` keyword | #137 | One list, no matcher change; seven self-directed phrases in, exactly one authorised test string amended, 7 new cases. Gate taken as a 3-seed `--rescore` with the replay precondition **discharged by measurement** (148 eval user turns, **0 `isCrisis` changes**) and the delta proven **identical at all three seeds**. Below-floor absolutes disclosed as the pre-existing model deficit. |

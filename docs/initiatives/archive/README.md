@@ -40,6 +40,8 @@ click from the live doc while getting it out of the per-run read.
 
 | [`public-release-2026-08-19.md`](public-release-2026-08-19.md) | `public-release.md`'s R16 material | 2026-08-19 | Taken the day after R16 shipped (PR #151) and the same run **R13c** was ruled into the queue, so the doc would not carry a closed item's 45-line spec plus its 28-line grounding section into every run's read. Here: R16's checked queue-item body (the two changes, the six decided strings) and *"R16's grounding, re-measured 2026-08-16"* (the seven shared trigger words, the 0.45 tie-break measurement). The live doc keeps R16's increments-table row, its ledger row, and the sentence recording that it was verified **live on the deployed bundle**, not merely merged. |
 
+| [`public-release-2026-08-20.md`](public-release-2026-08-20.md) | `public-release.md`'s R13c material + R17 as filed | 2026-08-20 | Taken the day after R13c shipped (PR #152) and the same run **R17** was ruled into the queue — the same shape as the 08-19 snapshot, one increment later. Here: R13c's closed queue-item body, its two spec-vs-code discrepancies, its planner grounding section, and **R17 exactly as execute filed it (PROPOSED)**, superseded by the ruled queue item that corrects two of its claims and narrows the proposed keyword list on measurement. The live doc keeps R13c's increments-table row and ledger row, and R17 as an open queue item plus a *Still live* entry. |
+
 Note: [`human-feedback-2026-08-12.md`](human-feedback-2026-08-12.md) (F5/F6/F7 specs, the closed
 F1/F1a/F2/F1b bodies, two resolved *Blocked on Sharang* entries) was taken 2026-08-12 and is
 described in the live `human-feedback.md`. `human-feedback-2026-08-14.md`,
