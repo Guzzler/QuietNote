@@ -167,3 +167,64 @@ describe("getTopEmotion", () => {
     expect(result!.intensity).toBeGreaterThan(5);
   });
 });
+
+// R17 — two ordinary English words were read as feelings: bare "still" (calm)
+// and bare "down" (sad). Both are \b-anchored but sense-blind, and one
+// incidental hit scores 0.50 against the 0.4 threshold the app reads at.
+describe("R17: incidental words are not read as feelings", () => {
+  describe("A. false positives that must not fire", () => {
+    const noEmotion = [
+      "I still feel bad about how I handled that conversation",
+      "I am still not over the argument with my brother",
+      "I still feel guilty about missing the call",
+      "I sat down and wrote out everything that went wrong today",
+      "The server was down all afternoon and I got nothing done",
+      "I calmed down after talking to her",
+    ];
+
+    for (const text of noEmotion) {
+      it(`detects nothing in: ${text}`, () => {
+        expect(getTopEmotion(text, 0.4)).toBeNull();
+      });
+    }
+
+    const outrankedBy: [string, string][] = [
+      ["Let me write this down before I forget how angry I was", "angry"],
+      ["I am anxious about tomorrow and I sat down to breathe", "anxious"],
+      ["I wrote down three things I was grateful for", "grateful"],
+    ];
+
+    for (const [text, expected] of outrankedBy) {
+      it(`reports ${expected}, not sad, for: ${text}`, () => {
+        const result = getTopEmotion(text, 0.4);
+        expect(result).not.toBeNull();
+        expect(result!.emotion).toBe(expected);
+      });
+    }
+  });
+
+  describe("B. true positives that must keep firing", () => {
+    const stillSad: [string, string][] = [
+      ["I have been feeling down since Monday", "feeling down"],
+      ["I feel down about how the week went", "feel down"],
+      ["I felt down all day and could not shake it", "felt down"],
+      ["I have been feeling low all week", "feeling low"],
+    ];
+
+    for (const [text, keyword] of stillSad) {
+      it(`still reports sad via "${keyword}" for: ${text}`, () => {
+        const result = getTopEmotion(text, 0.4);
+        expect(result).not.toBeNull();
+        expect(result!.emotion).toBe("sad");
+        expect(result!.matchedKeywords).toContain(keyword);
+      });
+    }
+
+    it("still reports calm for a real statement of calm", () => {
+      const result = getTopEmotion("I felt calm and settled after the walk", 0.4);
+      expect(result).not.toBeNull();
+      expect(result!.emotion).toBe("calm");
+      expect(result!.confidence).toBeCloseTo(0.8);
+    });
+  });
+});
