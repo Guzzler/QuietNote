@@ -54,7 +54,12 @@ const EMOTION_KEYWORDS: Record<MoodEmotion, string[]> = {
     "devastated",
     "melancholy",
     "gloomy",
-    "down",
+    // Verb-framed only: a bare "down" fires on "sat down", "the server was
+    // down", even "calmed down" — a false hit tells the user they felt
+    // something they did not (R17).
+    "feeling down",
+    "feel down",
+    "felt down",
     "feeling low",
   ],
   anxious: [
@@ -107,7 +112,9 @@ const EMOTION_KEYWORDS: Record<MoodEmotion, string[]> = {
     "at peace",
     "centered",
     "grounded",
-    "still",
+    // "still" removed (R17): in journal prose it is almost always the adverb
+    // ("I still feel guilty"), and it has no first-person feeling frame worth
+    // a replacement token.
     "settled",
     "composed",
     "mellow",
