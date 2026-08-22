@@ -43,7 +43,14 @@ const EMOTION_KEYWORDS: Record<MoodEmotion, string[]> = {
     "grief",
     "grieving",
     "mourning",
-    "loss",
+    // Framed only: a bare "loss" fires on "a net loss this quarter",
+    // "hearing loss", "a tough loss for the team" (R18).
+    "loss of my",
+    "such a loss",
+    "the loss of her",
+    "the loss of him",
+    "sense of loss",
+    "feel the loss",
     "miss them",
     "miss her",
     "miss him",
@@ -61,6 +68,9 @@ const EMOTION_KEYWORDS: Record<MoodEmotion, string[]> = {
     "feel down",
     "felt down",
     "feeling low",
+    // The two inflections "feeling low" was missing all along (R18).
+    "feel low",
+    "felt low",
   ],
   anxious: [
     "anxious",
@@ -91,7 +101,14 @@ const EMOTION_KEYWORDS: Record<MoodEmotion, string[]> = {
     "furious",
     "rage",
     "raging",
-    "mad",
+    // Framed only: a bare "mad" fires on "a mad dash", "mad about gardening",
+    // "mad busy" (R18).
+    "mad at",
+    "so mad",
+    "really mad",
+    "mad about it",
+    "get mad",
+    "got mad",
     "irritated",
     "annoyed",
     "pissed",
@@ -148,7 +165,14 @@ const EMOTION_KEYWORDS: Record<MoodEmotion, string[]> = {
     "so annoying",
   ],
   content: [
-    "content",
+    // Framed only: a bare "content" fires on "content strategy", "watched
+    // some content", and inverts "the content of the email upset me" into
+    // contentment (R18).
+    "feel content",
+    "feeling content",
+    "felt content",
+    "so content",
+    "quite content",
     "satisfied",
     "comfortable",
     "at ease",
@@ -162,10 +186,23 @@ const EMOTION_KEYWORDS: Record<MoodEmotion, string[]> = {
   lonely: [
     "lonely",
     "loneliness",
-    "alone",
+    // Framed only: a bare "alone" fires on "that alone was worth it" and
+    // "I worked alone on the deck"; bare "no one"/"nobody" fire on "nobody
+    // was hurt in the crash" (R18).
+    "feel alone",
+    "feeling alone",
+    "felt alone",
+    "so alone",
+    "all alone",
+    "alone in this",
     "isolated",
-    "no one",
-    "nobody",
+    "no one to talk to",
+    "no one understands",
+    "no one cares",
+    "nobody to talk to",
+    "nobody understands",
+    "nobody cares",
+    "no one else",
     "disconnected",
     "left out",
     "forgotten",
