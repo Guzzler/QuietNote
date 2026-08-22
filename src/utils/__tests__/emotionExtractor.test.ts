@@ -78,7 +78,9 @@ describe("extractEmotions", () => {
     );
     const lonelyMatch = result.find((r) => r.emotion === "lonely");
     expect(lonelyMatch).toBeDefined();
-    expect(lonelyMatch!.matchedKeywords).toContain("alone");
+    // R18: bare "alone" retired in favour of framed forms; this sentence is
+    // still lonely, now via "so alone" (plus "isolated" and "nobody cares").
+    expect(lonelyMatch!.matchedKeywords).toContain("so alone");
     expect(lonelyMatch!.matchedKeywords).toContain("isolated");
   });
 
@@ -226,5 +228,82 @@ describe("R17: incidental words are not read as feelings", () => {
       expect(result!.emotion).toBe("calm");
       expect(result!.confidence).toBeCloseTo(0.8);
     });
+  });
+});
+
+// R18 — six more bare words were read as feelings: "content", "loss",
+// "alone", "no one", "nobody" and "mad". Each scored 0.50 against the 0.4
+// threshold on ordinary sentences, and "content" inverted an upset entry into
+// contentment. Same remedy as R17: framed forms only, no matcher change.
+describe("R18: six more bare words are not read as feelings", () => {
+  describe("A. false positives that must not fire", () => {
+    const noEmotion = [
+      "I watched some content on my phone before bed",
+      "the content of the email upset me",
+      "content strategy is my whole job",
+      "the loss of the contract set the whole team back",
+      "we had a net loss this quarter",
+      "hearing loss runs in my family",
+      "it was a tough loss for the team last night",
+      "I worked alone on the deck today and it was great",
+      "that alone was worth the trip",
+      "I like being alone with a book",
+      "no one had to remind me, I just did it",
+      "nobody was hurt in the crash",
+      "I made a mad dash for the train",
+      "she is mad about gardening",
+      "it was mad busy at work",
+    ];
+
+    for (const text of noEmotion) {
+      it(`detects nothing in: ${text}`, () => {
+        expect(getTopEmotion(text, 0.4)).toBeNull();
+      });
+    }
+  });
+
+  describe("B. true positives that must keep firing", () => {
+    const stillFires: [string, string, string][] = [
+      ["I felt content after dinner", "content", "felt content"],
+      ["the loss of my grandmother still hits me", "sad", "loss of my"],
+      [
+        "I keep feeling the loss of her in the small moments",
+        "sad",
+        "the loss of her",
+      ],
+      ["I feel alone even in a full room", "lonely", "feel alone"],
+      ["sitting here all alone again", "lonely", "all alone"],
+      [
+        "there is no one to talk to about any of this",
+        "lonely",
+        "no one to talk to",
+      ],
+      ["I am so mad at myself for forgetting", "angry", "mad at"],
+    ];
+
+    for (const [text, emotion, keyword] of stillFires) {
+      it(`still reports ${emotion} via "${keyword}" for: ${text}`, () => {
+        const result = getTopEmotion(text, 0.4);
+        expect(result).not.toBeNull();
+        expect(result!.emotion).toBe(emotion);
+        expect(result!.matchedKeywords).toContain(keyword);
+      });
+    }
+
+    // Recall the bare-word list never had: "feeling low" shipped alone, so
+    // these two inflections returned null before R18.
+    const newlyCaught: [string, string][] = [
+      ["I feel low today", "feel low"],
+      ["I felt low all afternoon", "felt low"],
+    ];
+
+    for (const [text, keyword] of newlyCaught) {
+      it(`now reports sad via "${keyword}" for: ${text}`, () => {
+        const result = getTopEmotion(text, 0.4);
+        expect(result).not.toBeNull();
+        expect(result!.emotion).toBe("sad");
+        expect(result!.matchedKeywords).toContain(keyword);
+      });
+    }
   });
 });

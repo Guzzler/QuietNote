@@ -10,13 +10,13 @@ https://guzzler.github.io/QuietNote/.** The initiative was marked COMPLETE on 20
 kept as the index plus the home of the defects still live on the shipped app. It is **not
 reopened** — but it remains the only initiative with an intake route that does not need a human,
 and that route is again the only thing producing work anywhere in the loop: **R13c** shipped
-2026-08-19 (PR #152), **R17** shipped 2026-08-20 (PR #153), and **R18** is queued today. Every
-other initiative — `human-feedback`, `model-quality`, `personalization` — is at zero open items,
-idle by design, waiting on Sharang.
+2026-08-19 (PR #152), **R17** shipped 2026-08-20 (PR #153), and **R18** shipped today (PR #154).
+Every initiative — this one included — is now at **zero open items**, idle by design, waiting on
+Sharang.
 
 **R18 exists because R17's own carry-forward worked.** R17 recorded `"loss"` in *Still live*
 rather than silently widening its scope; this run measured that word and the eight others in the
-same class, and six of them are now one queued item. **The mechanism that produced R18 is a
+same class, and six of them shipped as one item. **The mechanism that produced R18 is a
 deliberately-narrow fix writing down what it left behind** — worth keeping, because the
 alternative (fix everything you notice while you are in the file) is how a two-line PR becomes an
 unreviewable one.
@@ -120,64 +120,20 @@ as evidence, never as a current fact.
 | R13c | The Thought Record's third answer is destroyed at save time, not merely hidden | DONE (PR #152) — additive `emotionsText`, no migration, no gate read spent |
 | R16 | The session summary is a tautology in Gratitude mode, and discards the entry's subject | DONE (PR #151) — display-only, no gate read spent |
 | R17 | Two common English words are read as feelings, and one of them outranks the feeling the user named | DONE (PR #153) — two list edits, no matcher change, no gate read spent |
-| R18 | Six more bare words are read as feelings — including `content`, which inverts an upset entry into contentment | **QUEUED 2026-08-21** — list edits only, one authorised test amendment, no gate read |
+| R18 | Six more bare words are read as feelings — including `content`, which inverts an upset entry into contentment | DONE (PR #154) — list edits only, one authorised test amendment, no gate read spent |
 
 ## Task queue
 
-**ONE open as of 2026-08-21: R18.** It is the only open item anywhere in the initiatives —
-`human-feedback`, `model-quality` and `personalization` remain at **zero open**, idle by design
-and waiting on Sharang; **no work was invented to fill them.** R18 is not invented either: it
-arrives by the **audit rule** (this directory's intake route that does not need a human), every
-one of its cases was **reproduced against the real `extractEmotions` this run**, it is a defect
-**live on the shipped app**, and it is **not gate-triggering** — `emotionExtractor.ts` is not
-`src/prompts/`, not the send path and not one of the five safety utils, and nothing changes about
-what the model is asked. **No gate read is spent**, which is again why it can move while
-everything else waits.
+**ZERO open as of 2026-08-21.** R18 shipped this run as PR #154 and there is now **no open queue
+item anywhere in the initiatives** — `human-feedback`, `model-quality` and `personalization`
+remain at zero, idle by design and waiting on Sharang, and **no work was invented to fill them.**
+The next execute run therefore takes the **audit pass**, not a task: that rule is what produced
+R16, R13c, R17 and R18 in the first place, and it is the only intake route the loop has that does
+not need a human.
 
-- [ ] 2026-08-21 · **R18 — six more bare words stop being read as feelings.** Edit the keyword
-  lists in `src/utils/emotionExtractor.ts` (`EMOTION_KEYWORDS`) and add cases to
-  `src/utils/__tests__/emotionExtractor.test.ts`. **List edits only — do not touch the matcher,
-  the `matches × 0.3 + 0.2` confidence formula, the 0.4 threshold, or the declaration order.**
-  Six bare words are replaced by the framed forms measured below; each replacement set was
-  measured this run at **zero false positives across its adversarial corpus while still catching
-  100 % of its true-positive corpus**.
-
-  | list | delete | insert (exactly these) |
-  |---|---|---|
-  | `content` | `"content"` | `feel content`, `feeling content`, `felt content`, `so content`, `quite content` |
-  | `sad` | `"loss"` | `loss of my`, `such a loss`, `the loss of her`, `the loss of him`, `sense of loss`, `feel the loss` |
-  | `lonely` | `"alone"` | `feel alone`, `feeling alone`, `felt alone`, `so alone`, `all alone`, `alone in this` |
-  | `lonely` | `"no one"`, `"nobody"` | `no one to talk to`, `no one understands`, `no one cares`, `nobody to talk to`, `nobody understands`, `nobody cares`, `no one else` |
-  | `angry` | `"mad"` | `mad at`, `so mad`, `really mad`, `mad about it`, `get mad`, `got mad` |
-
-  Also add `feel low` and `felt low` to `sad` — `feeling low` is already there, and the two
-  missing inflections are the **pre-existing** recall gap R17 recorded rather than created
-  (measured today: *"I feel low today"* and *"I felt low all afternoon"* both return `null`).
-
-  **Verification — two tables, both with the *today* column already measured, so execute asserts
-  rather than predicts.** Must return `null` from `getTopEmotion` after the change (all are
-  `<emotion> 0.50` today): *"I watched some content on my phone before bed"*, *"the content of
-  the email upset me"* (today: **`content`** — an upset entry reported as contentment), *"content
-  strategy is my whole job"*, *"the loss of the contract set the whole team back"*, *"we had a
-  net loss this quarter"*, *"hearing loss runs in my family"*, *"it was a tough loss for the team
-  last night"*, *"I worked alone on the deck today and it was great"*, *"that alone was worth the
-  trip"*, *"I like being alone with a book"*, *"no one had to remind me, I just did it"*,
-  *"nobody was hurt in the crash"*, *"I made a mad dash for the train"*, *"she is mad about
-  gardening"*, *"it was mad busy at work"*. Must **still** fire, each pinned to the specific form
-  that catches it: *"I felt content after dinner"* → `content`, *"the loss of my grandmother
-  still hits me"* → `sad`, *"I keep feeling the loss of her in the small moments"* → `sad`, *"I
-  feel alone even in a full room"* → `lonely`, *"sitting here all alone again"* → `lonely`,
-  *"there is no one to talk to about any of this"* → `lonely`, *"I am so mad at myself for
-  forgetting"* → `angry`, *"I feel low today"* → `sad` (**new**; `null` today).
-
-  **Exactly one existing assertion must be amended, and no other.**
-  `emotionExtractor.test.ts:81` asserts `matchedKeywords` `toContain("alone")` for *"I feel so
-  alone and isolated, like nobody cares"*. Under the new list that sentence still resolves to
-  `lonely` — it matches `isolated`, `so alone` and `nobody cares` — so change the expectation to
-  `"so alone"`. **Nothing else in the file mentions any of the six words** (re-checked against
-  `emotionExtractor.test.ts` and confirmed it is the only test file importing this module).
-  → `npm run test` and `npm run build` green. **No gate read** — generation is untouched.
-
+R18's ruled item body — the five-row replacement table, both verification tables with their
+measured *today* column, and the single authorised test amendment — is frozen verbatim in
+[`archive/public-release-2026-08-21-r18.md`](archive/public-release-2026-08-21-r18.md).
 R17's ruled body and grounding — the three candidate forms rejected on false positives
 (`down about`, `so down`, `really down`), the accepted recall cost, and the two things it
 deliberately left alone — are frozen verbatim in
@@ -190,18 +146,17 @@ closed body and R17's PROPOSED filing are in
 ## Still live on the shipped app (not queued — read before proposing a fix)
 
 **Two** numbered things are true of the app a stranger uses today, plus the emotion-keyword
-residue recorded immediately below. **R13c stopped being one of them on 2026-08-19** (PR #152) and
-**R17 stopped being one on 2026-08-20** (PR #153) — both have ledger rows below. The two numbered
-ones stay unqueued for the stated reasons and should be re-read before anyone opens an item
-against them.
-
-**`"loss"` and the `"feel low"` / `"felt low"` gap are now R18's**, not still-live-and-unqueued —
-R17 recorded them here rather than widening its own scope, and that carry-forward is exactly what
-this run picked up. The declaration-order tie-break stays deliberately alone, argued in
+residue recorded immediately below. **R13c stopped being one of them on 2026-08-19** (PR #152),
+**R17 on 2026-08-20** (PR #153), and **`"loss"`, `"content"`, `"alone"`, `"no one"`, `"nobody"`,
+`"mad"` and the `"feel low"` / `"felt low"` recall gap on 2026-08-21** (PR #154) — all three have
+ledger rows below. The two numbered ones stay unqueued for the stated reasons and should be
+re-read before anyone opens an item against them. The declaration-order tie-break stays
+deliberately alone, argued in
 [`archive/public-release-2026-08-20-r17.md`](archive/public-release-2026-08-20-r17.md).
 
-**What R18 deliberately leaves behind (measured 2026-08-21, recorded so it is not re-filed as
-new).** Four more bare words mis-fire the same way, each reproduced against the real
+**What R18 deliberately left behind (measured 2026-08-21, recorded so it is not re-filed as
+new — and, per R17's precedent, this is the record a later run may pick up).** Four more bare
+words mis-fire the same way, each reproduced against the real
 `extractEmotions`, each `<emotion> 0.50`:
 
 | word | list | measured false hit |
@@ -306,6 +261,7 @@ Full outcome text for every row is in
 
 | date | item | PR | outcome |
 |---|---|---|---|
+| 2026-08-21 | R18 — six more bare words stop being read as feelings | #154 | Five list edits in `emotionExtractor.ts` and nothing else, exactly as scoped: `content`, `loss`, `alone`, `no one`/`nobody` and `mad` replaced by the decided framed forms; `feel low` / `felt low` added to close the pre-existing recall gap R17 recorded. **No matcher, formula, threshold or declaration-order change.** Both verification tables assert as decided: all **15** measured false positives now return `null` — including *"the content of the email upset me"*, which reported `content 0.50` (an upset entry read back as contentment) before this PR — and all seven true positives still fire, each pinned to the specific form that catches it. The two new-recall cases now return `sad`. **Exactly one existing assertion amended** (`emotionExtractor.test.ts:81`, `"alone"` → `"so alone"` for a sentence that still resolves to `lonely`), and no other; nothing loosened. **24 cases added, 2646 → 2670 tests green**, build green. `emotionExtractor.ts` is not `src/prompts/`, not the send path and not a safety util, and generation is untouched: **no gate read spent**, gate verdict unchanged. `stress` / `stuck` / `steady` / `fear`, the negation-blindness and the adverb brittleness stay deliberately unqueued — carried forward in *Still live* so they are not re-filed as new. |
 | 2026-08-20 | R17 — two ordinary English words stop being read as feelings | #153 | Two list edits in `emotionExtractor.ts` and nothing else, exactly as scoped: bare `"still"` deleted from `calm` with no replacement, bare `"down"` replaced by the three verb-framed forms (`feeling down` / `feel down` / `felt down`) — no matcher, threshold or tie-break change. Both verification tables assert as decided: all six false positives now return **null**, and the three tie-break cases now report `angry` / `anxious` / **`grateful`** — the gratitude inversion is gone. All five true positives still fire, each pinned to the keyword that catches it. **13 cases added, nothing loosened** — no pre-existing assertion mentioned either word (re-checked before writing). `emotionExtractor.ts` is not `src/prompts/`, not the send path and not a safety util, and generation is untouched: **no gate read spent**, gate verdict unchanged. 2646 tests green, build green. `"loss"` mis-fires the same way and stays deliberately unqueued — carried forward in *Still live* so it is not re-filed as new. |
 | 2026-08-19 | R13c — the Thought Record keeps the sentence you actually wrote | #152 | Three additive changes, three files plus tests, as scoped: optional `emotionsText`, the raw turn saved beside the parse, and the card preferring it. All six measured `today` strings pinned and all six now render verbatim; the legacy record renders unchanged. **No migration, no DB version bump** — verified in the running app, not argued (`db.version === 4`, `emotionsText` stored verbatim, three pre-R13c records still rendering from the parse). Existing assertions untouched, R13b's guards still bite — **test additions only**. Display-only, **no gate read spent**. Two spec discrepancies recorded rather than glossed — with the item body and its grounding, in [`archive/public-release-2026-08-20.md`](archive/public-release-2026-08-20.md). |
 | 2026-08-18 | R16 — the session summary stops stuttering, and stops discarding the subject | #151 | Two files only, as scoped. All six decided strings assert exactly, including the two the dedupe changes structurally (`Sat with grateful feelings.` when gratitude is the only theme; `relationships` restored when it tied and lost). Existing assertions untouched — **test additions only**, nothing loosened. Display-only, **no gate read spent**; the shipped generation path is unchanged and the gate verdict is untouched. |
