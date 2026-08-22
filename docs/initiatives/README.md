@@ -110,38 +110,40 @@ answer**, the **retrain call**, the **T1 follow-up**, and the **send to testers 
    before on the same origin, nothing having changed: network variance, and evidence *for* the
    shipped copy that R11 wrote to avoid promising a speed.
 
-**Amended 2026-08-20 (planner): R17 is ruled and queued, and the fix it ships is narrower than the
-one that was proposed.** It is the **only open queue item anywhere in the initiatives** —
-`human-feedback`, `model-quality` and `personalization` remain at zero, idle by design, and **no
-work was invented to fill them**. (The 2026-08-16 amendment this replaces recorded R16's ruling;
-R16 shipped as PR #151 and R13c as PR #152, and both are ledger rows in
-[`public-release.md`](public-release.md) now.) Three things settled, all written into that doc:
+**Amended 2026-08-21 (planner): R18 is filed and queued, and it exists because R17's carry-forward
+worked.** It is the **only open queue item anywhere in the initiatives** — `human-feedback`,
+`model-quality` and `personalization` remain at zero, idle by design, and **no work was invented
+to fill them.** (The 2026-08-20 amendment this replaces recorded R17's ruling; R17 shipped as
+PR #153 and is a ledger row in [`public-release.md`](public-release.md) now.) Three things
+settled, all written into that doc:
 
-1. **R17 is queueable and was queued.** Same route and same shape as R16 and R13c: filed by the
+1. **R18 is queueable and was queued**, same route and same shape as R16, R13c and R17: the
    **queue-empty audit rule** (this directory's intake route that does not need a human), a defect
    **live on the shipped app**, and **not gate-triggering** — `emotionExtractor.ts` is not
    `src/prompts/`, not the send path and not one of the five safety utils, and nothing changes
-   about what the model is asked. **No gate read is spent**, which is again why it can move while
-   everything else waits on Sharang.
-2. **The filing reproduced exactly and understated the harm twice.** `"still"` (calm) and
-   `"down"` (sad) are matched `\b`-anchored but sense-blind at `matches × 0.3 + 0.2 = 0.50`
-   against a 0.4 threshold. Beyond the filed cases: *"I wrote down three things I was grateful
-   for"* ranks **sad above grateful** — the app's own gratitude exercise read as sadness, on a
-   path that also suppresses gratitude prompts after negative entries (`ChatPanel.tsx:265`) — and
-   *"I calmed down after talking to her"* is stored as **sad**, because `\bcalm\b` does not match
-   *calmed*. For `"still"` the mechanism differs from the filing's: `calm` is declared after
-   `angry`/`anxious` so it **loses** those ties; it does damage as the **sole** match, which is
-   the common case (*"I still feel guilty about missing the call"* → **calm**).
-3. **The design question answered is the replacement keyword list, and three of the four proposed
-   forms were rejected on measurement.** `down about`, `so down` and `really down` each have a
-   measured false positive (*the site was down about an hour*; *so down to earth*; *the server was
-   really down*). Only the verb-framed `feeling down` / `feel down` / `felt down` produced zero
-   false hits, so R17 ships those three and deletes bare `"still"` with no replacement. The recall
-   cost is measured and accepted on a stated principle: **a miss is silent, a false hit is the app
-   telling the user they felt something they did not.**
+   about what the model is asked. **No gate read is spent.** Its origin is worth naming: R17 fixed
+   two words and *recorded* `"loss"` in *Still live* rather than widening its own scope, and this
+   run picked that record up. **A narrow fix that writes down what it left behind is what produced
+   the next item** — the opposite of "while we're in here".
+2. **Nine bare words were measured against the real `extractEmotions`, and every one of them fires
+   on 100 % of its adversarial corpus.** The worst is `"content"`, which **inverts**: *"the content
+   of the email upset me"* → `content 0.50`, an upset entry reported back as contentment. Also
+   measured: *"I worked alone on the deck today and it was great"* → `lonely`; *"nobody was hurt
+   in the crash"* → `lonely`; *"we had a net loss this quarter"* → `sad`; *"she is mad about
+   gardening"* → `angry`.
+3. **The design question answered is again the replacement list, and again a proposed form was
+   rejected on measurement.** `am content` looked like the obvious way to keep *"I am content with
+   how the day went"* — and it fires on *"I am content editing again this week"*, *"content
+   managing"*, *"content moderating"*: 4 of 5 adversarial sentences. It is out, and that recall is
+   deliberately spent on R17's principle: **a miss is silent, a false hit is the app telling the
+   user they felt something they did not.** Six words ship with form-sets measured at zero false
+   positives and 100 % true-positive retention; **four more (`stress`, `stuck`, `steady`, `fear`)
+   are measured, argued and left out**, along with two mechanisms no list edit fixes — the matcher
+   is negation-blind, and framed forms are brittle to inserted adverbs (`feeling stuck` misses
+   *"feeling completely stuck"*).
 
 **Everything else is unchanged and is Sharang's**: the QLoRA-to-browser answer, the retrain call,
-the T1 follow-up, and the send to testers 2–10. **The gate verdict is untouched** — R17 cannot
+the T1 follow-up, and the send to testers 2–10. **The gate verdict is untouched** — R18 cannot
 alter generation, and nothing may claim the live app meets the gate floors.
 
 ## Standing decisions (2026-07-09, Sharang — do not re-litigate)

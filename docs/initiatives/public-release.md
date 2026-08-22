@@ -5,15 +5,21 @@
 README tells them honestly what they are getting. Rules of engagement: [`README.md`](README.md)
 (standing decisions, release gate, queue format).
 
-**Status 2026-08-20: all 16 original increments DONE; the app is public and live at
+**Status 2026-08-21: all 16 original increments DONE; the app is public and live at
 https://guzzler.github.io/QuietNote/.** The initiative was marked COMPLETE on 2026-08-11 and
 kept as the index plus the home of the defects still live on the shipped app. It is **not
 reopened** — but it remains the only initiative with an intake route that does not need a human,
-and that route is now the only thing producing work anywhere in the loop: **R13c** shipped
-2026-08-19 (PR #152), and **R17** — filed PROPOSED by the 2026-08-19 audit walk and ruled in
-2026-08-20 — **shipped the same day (PR #153)**. That leaves **zero open items anywhere**:
-`human-feedback`, `model-quality` and `personalization` are all at zero and idle by design,
-waiting on Sharang.
+and that route is again the only thing producing work anywhere in the loop: **R13c** shipped
+2026-08-19 (PR #152), **R17** shipped 2026-08-20 (PR #153), and **R18** is queued today. Every
+other initiative — `human-feedback`, `model-quality`, `personalization` — is at zero open items,
+idle by design, waiting on Sharang.
+
+**R18 exists because R17's own carry-forward worked.** R17 recorded `"loss"` in *Still live*
+rather than silently widening its scope; this run measured that word and the eight others in the
+same class, and six of them are now one queued item. **The mechanism that produced R18 is a
+deliberately-narrow fix writing down what it left behind** — worth keeping, because the
+alternative (fix everything you notice while you are in the file) is how a two-line PR becomes an
+unreviewable one.
 
 **R16 is live, not merely merged (verified 2026-08-19, planner).** Shipping to `main` is not
 shipping to a tester — the same discipline the F-series was held to — so the deployed bundle was
@@ -114,38 +120,110 @@ as evidence, never as a current fact.
 | R13c | The Thought Record's third answer is destroyed at save time, not merely hidden | DONE (PR #152) — additive `emotionsText`, no migration, no gate read spent |
 | R16 | The session summary is a tautology in Gratitude mode, and discards the entry's subject | DONE (PR #151) — display-only, no gate read spent |
 | R17 | Two common English words are read as feelings, and one of them outranks the feeling the user named | DONE (PR #153) — two list edits, no matcher change, no gate read spent |
+| R18 | Six more bare words are read as feelings — including `content`, which inverts an upset entry into contentment | **QUEUED 2026-08-21** — list edits only, one authorised test amendment, no gate read |
 
 ## Task queue
-**ZERO open as of 2026-08-20.** R17 shipped as **PR #153** — the last open item anywhere in the
-initiatives. `human-feedback`, `model-quality` and `personalization` remain at **zero open**, idle
-by design and waiting on Sharang; **no work was invented to fill them.** The next run with an
-empty queue runs the audit pass (README rule) and files findings, or says "release-ready — waiting
-on R4-era Sharang actions" if it finds nothing.
 
-R17's ruled queue-item body and the planner's grounding — the reproduced measurements, the three
-candidate forms rejected on false positives (`down about`, `so down`, `really down`), the accepted
-recall cost, and the two things deliberately left alone (**`"loss"`** mis-firing the same way, and
-the declaration-order tie-break) — are frozen verbatim in
-[`archive/public-release-2026-08-20-r17.md`](archive/public-release-2026-08-20-r17.md). **Read it
-before re-filing either of those two**; they are observed, not forgotten. R13c's closed body and
-R17's PROPOSED filing are in
+**ONE open as of 2026-08-21: R18.** It is the only open item anywhere in the initiatives —
+`human-feedback`, `model-quality` and `personalization` remain at **zero open**, idle by design
+and waiting on Sharang; **no work was invented to fill them.** R18 is not invented either: it
+arrives by the **audit rule** (this directory's intake route that does not need a human), every
+one of its cases was **reproduced against the real `extractEmotions` this run**, it is a defect
+**live on the shipped app**, and it is **not gate-triggering** — `emotionExtractor.ts` is not
+`src/prompts/`, not the send path and not one of the five safety utils, and nothing changes about
+what the model is asked. **No gate read is spent**, which is again why it can move while
+everything else waits.
+
+- [ ] 2026-08-21 · **R18 — six more bare words stop being read as feelings.** Edit the keyword
+  lists in `src/utils/emotionExtractor.ts` (`EMOTION_KEYWORDS`) and add cases to
+  `src/utils/__tests__/emotionExtractor.test.ts`. **List edits only — do not touch the matcher,
+  the `matches × 0.3 + 0.2` confidence formula, the 0.4 threshold, or the declaration order.**
+  Six bare words are replaced by the framed forms measured below; each replacement set was
+  measured this run at **zero false positives across its adversarial corpus while still catching
+  100 % of its true-positive corpus**.
+
+  | list | delete | insert (exactly these) |
+  |---|---|---|
+  | `content` | `"content"` | `feel content`, `feeling content`, `felt content`, `so content`, `quite content` |
+  | `sad` | `"loss"` | `loss of my`, `such a loss`, `the loss of her`, `the loss of him`, `sense of loss`, `feel the loss` |
+  | `lonely` | `"alone"` | `feel alone`, `feeling alone`, `felt alone`, `so alone`, `all alone`, `alone in this` |
+  | `lonely` | `"no one"`, `"nobody"` | `no one to talk to`, `no one understands`, `no one cares`, `nobody to talk to`, `nobody understands`, `nobody cares`, `no one else` |
+  | `angry` | `"mad"` | `mad at`, `so mad`, `really mad`, `mad about it`, `get mad`, `got mad` |
+
+  Also add `feel low` and `felt low` to `sad` — `feeling low` is already there, and the two
+  missing inflections are the **pre-existing** recall gap R17 recorded rather than created
+  (measured today: *"I feel low today"* and *"I felt low all afternoon"* both return `null`).
+
+  **Verification — two tables, both with the *today* column already measured, so execute asserts
+  rather than predicts.** Must return `null` from `getTopEmotion` after the change (all are
+  `<emotion> 0.50` today): *"I watched some content on my phone before bed"*, *"the content of
+  the email upset me"* (today: **`content`** — an upset entry reported as contentment), *"content
+  strategy is my whole job"*, *"the loss of the contract set the whole team back"*, *"we had a
+  net loss this quarter"*, *"hearing loss runs in my family"*, *"it was a tough loss for the team
+  last night"*, *"I worked alone on the deck today and it was great"*, *"that alone was worth the
+  trip"*, *"I like being alone with a book"*, *"no one had to remind me, I just did it"*,
+  *"nobody was hurt in the crash"*, *"I made a mad dash for the train"*, *"she is mad about
+  gardening"*, *"it was mad busy at work"*. Must **still** fire, each pinned to the specific form
+  that catches it: *"I felt content after dinner"* → `content`, *"the loss of my grandmother
+  still hits me"* → `sad`, *"I keep feeling the loss of her in the small moments"* → `sad`, *"I
+  feel alone even in a full room"* → `lonely`, *"sitting here all alone again"* → `lonely`,
+  *"there is no one to talk to about any of this"* → `lonely`, *"I am so mad at myself for
+  forgetting"* → `angry`, *"I feel low today"* → `sad` (**new**; `null` today).
+
+  **Exactly one existing assertion must be amended, and no other.**
+  `emotionExtractor.test.ts:81` asserts `matchedKeywords` `toContain("alone")` for *"I feel so
+  alone and isolated, like nobody cares"*. Under the new list that sentence still resolves to
+  `lonely` — it matches `isolated`, `so alone` and `nobody cares` — so change the expectation to
+  `"so alone"`. **Nothing else in the file mentions any of the six words** (re-checked against
+  `emotionExtractor.test.ts` and confirmed it is the only test file importing this module).
+  → `npm run test` and `npm run build` green. **No gate read** — generation is untouched.
+
+R17's ruled body and grounding — the three candidate forms rejected on false positives
+(`down about`, `so down`, `really down`), the accepted recall cost, and the two things it
+deliberately left alone — are frozen verbatim in
+[`archive/public-release-2026-08-20-r17.md`](archive/public-release-2026-08-20-r17.md). R13c's
+closed body and R17's PROPOSED filing are in
 [`archive/public-release-2026-08-20.md`](archive/public-release-2026-08-20.md).
 
 
 
 ## Still live on the shipped app (not queued — read before proposing a fix)
 
-**Two** things are true of the app a stranger uses today. **R13c stopped being one of them on
-2026-08-19** (PR #152) and **R17 stopped being one on 2026-08-20** (PR #153) — both have ledger
-rows below. The two that remain stay unqueued for the stated reasons and should be re-read before
-anyone opens an item against them.
+**Two** numbered things are true of the app a stranger uses today, plus the emotion-keyword
+residue recorded immediately below. **R13c stopped being one of them on 2026-08-19** (PR #152) and
+**R17 stopped being one on 2026-08-20** (PR #153) — both have ledger rows below. The two numbered
+ones stay unqueued for the stated reasons and should be re-read before anyone opens an item
+against them.
 
-**One thing R17 did *not* fix, recorded so it is not re-filed as new:** **`"loss"`**
-(`emotionExtractor.ts`, the `sad` list) mis-fires exactly the way bare `"down"` did — *"the loss of
-the contract set the whole team back"* → `sad 0.50 [loss]`, measured 2026-08-20. It was outside
-the walked defect and was deliberately left alone, along with the declaration-order tie-break and
-the pre-existing `"feel low"` / `"felt low"` recall gap. All three are argued in
+**`"loss"` and the `"feel low"` / `"felt low"` gap are now R18's**, not still-live-and-unqueued —
+R17 recorded them here rather than widening its own scope, and that carry-forward is exactly what
+this run picked up. The declaration-order tie-break stays deliberately alone, argued in
 [`archive/public-release-2026-08-20-r17.md`](archive/public-release-2026-08-20-r17.md).
+
+**What R18 deliberately leaves behind (measured 2026-08-21, recorded so it is not re-filed as
+new).** Four more bare words mis-fire the same way, each reproduced against the real
+`extractEmotions`, each `<emotion> 0.50`:
+
+| word | list | measured false hit |
+|---|---|---|
+| `stress` | `anxious` | *"I stress the importance of testing at work"*; *"the beam is under stress"* |
+| `stuck` | `frustrated` | *"the drawer was stuck so I fixed it"*; *"I stuck to the plan all day"* |
+| `steady` | `content` | *"I kept a steady pace on my run"*; *"a steady drizzle all afternoon"* |
+| `fear` | `anxious` | *"there is no fear of that happening"*; *"no fear, it is handled"* |
+
+They are out of R18 for two stated reasons, not by oversight. **The false hit is rarer in journal
+prose** than `content`/`alone`/`mad` — nobody writes *the beam is under stress* in a diary — so
+the harm per word is lower. And **framing is brittle to inserted adverbs**, which is a limitation
+of the whole R17 strategy and was measured here rather than assumed: `feeling stuck` does not
+match *"feeling completely stuck"*, and `feel alone` does not match *"I feel so alone"*. R18
+absorbs that for its six words by shipping form-sets measured to cover their whole true-positive
+corpus (`so alone`, `all alone` catch what `feel alone` misses); for `stress` and `fear` the
+existing `stressed` / `afraid` / `scared` entries already carry most of the recall, so deleting
+the bare word would buy little. **Two further mechanisms are not keyword problems at all and no
+list edit fixes them:** the matcher is **negation-blind** (*"I did not want to miss her recital"*
+→ `sad 0.50 [miss her]`, and *"there is no fear of that happening"* → `anxious`), and framed
+forms can co-occur, so a genuine hit's confidence can rise where one keyword used to fire. Neither
+is queued.
 
 ### What else the 2026-08-19 walk found (nothing queueable)
 
